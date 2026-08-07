@@ -1,25 +1,44 @@
 import Foundation
 
 /// Static facts about the build, in one place so the About window, the update
-/// check and the crash-report footer never disagree.
+/// check and the release notes never disagree.
 enum AppInfo {
     static let name = "ScreenCap"
 
     static var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     }
 
     static var build: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
     }
+
+    /// "alpha", "beta", or empty for a stable build. Kept out of
+    /// `CFBundleShortVersionString`, which macOS expects to be purely numeric.
+    static var channel: String {
+        Bundle.main.object(forInfoDictionaryKey: "SCVersionChannel") as? String ?? ""
+    }
+
+    /// `0.9.0-alpha`, or just `1.2.0` once the channel is empty.
+    static var displayVersion: String {
+        channel.isEmpty ? version : "\(version)-\(channel)"
+    }
+
+    static var isPrerelease: Bool { !channel.isEmpty }
 
     static var versionLine: String {
-        L10n.t("about.version", version, build)
+        L10n.t("about.version", displayVersion, build)
     }
 
-    /// Change these together with the repository the project actually lives in.
-    static let repositoryURL = URL(string: "https://github.com/vertusdesign/ScreenCap")!
-    static let releasesURL = URL(string: "https://github.com/vertusdesign/ScreenCap/releases")!
-    static let licenseURL = URL(string: "https://github.com/vertusdesign/ScreenCap/blob/main/LICENSE")!
-    static let issuesURL = URL(string: "https://github.com/vertusdesign/ScreenCap/issues")!
+    // MARK: - Links
+
+    private static let repository = "https://github.com/vertusdesign/ScreenCap"
+
+    static let repositoryURL = URL(string: repository)!
+    /// Opened by "Check for Updates…" — the releases page is the source of truth;
+    /// the app never fetches anything itself.
+    static let releasesURL = URL(string: "\(repository)/releases/latest")!
+    static let licenseURL = URL(string: "\(repository)/blob/main/LICENSE")!
+    static let privacyURL = URL(string: "\(repository)/blob/main/PRIVACY.md")!
+    static let issuesURL = URL(string: "\(repository)/issues")!
 }

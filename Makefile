@@ -1,7 +1,10 @@
 APP_NAME    := ScreenCap
 BUNDLE_ID   := com.vertusdesign.ScreenCap
-VERSION     ?= 1.0.0
+VERSION     ?= 0.9.0
+# "alpha", "beta", or empty for a stable build.
+CHANNEL     ?= alpha
 BUILD       ?= 1
+FULLVERSION := $(VERSION)$(if $(CHANNEL),-$(CHANNEL),)
 
 DIST        := dist
 APP         := $(DIST)/$(APP_NAME).app
@@ -13,19 +16,26 @@ ICONSET     := $(DIST)/AppIcon.iconset
 
 # macOS ties the Screen Recording permission to the code signature, and an ad-hoc
 # signature changes on every rebuild — which means re-granting the permission every
-# time. So prefer any real signing identity in the keychain, and fall back to
-# ad-hoc only when there is none. Override explicitly for distribution:
+# time. So local builds prefer this project's own certificate, created by
+# Scripts/create-signing-cert.sh.
+#
+# Only that exact name is looked for. Grabbing whatever identity happens to be in the
+# keychain picks up certificates belonging to other projects, which then prompt for the
+# password of a keychain this build has no business unlocking.
+#
+# Released disk images are signed ad-hoc on purpose: a self-signed certificate only one
+# machine holds is worth nothing to anyone downloading the app.
+#   make dmg                                     -> ad-hoc
 #   make dmg SIGN_ID="Developer ID Application: Name (TEAMID)"
+LOCAL_CERT  := ScreenCap Local Signing
 DETECTED_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | \
-	awk -F'"' '/Developer ID Application/ && NF>2 {print $$2; exit}')
-ifeq ($(strip $(DETECTED_ID)),)
-DETECTED_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | \
-	awk -F'"' 'NF>2 {print $$2; exit}')
-endif
+	grep -F "$(LOCAL_CERT)" >/dev/null 2>&1 && echo "$(LOCAL_CERT)")
 ifeq ($(strip $(DETECTED_ID)),)
 DETECTED_ID := -
 endif
 SIGN_ID     ?= $(DETECTED_ID)
+# Distribution builds never use the local certificate.
+dmg: SIGN_ID = -
 
 .PHONY: all app run debug clean dmg install icon universal
 
@@ -45,6 +55,7 @@ app: universal icon
 	mkdir -p "$(BIN_DIR)" "$(RES_DIR)"
 	cp "$(PRODUCT)" "$(BIN_DIR)/$(APP_NAME)"
 	sed -e 's/__VERSION__/$(VERSION)/' -e 's/__BUILD__/$(BUILD)/' \
+		-e 's/__CHANNEL__/$(CHANNEL)/' \
 		Resources/Info.plist > "$(CONTENTS)/Info.plist"
 	cp Resources/AppIcon.icns "$(RES_DIR)/AppIcon.icns"
 	cp -R Resources/l10n/*.lproj "$(RES_DIR)/"
@@ -77,15 +88,18 @@ install: app
 
 ## Build a distributable disk image.
 dmg: app
-	rm -f "$(DIST)/$(APP_NAME)-$(VERSION).dmg"
+	rm -f "$(DIST)/$(APP_NAME)-$(FULLVERSION).dmg"
 	rm -rf "$(DIST)/dmg-root"
 	mkdir -p "$(DIST)/dmg-root"
 	cp -R "$(APP)" "$(DIST)/dmg-root/"
 	ln -s /Applications "$(DIST)/dmg-root/Applications"
 	hdiutil create -volname "$(APP_NAME)" -srcfolder "$(DIST)/dmg-root" \
-		-ov -format UDZO "$(DIST)/$(APP_NAME)-$(VERSION).dmg"
+		-ov -format UDZO "$(DIST)/$(APP_NAME)-$(FULLVERSION).dmg"
 	rm -rf "$(DIST)/dmg-root"
-	@echo "Готово: $(DIST)/$(APP_NAME)-$(VERSION).dmg"
+	# Checksum records the bare filename: with the full path in it, a downloader
+	# running `shasum -c` in their Downloads folder gets "No such file".
+	cd "$(DIST)" && shasum -a 256 "$(APP_NAME)-$(FULLVERSION).dmg" > "$(APP_NAME)-$(FULLVERSION).dmg.sha256"
+	@echo "Готово: $(DIST)/$(APP_NAME)-$(FULLVERSION).dmg"
 
 clean:
 	rm -rf .build "$(DIST)"

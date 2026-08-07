@@ -120,9 +120,10 @@
 
 "about.version" = "Versio %@ (koontiversio %@)";
 "about.tagline" = "Näyttökuvat välittömillä merkinnöillä macOS:lle.";
-"about.privacy" = "Kaikki tapahtuu omalla Macilläsi. Ei tilejä, ei latauksia, ei minkäänlaista verkkoyhteyttä.";
+"about.alpha" = "Alfaversio — muutamia karkeuksia on vielä jäljellä.";
 "about.link.source" = "Lähdekoodi";
 "about.link.releases" = "Julkaisut";
+"about.link.privacy" = "Tietosuoja";
 "about.link.license" = "Lisenssi";
 "about.link.issues" = "Ilmoita ongelmasta";
 "about.copyright" = "MIT-lisenssi · © 2026 ScreenCapin tekijät";

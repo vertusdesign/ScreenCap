@@ -120,9 +120,10 @@
 
 "about.version" = "Versiunea %@ (build %@)";
 "about.tagline" = "Capturi de ecran cu adnotare instantanee pentru macOS.";
-"about.privacy" = "Totul se întâmplă pe Mac-ul tău. Fără conturi, fără încărcări, fără niciun acces la rețea.";
+"about.alpha" = "Versiune alfa — au mai rămas câteva asperități.";
 "about.link.source" = "Cod sursă";
 "about.link.releases" = "Versiuni";
+"about.link.privacy" = "Confidențialitate";
 "about.link.license" = "Licență";
 "about.link.issues" = "Raportează o problemă";
 "about.copyright" = "Licență MIT · © 2026 contribuitorii ScreenCap";

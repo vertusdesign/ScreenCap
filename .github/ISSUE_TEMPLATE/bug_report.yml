@@ -1,0 +1,75 @@
+name: Bug report
+description: Something does not work as described
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: if a shortcut does nothing, open Settings first. A shortcut already
+        owned by another app is marked with a warning triangle — macOS gives a shortcut to
+        whichever app registered it first.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Press ⌘F2
+        2. Select an area
+        3. …
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: ScreenCap version
+      description: Menu → About ScreenCap
+      placeholder: 0.9.0-alpha (build 1)
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac model
+      placeholder: macOS 26.5 on MacBook Pro (M3)
+    validations:
+      required: true
+
+  - type: input
+    id: displays
+    attributes:
+      label: Displays
+      description: How many, and their scale factors if they differ. Overlay bugs are often specific to this.
+      placeholder: two — built-in Retina plus a 1080p external
+    validations:
+      required: false
+
+  - type: input
+    id: layout
+    attributes:
+      label: Keyboard layout
+      description: Only needed if a shortcut misbehaved.
+      placeholder: Ukrainian
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Screenshots help. If the app misbehaved rather than crashed, output from a debug run
+        is the most useful thing you can attach:
+        `SCREENCAP_DEBUG=1 /Applications/ScreenCap.app/Contents/MacOS/ScreenCap`
+    validations:
+      required: false

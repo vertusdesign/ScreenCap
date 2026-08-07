@@ -120,9 +120,10 @@
 
 "about.version" = "Version %@ (Build %@)";
 "about.tagline" = "Bildschirmfotos mit sofortigen Anmerkungen für macOS.";
-"about.privacy" = "Alles passiert auf deinem Mac. Keine Accounts, keine Uploads, überhaupt kein Netzwerkzugriff.";
+"about.alpha" = "Alpha-Version — einige Ecken und Kanten sind geblieben.";
 "about.link.source" = "Quellcode";
 "about.link.releases" = "Releases";
+"about.link.privacy" = "Datenschutz";
 "about.link.license" = "Lizenz";
 "about.link.issues" = "Problem melden";
 "about.copyright" = "MIT-Lizenz · © 2026 ScreenCap-Mitwirkende";

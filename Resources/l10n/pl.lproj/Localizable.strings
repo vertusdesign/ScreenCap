@@ -120,9 +120,10 @@
 
 "about.version" = "Wersja %@ (kompilacja %@)";
 "about.tagline" = "Zrzuty ekranu z natychmiastowymi adnotacjami dla macOS.";
-"about.privacy" = "Wszystko dzieje się na twoim Macu. Bez kont, bez wysyłania, bez żadnego dostępu do sieci.";
+"about.alpha" = "Wersja alfa — trochę chropowatości jeszcze zostało.";
 "about.link.source" = "Kod źródłowy";
 "about.link.releases" = "Wydania";
+"about.link.privacy" = "Prywatność";
 "about.link.license" = "Licencja";
 "about.link.issues" = "Zgłoś problem";
 "about.copyright" = "Licencja MIT · © 2026 współtwórcy ScreenCap";

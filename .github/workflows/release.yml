@@ -5,6 +5,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -17,31 +20,62 @@ jobs:
       - name: Self-test
         run: |
           swift build
-          .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
+          SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
 
+      # A tag of v0.9.0-alpha means VERSION=0.9.0 (CFBundleShortVersionString has
+      # to stay numeric) and CHANNEL=alpha, which is what the About window shows.
       - name: Derive version
         id: version
         run: |
-          REF="${GITHUB_REF_NAME}"
-          echo "value=${REF#v}" >> "$GITHUB_OUTPUT"
+          FULL="${GITHUB_REF_NAME#v}"
+          VERSION="${FULL%%-*}"
+          CHANNEL=""
+          if [ "$FULL" != "$VERSION" ]; then CHANNEL="${FULL#*-}"; fi
+          {
+            echo "full=$FULL"
+            echo "version=$VERSION"
+            echo "channel=$CHANNEL"
+            echo "prerelease=$([ -n "$CHANNEL" ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build disk image
-        run: make dmg VERSION="${{ steps.version.outputs.value }}" BUILD="${{ github.run_number }}"
+        run: |
+          make dmg \
+            VERSION="${{ steps.version.outputs.version }}" \
+            CHANNEL="${{ steps.version.outputs.channel }}" \
+            BUILD="${{ github.run_number }}"
 
       - name: Verify universal binary
         run: lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap | tee /dev/stderr | grep -q x86_64
 
+      - name: Verify the app reports the tagged version
+        run: |
+          PLIST=dist/ScreenCap.app/Contents/Info.plist
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PLIST")" \
+             = "${{ steps.version.outputs.version }}"
+          test "$(/usr/libexec/PlistBuddy -c 'Print SCVersionChannel' "$PLIST")" \
+             = "${{ steps.version.outputs.channel }}"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ScreenCap-dmg
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            dist/*.sha256
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.dmg
+          name: ScreenCap ${{ steps.version.outputs.full }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          files: |
+            dist/*.dmg
+            dist/*.sha256
           body: |
-            Собрано из тега ${{ github.ref_name }}.
+            Built from tag ${{ github.ref_name }}.
 
-            Приложение подписано ad-hoc: при первом запуске правый клик → «Открыть».
+            **Not notarized** — macOS blocks the first launch. Press **Done**, then
+            **System Settings → Privacy & Security → Security → Open Anyway**. Once only.
+
+            **Full changelog:** https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md

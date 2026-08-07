@@ -120,9 +120,10 @@
 
 "about.version" = "Phiên bản %@ (bản dựng %@)";
 "about.tagline" = "Ảnh chụp màn hình kèm chú thích tức thì cho macOS.";
-"about.privacy" = "Mọi thứ diễn ra trên máy Mac của bạn. Không tài khoản, không tải lên, không truy cập mạng.";
+"about.alpha" = "Bản alpha — vẫn còn vài chỗ chưa hoàn thiện.";
 "about.link.source" = "Mã nguồn";
 "about.link.releases" = "Bản phát hành";
+"about.link.privacy" = "Quyền riêng tư";
 "about.link.license" = "Giấy phép";
 "about.link.issues" = "Báo lỗi";
 "about.copyright" = "Giấy phép MIT · © 2026 những người đóng góp ScreenCap";

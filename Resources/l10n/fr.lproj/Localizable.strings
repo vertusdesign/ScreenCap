@@ -120,9 +120,10 @@
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Captures d’écran annotées instantanément, pour macOS.";
-"about.privacy" = "Tout se passe sur votre Mac. Aucun compte, aucun envoi, aucun accès réseau.";
+"about.alpha" = "Version alpha — quelques aspérités subsistent.";
 "about.link.source" = "Code source";
 "about.link.releases" = "Versions";
+"about.link.privacy" = "Confidentialité";
 "about.link.license" = "Licence";
 "about.link.issues" = "Signaler un problème";
 "about.copyright" = "Licence MIT · © 2026 contributeurs de ScreenCap";

@@ -120,9 +120,10 @@
 
 "about.version" = "Versi %@ (build %@)";
 "about.tagline" = "Tangkapan layar dengan anotasi seketika untuk macOS.";
-"about.privacy" = "Semuanya terjadi di Mac Anda. Tanpa akun, tanpa unggahan, tanpa akses jaringan sama sekali.";
+"about.alpha" = "Versi alfa — masih ada beberapa bagian yang kasar.";
 "about.link.source" = "Kode sumber";
 "about.link.releases" = "Rilis";
+"about.link.privacy" = "Privasi";
 "about.link.license" = "Lisensi";
 "about.link.issues" = "Laporkan masalah";
 "about.copyright" = "Lisensi MIT · © 2026 kontributor ScreenCap";

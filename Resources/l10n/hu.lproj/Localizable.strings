@@ -120,9 +120,10 @@
 
 "about.version" = "%@ verzió (build %@)";
 "about.tagline" = "Képernyőképek azonnali jegyzetelessel macOS-re.";
-"about.privacy" = "Minden a saját Macedon történik. Nincsenek fiókok, nincs feltöltés, egyáltalán nincs hálózati hozzáférés.";
+"about.alpha" = "Alfa verzió — maradt még néhány érdesség.";
 "about.link.source" = "Forráskód";
 "about.link.releases" = "Kiadások";
+"about.link.privacy" = "Adatvédelem";
 "about.link.license" = "Licenc";
 "about.link.issues" = "Hiba bejelentése";
 "about.copyright" = "MIT licenc · © 2026 a ScreenCap közreműködői";

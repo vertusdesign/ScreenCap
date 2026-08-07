@@ -120,9 +120,10 @@
 
 "about.version" = "Versione %@ (build %@)";
 "about.tagline" = "Schermate con annotazioni istantanee per macOS.";
-"about.privacy" = "Tutto avviene sul tuo Mac. Nessun account, nessun caricamento, nessun accesso alla rete.";
+"about.alpha" = "Versione alfa — restano alcune ruvidità.";
 "about.link.source" = "Codice sorgente";
 "about.link.releases" = "Versioni";
+"about.link.privacy" = "Privacy";
 "about.link.license" = "Licenza";
 "about.link.issues" = "Segnala un problema";
 "about.copyright" = "Licenza MIT · © 2026 contributori di ScreenCap";

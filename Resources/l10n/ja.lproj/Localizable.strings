@@ -120,9 +120,10 @@
 
 "about.version" = "バージョン %@（ビルド %@）";
 "about.tagline" = "macOS 用、すぐに書き込めるスクリーンショット。";
-"about.privacy" = "すべてお使いの Mac の中で完結します。アカウントもアップロードもなく、ネットワークには一切つなぎません。";
+"about.alpha" = "アルファ版です。粗い部分がまだ残っています。";
 "about.link.source" = "ソースコード";
 "about.link.releases" = "リリース";
+"about.link.privacy" = "プライバシー";
 "about.link.license" = "ライセンス";
 "about.link.issues" = "問題を報告";
 "about.copyright" = "MIT ライセンス · © 2026 ScreenCap コントリビューター";

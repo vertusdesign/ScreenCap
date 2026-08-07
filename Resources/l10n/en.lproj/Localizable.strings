@@ -120,9 +120,10 @@
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Screenshots with instant annotation for macOS.";
-"about.privacy" = "Everything happens on your Mac. No accounts, no uploads, no network access at all.";
+"about.alpha" = "Alpha version — some rough edges remain.";
 "about.link.source" = "Source code";
 "about.link.releases" = "Releases";
+"about.link.privacy" = "Privacy";
 "about.link.license" = "License";
 "about.link.issues" = "Report an issue";
 "about.copyright" = "MIT License · © 2026 ScreenCap contributors";

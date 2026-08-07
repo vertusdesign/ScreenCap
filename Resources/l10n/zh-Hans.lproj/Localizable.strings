@@ -120,9 +120,10 @@
 
 "about.version" = "版本 %@（构建 %@）";
 "about.tagline" = "随手标注的 macOS 截图工具。";
-"about.privacy" = "一切都在你的 Mac 上完成。没有账号，不上传，完全不联网。";
+"about.alpha" = "Alpha 版本，仍有一些粗糙之处。";
 "about.link.source" = "源代码";
 "about.link.releases" = "版本发布";
+"about.link.privacy" = "隐私";
 "about.link.license" = "许可证";
 "about.link.issues" = "报告问题";
 "about.copyright" = "MIT 许可证 · © 2026 ScreenCap 贡献者";

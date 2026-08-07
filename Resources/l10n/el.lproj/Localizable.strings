@@ -120,9 +120,10 @@
 
 "about.version" = "Έκδοση %@ (build %@)";
 "about.tagline" = "Στιγμιότυπα οθόνης με άμεσο σχολιασμό για macOS.";
-"about.privacy" = "Όλα γίνονται στο δικό σας Mac. Χωρίς λογαριασμούς, χωρίς μεταφορτώσεις, χωρίς καμία πρόσβαση στο δίκτυο.";
+"about.alpha" = "Έκδοση άλφα — κάποιες ατέλειες παραμένουν.";
 "about.link.source" = "Πηγαίος κώδικας";
 "about.link.releases" = "Εκδόσεις";
+"about.link.privacy" = "Απόρρητο";
 "about.link.license" = "Άδεια";
 "about.link.issues" = "Αναφορά προβλήματος";
 "about.copyright" = "Άδεια MIT · © 2026 συνεισφέροντες του ScreenCap";

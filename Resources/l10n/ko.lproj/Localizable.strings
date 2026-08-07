@@ -120,9 +120,10 @@
 
 "about.version" = "버전 %@ (빌드 %@)";
 "about.tagline" = "바로 주석을 다는 macOS 스크린샷 앱.";
-"about.privacy" = "모든 것이 여러분의 Mac 안에서 끝납니다. 계정도, 업로드도, 네트워크 접근도 전혀 없습니다.";
+"about.alpha" = "알파 버전 — 다듬어지지 않은 부분이 남아 있습니다.";
 "about.link.source" = "소스 코드";
 "about.link.releases" = "릴리스";
+"about.link.privacy" = "개인정보 보호";
 "about.link.license" = "라이선스";
 "about.link.issues" = "문제 신고";
 "about.copyright" = "MIT 라이선스 · © 2026 ScreenCap 기여자";

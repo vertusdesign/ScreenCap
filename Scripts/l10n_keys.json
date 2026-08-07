@@ -104,9 +104,10 @@
 "filename.fallback",
 "about.version",
 "about.tagline",
-"about.privacy",
+"about.alpha",
 "about.link.source",
 "about.link.releases",
+"about.link.privacy",
 "about.link.license",
 "about.link.issues",
 "about.copyright"

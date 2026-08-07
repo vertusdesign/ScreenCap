@@ -120,9 +120,10 @@
 
 "about.version" = "संस्करण %@ (बिल्ड %@)";
 "about.tagline" = "macOS के लिए तुरंत टिप्पणी वाले स्क्रीनशॉट।";
-"about.privacy" = "सब कुछ आपके Mac पर ही होता है। न खाते, न अपलोड, नेटवर्क तक कोई पहुँच नहीं।";
+"about.alpha" = "अल्फा संस्करण — कुछ कमियाँ अभी बाकी हैं।";
 "about.link.source" = "सोर्स कोड";
 "about.link.releases" = "रिलीज़";
+"about.link.privacy" = "गोपनीयता";
 "about.link.license" = "लाइसेंस";
 "about.link.issues" = "समस्या की रिपोर्ट करें";
 "about.copyright" = "MIT लाइसेंस · © 2026 ScreenCap योगदानकर्ता";

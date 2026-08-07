@@ -10,11 +10,35 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app
+
       - name: Build
-        run: swift build
+        run: swift build 2>&1 | tee build.log
+
+      - name: Fail on warnings
+        run: '! grep -q "warning:" build.log'
+
       - name: Self-test
-        run: .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
+        run: SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
+
+      # Every translation must carry every key the code asks for; a missing one
+      # falls back to English at runtime, but silently, so CI catches it instead.
+      - name: Check translations are complete
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, re, sys
+          keys = set(json.loads(pathlib.Path("Scripts/l10n_keys.json").read_text()))
+          bad = False
+          for f in sorted(pathlib.Path("Resources/l10n").glob("*.lproj/Localizable.strings")):
+              present = set(re.findall(r'^"([^"]+)" = ', f.read_text(encoding="utf-8"), re.M))
+              missing, extra = keys - present, present - keys
+              if missing or extra:
+                  bad = True
+                  print(f"{f.parent.name}: missing {sorted(missing)} extra {sorted(extra)}")
+          sys.exit(1 if bad else 0)
+          EOF
+
       - name: Universal build
         run: swift build -c release --arch arm64 --arch x86_64

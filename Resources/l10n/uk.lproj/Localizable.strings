@@ -120,9 +120,10 @@
 
 "about.version" = "Версія %@ (збірка %@)";
 "about.tagline" = "Знімки екрана з миттєвими позначками для macOS.";
-"about.privacy" = "Усе відбувається на вашому Mac. Без акаунтів, без завантажень, без доступу до мережі взагалі.";
+"about.alpha" = "Альфа-версія — деякі шорсткості ще лишилися.";
 "about.link.source" = "Вихідний код";
 "about.link.releases" = "Релізи";
+"about.link.privacy" = "Приватність";
 "about.link.license" = "Ліцензія";
 "about.link.issues" = "Повідомити про проблему";
 "about.copyright" = "Ліцензія MIT · © 2026 учасники ScreenCap";

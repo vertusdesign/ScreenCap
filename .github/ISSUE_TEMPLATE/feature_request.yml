@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest something the app should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A few things are deliberately out of scope and will be declined: uploading anywhere,
+        accounts, sharing integrations, image search, and any form of telemetry. The app
+        contains no networking code and is meant to stay that way.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The problem, rather than the solution — it often has a simpler answer than the feature you had in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: Existing tools or workarounds, and why they fall short.
+    validations:
+      required: false

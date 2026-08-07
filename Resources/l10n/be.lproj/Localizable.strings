@@ -120,9 +120,10 @@
 
 "about.version" = "Версія %@ (зборка %@)";
 "about.tagline" = "Здымкі экрана з імгненнымі пазнакамі для macOS.";
-"about.privacy" = "Усё адбываецца на вашым Mac. Без акаўнтаў, без выгрузак, без доступу да сеткі наогул.";
+"about.alpha" = "Альфа-версія — некаторыя шурпатасці яшчэ засталіся.";
 "about.link.source" = "Зыходны код";
 "about.link.releases" = "Рэлізы";
+"about.link.privacy" = "Прыватнасць";
 "about.link.license" = "Ліцэнзія";
 "about.link.issues" = "Паведаміць пра праблему";
 "about.copyright" = "Ліцэнзія MIT · © 2026 удзельнікі ScreenCap";

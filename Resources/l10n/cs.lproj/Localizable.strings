@@ -120,9 +120,10 @@
 
 "about.version" = "Verze %@ (build %@)";
 "about.tagline" = "Snímky obrazovky s okamžitými poznámkami pro macOS.";
-"about.privacy" = "Všechno se děje na vašem Macu. Žádné účty, žádné nahrávání, vůbec žádný přístup k síti.";
+"about.alpha" = "Alfa verze — některé nedodělky přetrvávají.";
 "about.link.source" = "Zdrojový kód";
 "about.link.releases" = "Verze";
+"about.link.privacy" = "Soukromí";
 "about.link.license" = "Licence";
 "about.link.issues" = "Nahlásit problém";
 "about.copyright" = "Licence MIT · © 2026 přispěvatelé ScreenCap";

@@ -120,9 +120,10 @@
 
 "about.version" = "Versie %@ (build %@)";
 "about.tagline" = "Schermafbeeldingen met directe aantekeningen voor macOS.";
-"about.privacy" = "Alles gebeurt op je Mac. Geen accounts, geen uploads, helemaal geen netwerktoegang.";
+"about.alpha" = "Alfaversie — er zitten nog wat ruwe randjes aan.";
 "about.link.source" = "Broncode";
 "about.link.releases" = "Releases";
+"about.link.privacy" = "Privacy";
 "about.link.license" = "Licentie";
 "about.link.issues" = "Meld een probleem";
 "about.copyright" = "MIT-licentie · © 2026 ScreenCap-bijdragers";

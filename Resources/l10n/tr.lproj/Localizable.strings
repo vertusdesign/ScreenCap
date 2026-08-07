@@ -120,9 +120,10 @@
 
 "about.version" = "Sürüm %@ (yapı %@)";
 "about.tagline" = "macOS için anında işaretlemeli ekran görüntüleri.";
-"about.privacy" = "Her şey kendi Mac’inizde olur. Hesap yok, yükleme yok, hiçbir ağ erişimi yok.";
+"about.alpha" = "Alfa sürümü — bazı pürüzler hâlâ duruyor.";
 "about.link.source" = "Kaynak kodu";
 "about.link.releases" = "Sürümler";
+"about.link.privacy" = "Gizlilik";
 "about.link.license" = "Lisans";
 "about.link.issues" = "Sorun bildir";
 "about.copyright" = "MIT Lisansı · © 2026 ScreenCap katkıda bulunanları";

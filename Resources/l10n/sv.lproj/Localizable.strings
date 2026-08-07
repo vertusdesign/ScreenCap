@@ -120,9 +120,10 @@
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Skärmbilder med direkta anteckningar för macOS.";
-"about.privacy" = "Allt sker på din Mac. Inga konton, inga uppladdningar, ingen nätverksåtkomst alls.";
+"about.alpha" = "Alfaversion — en del skavanker finns kvar.";
 "about.link.source" = "Källkod";
 "about.link.releases" = "Utgåvor";
+"about.link.privacy" = "Integritet";
 "about.link.license" = "Licens";
 "about.link.issues" = "Rapportera ett problem";
 "about.copyright" = "MIT-licens · © 2026 ScreenCap-bidragsgivare";

@@ -120,9 +120,10 @@
 
 "about.version" = "الإصدار %@ (بنية %@)";
 "about.tagline" = "لقطات شاشة مع تعليق فوري لنظام macOS.";
-"about.privacy" = "كل شيء يجري على جهاز Mac الخاص بك. بلا حسابات، بلا رفع، وبلا أي اتصال بالشبكة.";
+"about.alpha" = "إصدار ألفا — لا تزال هناك بعض الجوانب غير المكتملة.";
 "about.link.source" = "الكود المصدري";
 "about.link.releases" = "الإصدارات";
+"about.link.privacy" = "الخصوصية";
 "about.link.license" = "الرخصة";
 "about.link.issues" = "الإبلاغ عن مشكلة";
 "about.copyright" = "رخصة MIT · © 2026 مساهمو ScreenCap";

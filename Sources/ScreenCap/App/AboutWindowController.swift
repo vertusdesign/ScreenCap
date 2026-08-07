@@ -61,24 +61,28 @@ private struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 12)
 
-            Text(L10n.t("about.privacy"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 8)
-                .padding(.horizontal, 8)
+            if AppInfo.isPrerelease {
+                Text(L10n.t("about.alpha"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 6)
+            }
 
             Divider()
                 .padding(.vertical, 16)
 
-            HStack(spacing: 22) {
+            // Four links, generously padded: at 24 languages the widest
+            // translations otherwise run flush into the window edges.
+            HStack(spacing: 20) {
                 Link(L10n.t("about.link.source"), destination: AppInfo.repositoryURL)
                 Link(L10n.t("about.link.releases"), destination: AppInfo.releasesURL)
+                Link(L10n.t("about.link.privacy"), destination: AppInfo.privacyURL)
                 Link(L10n.t("about.link.license"), destination: AppInfo.licenseURL)
-                Link(L10n.t("about.link.issues"), destination: AppInfo.issuesURL)
             }
             .font(.system(size: 12))
+            .padding(.horizontal, 8)
+            .fixedSize(horizontal: false, vertical: true)
 
             Text(L10n.t("about.copyright"))
                 .font(.system(size: 11))
