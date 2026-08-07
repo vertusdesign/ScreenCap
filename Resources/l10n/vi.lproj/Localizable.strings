@@ -1,0 +1,128 @@
+/* vi — ScreenCap */
+
+"tool.move" = "Di chuyển";
+"tool.pen" = "Bút chì";
+"tool.marker" = "Bút dạ quang";
+"tool.line" = "Đường thẳng";
+"tool.arrow" = "Mũi tên";
+"tool.rectangle" = "Hình chữ nhật";
+"tool.ellipse" = "Hình bầu dục";
+"tool.obfuscate" = "Che";
+"tool.counter" = "Đánh số";
+"tool.text" = "Văn bản";
+"tool.eraser" = "Tẩy";
+
+"hotkey.captureArea" = "Chụp một vùng";
+"hotkey.repeatLastArea" = "Lặp lại vùng gần nhất";
+"hotkey.captureWindow" = "Chụp cửa sổ dưới con trỏ";
+"hotkey.captureFullScreen" = "Chụp toàn màn hình";
+"hotkey.recording" = "Nhấn một tổ hợp phím…";
+"hotkey.unset" = "Chưa đặt";
+
+"obfuscation.style.pixelate" = "Làm vỡ điểm ảnh";
+"obfuscation.style.blur" = "Làm mờ";
+"obfuscation.shape.rectangle" = "Hình chữ nhật";
+"obfuscation.shape.ellipse" = "Hình bầu dục";
+"obfuscation.shape.brush" = "Cọ vẽ";
+
+"text.backdrop.none" = "Không nền";
+"text.backdrop.solid" = "Nền đặc";
+"text.backdrop.translucent" = "Nền bán trong suốt";
+"text.backdrop.shadow" = "Đổ bóng";
+
+"action.copy" = "Sao chép";
+"action.save" = "Lưu";
+"action.print" = "In";
+"action.cancel" = "Huỷ";
+"action.undo" = "Hoàn tác";
+"action.redo" = "Làm lại";
+"action.style" = "Màu và tuỳ chọn";
+"action.cut" = "Cắt";
+"action.paste" = "Dán";
+"action.selectAll" = "Chọn tất cả";
+
+"hint.control.alternate" = "Giữ ⌃ để dùng biến thể";
+"hint.shift.saveAs" = "⇧-nhấp để chọn thư mục";
+
+"style.recent" = "Gần đây";
+"style.hex" = "Màu HEX";
+"style.eyedropper" = "Lấy màu từ màn hình";
+"style.eyedropper.hint" = "Nhấp lần nữa để huỷ";
+"style.systemPalette" = "Bảng màu hệ thống";
+"style.thickness" = "Độ dày";
+"style.fontSize" = "Cỡ chữ";
+"style.backdropColor" = "Màu nền";
+"style.brushSize" = "Cỡ cọ";
+"style.intensity" = "Cường độ";
+"style.eraserSize" = "Cỡ tẩy";
+
+"overlay.hint.area" = "Kéo để chọn một vùng · Esc để huỷ";
+"overlay.hint.window" = "Trỏ vào một cửa sổ rồi nhấp · Esc để huỷ";
+
+"toast.copied" = "Đã sao chép vào bảng nháp";
+"toast.saved" = "Đã lưu";
+"toast.color.copied" = "Đã sao chép màu %@";
+"toast.noLastArea" = "Chưa có vùng nào được lưu";
+"toast.noLastArea.detail" = "Chọn một lần và nó sẽ được ghi nhớ";
+
+"menu.language" = "Ngôn ngữ";
+"menu.language.system" = "Theo hệ thống";
+"menu.launchAtLogin" = "Mở khi đăng nhập";
+"menu.settings" = "Cài đặt…";
+"menu.about" = "Giới thiệu về %@";
+"menu.checkForUpdates" = "Kiểm tra bản cập nhật…";
+"menu.quit" = "Thoát %@";
+"menu.edit" = "Sửa";
+
+"prefs.title" = "Cài đặt %@";
+"prefs.tab.shortcuts" = "Phím tắt";
+"prefs.tab.capture" = "Ảnh chụp";
+"prefs.tab.tools" = "Công cụ";
+"prefs.launchAtLogin" = "Mở khi đăng nhập";
+"prefs.shortcut.help" = "Nhấp vào ô rồi nhấn tổ hợp phím. Delete để xoá, Esc để huỷ ghi.";
+"prefs.shortcut.reset" = "Khôi phục phím tắt mặc định";
+"prefs.shortcut.conflict" = "Các phím tắt được đánh dấu đã bị ứng dụng khác chiếm và sẽ không hoạt động. Hãy chọn tổ hợp khác hoặc thoát ứng dụng đó.";
+"prefs.shortcut.conflict.help" = "Bị ứng dụng khác chiếm và không hoạt động";
+"prefs.saveFolder" = "Thư mục lưu";
+"prefs.choose" = "Chọn…";
+"prefs.filenameTemplate" = "Mẫu tên tệp";
+"prefs.filenameTokens" = "Có thể dùng: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Luôn hỏi nơi lưu";
+"prefs.copyOnSave" = "Sao chép vào bảng nháp khi lưu";
+"prefs.downscaleRetina" = "Lưu ở kích thước lôgic (không Retina ×2)";
+"prefs.shutterSound" = "Âm thanh màn trập";
+"prefs.showMagnifier" = "Hiện kính lúp kèm ống hút màu";
+"prefs.showSizeBadge" = "Hiện kích thước vùng chọn";
+"prefs.dimming" = "Làm tối nền";
+"prefs.tools.explainer" = "Tuỳ chọn vẽ nằm ngay trong lớp phủ, cạnh bản vẽ: màu, độ dày, che và kiểu chữ đều ở bảng phía sau chấm màu.";
+"prefs.tools.reset" = "Đặt lại công cụ";
+"prefs.overlayShortcuts" = "Phím tắt trong lớp phủ";
+"prefs.shortcuts.actions" = "⌘C sao chép · ⌘S lưu · ⇧⌘S lưu thành · ⌘P in · ⌘Z / ⇧⌘Z hoàn tác và làm lại · ⌘A toàn màn hình · ↩ sao chép rồi đóng · Esc huỷ";
+"prefs.shortcuts.modifiers" = "Khi vẽ: ⇧ hình vuông hoặc 45° · ⌥ vẽ từ tâm · ⌃ biến thể của công cụ (hình tô đặc, kiểu che khác). Có thể kết hợp các phím.";
+
+"permission.title" = "Cần quyền Ghi màn hình";
+"permission.body" = "Mở Cài đặt hệ thống → Quyền riêng tư và Bảo mật → Ghi màn hình rồi bật %@.\n\nSau đó phải khởi động lại ứng dụng.";
+"permission.open" = "Mở cài đặt";
+"permission.toast" = "Không có quyền ghi màn hình";
+"permission.toast.detail" = "Bật ứng dụng ở mục “Ghi màn hình” rồi khởi động lại";
+
+"common.later" = "Để sau";
+
+"error.permissionDenied" = "Không có quyền ghi màn hình.";
+"error.noDisplays" = "Không tìm thấy màn hình nào.";
+"error.captureFailed" = "Chụp thất bại: %@";
+"error.captureTitle" = "Chụp thất bại";
+"error.createFolder" = "Không tạo được thư mục lưu";
+"error.encodePNG" = "Không mã hoá được PNG";
+"error.saveFile" = "Không lưu được tệp";
+
+"filename.fallback" = "Ảnh chụp màn hình";
+
+"about.version" = "Phiên bản %@ (bản dựng %@)";
+"about.tagline" = "Ảnh chụp màn hình kèm chú thích tức thì cho macOS.";
+"about.privacy" = "Mọi thứ diễn ra trên máy Mac của bạn. Không tài khoản, không tải lên, không truy cập mạng.";
+"about.link.source" = "Mã nguồn";
+"about.link.releases" = "Bản phát hành";
+"about.link.license" = "Giấy phép";
+"about.link.issues" = "Báo lỗi";
+"about.copyright" = "Giấy phép MIT · © 2026 những người đóng góp ScreenCap";

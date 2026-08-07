@@ -1,0 +1,128 @@
+/* pt-BR — ScreenCap */
+
+"tool.move" = "Mover";
+"tool.pen" = "Lápis";
+"tool.marker" = "Marca-texto";
+"tool.line" = "Linha";
+"tool.arrow" = "Seta";
+"tool.rectangle" = "Retângulo";
+"tool.ellipse" = "Oval";
+"tool.obfuscate" = "Ocultar";
+"tool.counter" = "Numeração";
+"tool.text" = "Texto";
+"tool.eraser" = "Borracha";
+
+"hotkey.captureArea" = "Capturar uma área";
+"hotkey.repeatLastArea" = "Repetir a última área";
+"hotkey.captureWindow" = "Capturar a janela sob o cursor";
+"hotkey.captureFullScreen" = "Capturar a tela inteira";
+"hotkey.recording" = "Pressione um atalho…";
+"hotkey.unset" = "Não definido";
+
+"obfuscation.style.pixelate" = "Pixelizar";
+"obfuscation.style.blur" = "Desfocar";
+"obfuscation.shape.rectangle" = "Retângulo";
+"obfuscation.shape.ellipse" = "Oval";
+"obfuscation.shape.brush" = "Pincel";
+
+"text.backdrop.none" = "Sem fundo";
+"text.backdrop.solid" = "Fundo sólido";
+"text.backdrop.translucent" = "Fundo translúcido";
+"text.backdrop.shadow" = "Sombra";
+
+"action.copy" = "Copiar";
+"action.save" = "Salvar";
+"action.print" = "Imprimir";
+"action.cancel" = "Cancelar";
+"action.undo" = "Desfazer";
+"action.redo" = "Refazer";
+"action.style" = "Cor e opções";
+"action.cut" = "Recortar";
+"action.paste" = "Colar";
+"action.selectAll" = "Selecionar tudo";
+
+"hint.control.alternate" = "Segure ⌃ para a variante";
+"hint.shift.saveAs" = "⇧-clique para escolher a pasta";
+
+"style.recent" = "Recentes";
+"style.hex" = "Cor HEX";
+"style.eyedropper" = "Pegar cor da tela";
+"style.eyedropper.hint" = "Clique de novo para cancelar";
+"style.systemPalette" = "Paleta do sistema";
+"style.thickness" = "Espessura";
+"style.fontSize" = "Tamanho";
+"style.backdropColor" = "Cor do fundo";
+"style.brushSize" = "Tamanho do pincel";
+"style.intensity" = "Intensidade";
+"style.eraserSize" = "Tamanho da borracha";
+
+"overlay.hint.area" = "Arraste para selecionar uma área · Esc cancela";
+"overlay.hint.window" = "Aponte para uma janela e clique · Esc cancela";
+
+"toast.copied" = "Copiado para a área de transferência";
+"toast.saved" = "Salvo";
+"toast.color.copied" = "Cor %@ copiada";
+"toast.noLastArea" = "Nenhuma área salva";
+"toast.noLastArea.detail" = "Selecione uma vez e ela será lembrada";
+
+"menu.language" = "Idioma";
+"menu.language.system" = "Igual ao sistema";
+"menu.launchAtLogin" = "Abrir ao iniciar sessão";
+"menu.settings" = "Ajustes…";
+"menu.about" = "Sobre o %@";
+"menu.checkForUpdates" = "Buscar atualizações…";
+"menu.quit" = "Encerrar o %@";
+"menu.edit" = "Editar";
+
+"prefs.title" = "Ajustes do %@";
+"prefs.tab.shortcuts" = "Atalhos";
+"prefs.tab.capture" = "Capturas";
+"prefs.tab.tools" = "Ferramentas";
+"prefs.launchAtLogin" = "Abrir ao iniciar a sessão";
+"prefs.shortcut.help" = "Clique num campo e pressione um atalho. Delete limpa, Esc cancela a gravação.";
+"prefs.shortcut.reset" = "Restaurar os atalhos padrão";
+"prefs.shortcut.conflict" = "Os atalhos marcados já são usados por outro app e não vão funcionar. Escolha outros ou encerre aquele app.";
+"prefs.shortcut.conflict.help" = "Usado por outro app e sem efeito";
+"prefs.saveFolder" = "Pasta de destino";
+"prefs.choose" = "Escolher…";
+"prefs.filenameTemplate" = "Modelo de nome";
+"prefs.filenameTokens" = "Disponíveis: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Perguntar sempre onde salvar";
+"prefs.copyOnSave" = "Copiar para a área de transferência ao salvar";
+"prefs.downscaleRetina" = "Salvar em tamanho lógico (sem Retina ×2)";
+"prefs.shutterSound" = "Som do obturador";
+"prefs.showMagnifier" = "Mostrar a lupa com conta-gotas";
+"prefs.showSizeBadge" = "Mostrar o tamanho da seleção";
+"prefs.dimming" = "Escurecimento do fundo";
+"prefs.tools.explainer" = "As opções de desenho ficam na sobreposição, ao lado do desenho: cor, espessura, ocultação e estilo de texto estão no painel atrás do círculo de cor.";
+"prefs.tools.reset" = "Redefinir as ferramentas";
+"prefs.overlayShortcuts" = "Atalhos da sobreposição";
+"prefs.shortcuts.actions" = "⌘C copiar · ⌘S salvar · ⇧⌘S salvar como · ⌘P imprimir · ⌘Z / ⇧⌘Z desfazer e refazer · ⌘A tela inteira · ↩ copiar e fechar · Esc cancelar";
+"prefs.shortcuts.modifiers" = "Ao desenhar: ⇧ quadrado ou 45° · ⌥ desenhar a partir do centro · ⌃ variante da ferramenta (forma preenchida, outra ocultação). Os modificadores se combinam.";
+
+"permission.title" = "É necessária permissão de gravação de tela";
+"permission.body" = "Abra Ajustes do Sistema → Privacidade e Segurança → Gravação de Tela e ative o %@.\n\nDepois o app precisa ser reiniciado.";
+"permission.open" = "Abrir os ajustes";
+"permission.toast" = "Sem acesso à gravação de tela";
+"permission.toast.detail" = "Ative o app em “Gravação de Tela” e reinicie-o";
+
+"common.later" = "Mais tarde";
+
+"error.permissionDenied" = "Sem permissão de gravação de tela.";
+"error.noDisplays" = "Nenhuma tela encontrada.";
+"error.captureFailed" = "A captura falhou: %@";
+"error.captureTitle" = "A captura falhou";
+"error.createFolder" = "Não foi possível criar a pasta de destino";
+"error.encodePNG" = "Não foi possível codificar o PNG";
+"error.saveFile" = "Não foi possível salvar o arquivo";
+
+"filename.fallback" = "Captura de Tela";
+
+"about.version" = "Versão %@ (build %@)";
+"about.tagline" = "Capturas de tela com anotação instantânea para o macOS.";
+"about.privacy" = "Tudo acontece no seu Mac. Sem contas, sem envios, sem nenhum acesso à rede.";
+"about.link.source" = "Código-fonte";
+"about.link.releases" = "Versões";
+"about.link.license" = "Licença";
+"about.link.issues" = "Relatar um problema";
+"about.copyright" = "Licença MIT · © 2026 colaboradores do ScreenCap";

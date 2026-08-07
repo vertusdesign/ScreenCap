@@ -1,0 +1,128 @@
+/* id — ScreenCap */
+
+"tool.move" = "Pindahkan";
+"tool.pen" = "Pensil";
+"tool.marker" = "Stabilo";
+"tool.line" = "Garis";
+"tool.arrow" = "Panah";
+"tool.rectangle" = "Persegi panjang";
+"tool.ellipse" = "Oval";
+"tool.obfuscate" = "Sensor";
+"tool.counter" = "Penomoran";
+"tool.text" = "Teks";
+"tool.eraser" = "Penghapus";
+
+"hotkey.captureArea" = "Ambil area";
+"hotkey.repeatLastArea" = "Ulangi area terakhir";
+"hotkey.captureWindow" = "Ambil jendela di bawah kursor";
+"hotkey.captureFullScreen" = "Ambil seluruh layar";
+"hotkey.recording" = "Tekan pintasan…";
+"hotkey.unset" = "Belum diatur";
+
+"obfuscation.style.pixelate" = "Piksel";
+"obfuscation.style.blur" = "Buram";
+"obfuscation.shape.rectangle" = "Persegi panjang";
+"obfuscation.shape.ellipse" = "Oval";
+"obfuscation.shape.brush" = "Kuas";
+
+"text.backdrop.none" = "Tanpa latar";
+"text.backdrop.solid" = "Latar solid";
+"text.backdrop.translucent" = "Latar semi transparan";
+"text.backdrop.shadow" = "Bayangan";
+
+"action.copy" = "Salin";
+"action.save" = "Simpan";
+"action.print" = "Cetak";
+"action.cancel" = "Batal";
+"action.undo" = "Urungkan";
+"action.redo" = "Ulangi";
+"action.style" = "Warna dan opsi";
+"action.cut" = "Potong";
+"action.paste" = "Tempel";
+"action.selectAll" = "Pilih semua";
+
+"hint.control.alternate" = "Tahan ⌃ untuk varian lain";
+"hint.shift.saveAs" = "⇧-klik untuk memilih folder";
+
+"style.recent" = "Terbaru";
+"style.hex" = "Warna HEX";
+"style.eyedropper" = "Ambil warna dari layar";
+"style.eyedropper.hint" = "Klik lagi untuk membatalkan";
+"style.systemPalette" = "Palet sistem";
+"style.thickness" = "Ketebalan";
+"style.fontSize" = "Ukuran";
+"style.backdropColor" = "Warna latar";
+"style.brushSize" = "Ukuran kuas";
+"style.intensity" = "Intensitas";
+"style.eraserSize" = "Ukuran penghapus";
+
+"overlay.hint.area" = "Seret untuk memilih area · Esc membatalkan";
+"overlay.hint.window" = "Arahkan ke jendela lalu klik · Esc membatalkan";
+
+"toast.copied" = "Disalin ke papan klip";
+"toast.saved" = "Tersimpan";
+"toast.color.copied" = "Warna %@ disalin";
+"toast.noLastArea" = "Belum ada area tersimpan";
+"toast.noLastArea.detail" = "Pilih sekali dan akan diingat";
+
+"menu.language" = "Bahasa";
+"menu.language.system" = "Ikuti sistem";
+"menu.launchAtLogin" = "Buka saat masuk";
+"menu.settings" = "Pengaturan…";
+"menu.about" = "Tentang %@";
+"menu.checkForUpdates" = "Periksa pembaruan…";
+"menu.quit" = "Keluar dari %@";
+"menu.edit" = "Edit";
+
+"prefs.title" = "Pengaturan %@";
+"prefs.tab.shortcuts" = "Pintasan";
+"prefs.tab.capture" = "Tangkapan";
+"prefs.tab.tools" = "Alat";
+"prefs.launchAtLogin" = "Buka saat masuk";
+"prefs.shortcut.help" = "Klik kolomnya lalu tekan pintasan. Delete menghapus, Esc membatalkan perekaman.";
+"prefs.shortcut.reset" = "Kembalikan pintasan bawaan";
+"prefs.shortcut.conflict" = "Pintasan yang ditandai sudah dipakai aplikasi lain dan tidak akan berfungsi. Pilih yang lain atau tutup aplikasi tersebut.";
+"prefs.shortcut.conflict.help" = "Dipakai aplikasi lain dan tidak berfungsi";
+"prefs.saveFolder" = "Folder penyimpanan";
+"prefs.choose" = "Pilih…";
+"prefs.filenameTemplate" = "Pola nama berkas";
+"prefs.filenameTokens" = "Tersedia: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Selalu tanyakan tempat menyimpan";
+"prefs.copyOnSave" = "Salin ke papan klip saat menyimpan";
+"prefs.downscaleRetina" = "Simpan dalam ukuran logis (tanpa Retina ×2)";
+"prefs.shutterSound" = "Suara rana";
+"prefs.showMagnifier" = "Tampilkan lup dengan pemilih warna";
+"prefs.showSizeBadge" = "Tampilkan ukuran seleksi";
+"prefs.dimming" = "Peredupan latar";
+"prefs.tools.explainer" = "Opsi menggambar ada di dalam overlay, tepat di samping gambar: warna, ketebalan, sensor, dan gaya teks semuanya di panel di balik bulatan warna.";
+"prefs.tools.reset" = "Setel ulang alat";
+"prefs.overlayShortcuts" = "Pintasan di overlay";
+"prefs.shortcuts.actions" = "⌘C salin · ⌘S simpan · ⇧⌘S simpan sebagai · ⌘P cetak · ⌘Z / ⇧⌘Z urungkan dan ulangi · ⌘A seluruh layar · ↩ salin dan tutup · Esc batal";
+"prefs.shortcuts.modifiers" = "Saat menggambar: ⇧ persegi atau 45° · ⌥ gambar dari tengah · ⌃ varian alat (bentuk terisi, sensor lain). Modifier bisa digabung.";
+
+"permission.title" = "Perlu izin Perekaman Layar";
+"permission.body" = "Buka Pengaturan Sistem → Privasi & Keamanan → Perekaman Layar lalu aktifkan %@.\n\nSetelah itu aplikasi harus dijalankan ulang.";
+"permission.open" = "Buka pengaturan";
+"permission.toast" = "Tidak ada akses perekaman layar";
+"permission.toast.detail" = "Aktifkan aplikasi di “Perekaman Layar” lalu jalankan ulang";
+
+"common.later" = "Nanti";
+
+"error.permissionDenied" = "Tidak ada izin perekaman layar.";
+"error.noDisplays" = "Tidak ada layar yang ditemukan.";
+"error.captureFailed" = "Pengambilan gagal: %@";
+"error.captureTitle" = "Pengambilan gagal";
+"error.createFolder" = "Tidak bisa membuat folder penyimpanan";
+"error.encodePNG" = "Tidak bisa mengodekan PNG";
+"error.saveFile" = "Tidak bisa menyimpan berkas";
+
+"filename.fallback" = "Tangkapan Layar";
+
+"about.version" = "Versi %@ (build %@)";
+"about.tagline" = "Tangkapan layar dengan anotasi seketika untuk macOS.";
+"about.privacy" = "Semuanya terjadi di Mac Anda. Tanpa akun, tanpa unggahan, tanpa akses jaringan sama sekali.";
+"about.link.source" = "Kode sumber";
+"about.link.releases" = "Rilis";
+"about.link.license" = "Lisensi";
+"about.link.issues" = "Laporkan masalah";
+"about.copyright" = "Lisensi MIT · © 2026 kontributor ScreenCap";

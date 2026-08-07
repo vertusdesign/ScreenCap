@@ -1,0 +1,128 @@
+/* cs — ScreenCap */
+
+"tool.move" = "Posun";
+"tool.pen" = "Tužka";
+"tool.marker" = "Zvýrazňovač";
+"tool.line" = "Čára";
+"tool.arrow" = "Šipka";
+"tool.rectangle" = "Obdélník";
+"tool.ellipse" = "Ovál";
+"tool.obfuscate" = "Začernit";
+"tool.counter" = "Číslování";
+"tool.text" = "Text";
+"tool.eraser" = "Guma";
+
+"hotkey.captureArea" = "Vybrat oblast";
+"hotkey.repeatLastArea" = "Zopakovat poslední oblast";
+"hotkey.captureWindow" = "Zachytit okno pod kurzorem";
+"hotkey.captureFullScreen" = "Zachytit celou obrazovku";
+"hotkey.recording" = "Stiskněte zkratku…";
+"hotkey.unset" = "Nenastaveno";
+
+"obfuscation.style.pixelate" = "Pixelace";
+"obfuscation.style.blur" = "Rozostření";
+"obfuscation.shape.rectangle" = "Obdélník";
+"obfuscation.shape.ellipse" = "Ovál";
+"obfuscation.shape.brush" = "Štětec";
+
+"text.backdrop.none" = "Bez podkladu";
+"text.backdrop.solid" = "Plné pozadí";
+"text.backdrop.translucent" = "Průsvitné pozadí";
+"text.backdrop.shadow" = "Stín";
+
+"action.copy" = "Kopírovat";
+"action.save" = "Uložit";
+"action.print" = "Tisk";
+"action.cancel" = "Zrušit";
+"action.undo" = "Zpět";
+"action.redo" = "Znovu";
+"action.style" = "Barva a volby";
+"action.cut" = "Vyjmout";
+"action.paste" = "Vložit";
+"action.selectAll" = "Vybrat vše";
+
+"hint.control.alternate" = "Podržte ⌃ pro variantu";
+"hint.shift.saveAs" = "⇧-klik vybere složku";
+
+"style.recent" = "Nedávné";
+"style.hex" = "Barva HEX";
+"style.eyedropper" = "Nabrat barvu z obrazovky";
+"style.eyedropper.hint" = "Dalším klepnutím zrušíte";
+"style.systemPalette" = "Systémová paleta";
+"style.thickness" = "Tloušťka";
+"style.fontSize" = "Velikost";
+"style.backdropColor" = "Barva podkladu";
+"style.brushSize" = "Velikost štětce";
+"style.intensity" = "Intenzita";
+"style.eraserSize" = "Velikost gumy";
+
+"overlay.hint.area" = "Tažením vyberte oblast · Esc zruší";
+"overlay.hint.window" = "Najeďte na okno a klepněte · Esc zruší";
+
+"toast.copied" = "Zkopírováno do schránky";
+"toast.saved" = "Uloženo";
+"toast.color.copied" = "Barva %@ zkopírována";
+"toast.noLastArea" = "Žádná uložená oblast";
+"toast.noLastArea.detail" = "Jednou ji vyberte a zapamatuje se";
+
+"menu.language" = "Jazyk";
+"menu.language.system" = "Podle systému";
+"menu.launchAtLogin" = "Spouštět při přihlášení";
+"menu.settings" = "Nastavení…";
+"menu.about" = "O aplikaci %@";
+"menu.checkForUpdates" = "Zkontrolovat aktualizace…";
+"menu.quit" = "Ukončit %@";
+"menu.edit" = "Úpravy";
+
+"prefs.title" = "Nastavení %@";
+"prefs.tab.shortcuts" = "Zkratky";
+"prefs.tab.capture" = "Snímky";
+"prefs.tab.tools" = "Nástroje";
+"prefs.launchAtLogin" = "Spouštět při přihlášení";
+"prefs.shortcut.help" = "Klepněte do pole a stiskněte zkratku. Delete ji smaže, Esc zruší nahrávání.";
+"prefs.shortcut.reset" = "Obnovit výchozí zkratky";
+"prefs.shortcut.conflict" = "Označené zkratky už používá jiná aplikace a nespustí se. Zvolte jiné, nebo tu aplikaci ukončete.";
+"prefs.shortcut.conflict.help" = "Obsazeno jinou aplikací, nefunguje";
+"prefs.saveFolder" = "Složka pro ukládání";
+"prefs.choose" = "Vybrat…";
+"prefs.filenameTemplate" = "Šablona názvu";
+"prefs.filenameTokens" = "K dispozici: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Pokaždé se zeptat, kam uložit";
+"prefs.copyOnSave" = "Při uložení kopírovat do schránky";
+"prefs.downscaleRetina" = "Ukládat v logické velikosti (bez Retina ×2)";
+"prefs.shutterSound" = "Zvuk spouště";
+"prefs.showMagnifier" = "Zobrazovat lupu s kapátkem";
+"prefs.showSizeBadge" = "Zobrazovat velikost výběru";
+"prefs.dimming" = "Ztmavení pozadí";
+"prefs.tools.explainer" = "Volby kreslení jsou přímo v překryvu vedle kresby: barva, tloušťka, začernění i styl textu jsou v panelu za kolečkem barvy.";
+"prefs.tools.reset" = "Obnovit výchozí nástroje";
+"prefs.overlayShortcuts" = "Zkratky v překryvu";
+"prefs.shortcuts.actions" = "⌘C kopírovat · ⌘S uložit · ⇧⌘S uložit jako · ⌘P tisk · ⌘Z / ⇧⌘Z zpět a znovu · ⌘A celá obrazovka · ↩ kopírovat a zavřít · Esc zrušit";
+"prefs.shortcuts.modifiers" = "Při kreslení: ⇧ čtverec nebo 45° · ⌥ kreslit od středu · ⌃ varianta nástroje (vyplněný tvar, jiné začernění). Modifikátory lze kombinovat.";
+
+"permission.title" = "Je potřeba oprávnění k nahrávání obrazovky";
+"permission.body" = "Otevřete Nastavení systému → Soukromí a zabezpečení → Nahrávání obrazovky a zapněte %@.\n\nPoté je nutné aplikaci restartovat.";
+"permission.open" = "Otevřít nastavení";
+"permission.toast" = "Bez přístupu k nahrávání obrazovky";
+"permission.toast.detail" = "Zapněte aplikaci v „Nahrávání obrazovky“ a restartujte ji";
+
+"common.later" = "Později";
+
+"error.permissionDenied" = "Chybí oprávnění k nahrávání obrazovky.";
+"error.noDisplays" = "Nenalezena žádná obrazovka.";
+"error.captureFailed" = "Snímek se nezdařil: %@";
+"error.captureTitle" = "Snímek se nezdařil";
+"error.createFolder" = "Nepodařilo se vytvořit složku pro ukládání";
+"error.encodePNG" = "Nepodařilo se zakódovat PNG";
+"error.saveFile" = "Nepodařilo se uložit soubor";
+
+"filename.fallback" = "Snímek obrazovky";
+
+"about.version" = "Verze %@ (build %@)";
+"about.tagline" = "Snímky obrazovky s okamžitými poznámkami pro macOS.";
+"about.privacy" = "Všechno se děje na vašem Macu. Žádné účty, žádné nahrávání, vůbec žádný přístup k síti.";
+"about.link.source" = "Zdrojový kód";
+"about.link.releases" = "Verze";
+"about.link.license" = "Licence";
+"about.link.issues" = "Nahlásit problém";
+"about.copyright" = "Licence MIT · © 2026 přispěvatelé ScreenCap";

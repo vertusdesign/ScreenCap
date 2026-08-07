@@ -1,0 +1,128 @@
+/* hu — ScreenCap */
+
+"tool.move" = "Mozgatás";
+"tool.pen" = "Ceruza";
+"tool.marker" = "Szövegkiemelő";
+"tool.line" = "Vonal";
+"tool.arrow" = "Nyíl";
+"tool.rectangle" = "Téglalap";
+"tool.ellipse" = "Ovális";
+"tool.obfuscate" = "Kitakarás";
+"tool.counter" = "Számozás";
+"tool.text" = "Szöveg";
+"tool.eraser" = "Radír";
+
+"hotkey.captureArea" = "Terület rögzítése";
+"hotkey.repeatLastArea" = "Utolsó terület megismétlése";
+"hotkey.captureWindow" = "A kurzor alatti ablak rögzítése";
+"hotkey.captureFullScreen" = "Teljes képernyő rögzítése";
+"hotkey.recording" = "Nyomj le egy billentyűkombinációt…";
+"hotkey.unset" = "Nincs beállítva";
+
+"obfuscation.style.pixelate" = "Pixelesítés";
+"obfuscation.style.blur" = "Elmosás";
+"obfuscation.shape.rectangle" = "Téglalap";
+"obfuscation.shape.ellipse" = "Ovális";
+"obfuscation.shape.brush" = "Ecset";
+
+"text.backdrop.none" = "Nincs háttér";
+"text.backdrop.solid" = "Tömör háttér";
+"text.backdrop.translucent" = "Áttetsző háttér";
+"text.backdrop.shadow" = "Árnyék";
+
+"action.copy" = "Másolás";
+"action.save" = "Mentés";
+"action.print" = "Nyomtatás";
+"action.cancel" = "Mégsem";
+"action.undo" = "Visszavonás";
+"action.redo" = "Újra";
+"action.style" = "Szín és beállítások";
+"action.cut" = "Kivágás";
+"action.paste" = "Beillesztés";
+"action.selectAll" = "Összes kijelölése";
+
+"hint.control.alternate" = "Tartsd a ⌃-t a másik változathoz";
+"hint.shift.saveAs" = "⇧-kattintás mappa választásához";
+
+"style.recent" = "Legutóbbi";
+"style.hex" = "HEX szín";
+"style.eyedropper" = "Szín leolvasása a képernyőről";
+"style.eyedropper.hint" = "Kattints újra a megszakításhoz";
+"style.systemPalette" = "Rendszerpaletta";
+"style.thickness" = "Vastagság";
+"style.fontSize" = "Méret";
+"style.backdropColor" = "Háttérszín";
+"style.brushSize" = "Ecsetméret";
+"style.intensity" = "Erősség";
+"style.eraserSize" = "Radírméret";
+
+"overlay.hint.area" = "Húzd ki a területet · Esc megszakít";
+"overlay.hint.window" = "Mutass egy ablakra és kattints · Esc megszakít";
+
+"toast.copied" = "Vágólapra másolva";
+"toast.saved" = "Mentve";
+"toast.color.copied" = "%@ szín kimásolva";
+"toast.noLastArea" = "Nincs mentett terület";
+"toast.noLastArea.detail" = "Jelöld ki egyszer, és megjegyzi";
+
+"menu.language" = "Nyelv";
+"menu.language.system" = "Mint a rendszerben";
+"menu.launchAtLogin" = "Indítás bejelentkezéskor";
+"menu.settings" = "Beállítások…";
+"menu.about" = "A(z) %@ névjegye";
+"menu.checkForUpdates" = "Frissítések keresése…";
+"menu.quit" = "Kilépés – %@";
+"menu.edit" = "Szerkesztés";
+
+"prefs.title" = "%@ beállításai";
+"prefs.tab.shortcuts" = "Gyorsbillentyűk";
+"prefs.tab.capture" = "Képek";
+"prefs.tab.tools" = "Eszközök";
+"prefs.launchAtLogin" = "Indítás bejelentkezéskor";
+"prefs.shortcut.help" = "Kattints a mezőbe, és nyomj le egy kombinációt. A Delete törli, az Esc megszakítja a rögzítést.";
+"prefs.shortcut.reset" = "Alapértelmezett gyorsbillentyűk visszaállítása";
+"prefs.shortcut.conflict" = "A megjelölt kombinációkat már más alkalmazás foglalja, így nem működnek. Válassz másikat, vagy lépj ki abból az alkalmazásból.";
+"prefs.shortcut.conflict.help" = "Másik alkalmazás foglalja, nem működik";
+"prefs.saveFolder" = "Mentési mappa";
+"prefs.choose" = "Kiválasztás…";
+"prefs.filenameTemplate" = "Névsablon";
+"prefs.filenameTokens" = "Elérhető: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Mindig kérdezze meg, hová mentsen";
+"prefs.copyOnSave" = "Mentéskor a vágólapra is másolja";
+"prefs.downscaleRetina" = "Mentés logikai méretben (Retina ×2 nélkül)";
+"prefs.shutterSound" = "Zárhang";
+"prefs.showMagnifier" = "Nagyító megjelenítése színpipettával";
+"prefs.showSizeBadge" = "Kijelölés méretének mutatása";
+"prefs.dimming" = "Háttér sötétítése";
+"prefs.tools.explainer" = "A rajzolási beállítások a rátétben vannak, közvetlenül a rajz mellett: a szín, a vastagság, a kitakarás és a szövegstílus a színkör mögötti panelen található.";
+"prefs.tools.reset" = "Eszközök visszaállítása";
+"prefs.overlayShortcuts" = "Gyorsbillentyűk a rátétben";
+"prefs.shortcuts.actions" = "⌘C másolás · ⌘S mentés · ⇧⌘S mentés másként · ⌘P nyomtatás · ⌘Z / ⇧⌘Z visszavonás és újra · ⌘A teljes képernyő · ↩ másolás és bezárás · Esc mégsem";
+"prefs.shortcuts.modifiers" = "Rajzolás közben: ⇧ négyzet vagy 45° · ⌥ rajzolás középről · ⌃ az eszköz másik változata (kitöltött alakzat, másik kitakarás). A módosítók kombinálhatók.";
+
+"permission.title" = "Képernyőrögzítési engedély szükséges";
+"permission.body" = "Nyisd meg a Rendszerbeállítások → Adatvédelem és biztonság → Képernyőrögzítés pontot, és kapcsold be a(z) %@ alkalmazást.\n\nUtána az alkalmazást újra kell indítani.";
+"permission.open" = "Beállítások megnyitása";
+"permission.toast" = "Nincs hozzáférés a képernyőrögzítéshez";
+"permission.toast.detail" = "Engedélyezd az alkalmazást a „Képernyőrögzítés” alatt, majd indítsd újra";
+
+"common.later" = "Később";
+
+"error.permissionDenied" = "Nincs képernyőrögzítési engedély.";
+"error.noDisplays" = "Nem található kijelző.";
+"error.captureFailed" = "A rögzítés nem sikerült: %@";
+"error.captureTitle" = "A rögzítés nem sikerült";
+"error.createFolder" = "Nem sikerült létrehozni a mentési mappát";
+"error.encodePNG" = "Nem sikerült PNG-be kódolni";
+"error.saveFile" = "Nem sikerült menteni a fájlt";
+
+"filename.fallback" = "Képernyőkép";
+
+"about.version" = "%@ verzió (build %@)";
+"about.tagline" = "Képernyőképek azonnali jegyzetelessel macOS-re.";
+"about.privacy" = "Minden a saját Macedon történik. Nincsenek fiókok, nincs feltöltés, egyáltalán nincs hálózati hozzáférés.";
+"about.link.source" = "Forráskód";
+"about.link.releases" = "Kiadások";
+"about.link.license" = "Licenc";
+"about.link.issues" = "Hiba bejelentése";
+"about.copyright" = "MIT licenc · © 2026 a ScreenCap közreműködői";

@@ -1,0 +1,128 @@
+/* ko — ScreenCap */
+
+"tool.move" = "이동";
+"tool.pen" = "펜";
+"tool.marker" = "형광펜";
+"tool.line" = "선";
+"tool.arrow" = "화살표";
+"tool.rectangle" = "사각형";
+"tool.ellipse" = "타원";
+"tool.obfuscate" = "가리기";
+"tool.counter" = "번호 매기기";
+"tool.text" = "텍스트";
+"tool.eraser" = "지우개";
+
+"hotkey.captureArea" = "영역 캡처";
+"hotkey.repeatLastArea" = "마지막 영역 반복";
+"hotkey.captureWindow" = "포인터 아래 윈도우 캡처";
+"hotkey.captureFullScreen" = "전체 화면 캡처";
+"hotkey.recording" = "단축키를 누르세요…";
+"hotkey.unset" = "설정 안 됨";
+
+"obfuscation.style.pixelate" = "모자이크";
+"obfuscation.style.blur" = "흐리게";
+"obfuscation.shape.rectangle" = "사각형";
+"obfuscation.shape.ellipse" = "타원";
+"obfuscation.shape.brush" = "브러시";
+
+"text.backdrop.none" = "배경 없음";
+"text.backdrop.solid" = "불투명 배경";
+"text.backdrop.translucent" = "반투명 배경";
+"text.backdrop.shadow" = "그림자";
+
+"action.copy" = "복사";
+"action.save" = "저장";
+"action.print" = "프린트";
+"action.cancel" = "취소";
+"action.undo" = "실행 취소";
+"action.redo" = "다시 실행";
+"action.style" = "색상 및 옵션";
+"action.cut" = "오려두기";
+"action.paste" = "붙여넣기";
+"action.selectAll" = "전체 선택";
+
+"hint.control.alternate" = "⌃ 를 누르면 대체 동작";
+"hint.shift.saveAs" = "⇧-클릭하면 폴더 선택";
+
+"style.recent" = "최근 사용";
+"style.hex" = "HEX 색상";
+"style.eyedropper" = "화면에서 색 추출";
+"style.eyedropper.hint" = "한 번 더 클릭하면 취소";
+"style.systemPalette" = "시스템 색상 팔레트";
+"style.thickness" = "두께";
+"style.fontSize" = "크기";
+"style.backdropColor" = "배경 색상";
+"style.brushSize" = "브러시 크기";
+"style.intensity" = "강도";
+"style.eraserSize" = "지우개 크기";
+
+"overlay.hint.area" = "드래그해서 영역 선택 · Esc 취소";
+"overlay.hint.window" = "윈도우를 가리키고 클릭 · Esc 취소";
+
+"toast.copied" = "클립보드에 복사됨";
+"toast.saved" = "저장됨";
+"toast.color.copied" = "색상 %@ 복사됨";
+"toast.noLastArea" = "저장된 영역이 없습니다";
+"toast.noLastArea.detail" = "한 번 선택하면 기억합니다";
+
+"menu.language" = "언어";
+"menu.language.system" = "시스템 설정 따르기";
+"menu.launchAtLogin" = "로그인 시 실행";
+"menu.settings" = "설정…";
+"menu.about" = "%@ 정보";
+"menu.checkForUpdates" = "업데이트 확인…";
+"menu.quit" = "%@ 종료";
+"menu.edit" = "편집";
+
+"prefs.title" = "%@ 설정";
+"prefs.tab.shortcuts" = "단축키";
+"prefs.tab.capture" = "캡처";
+"prefs.tab.tools" = "도구";
+"prefs.launchAtLogin" = "로그인 시 실행";
+"prefs.shortcut.help" = "필드를 클릭하고 단축키를 누르세요. Delete는 지우고 Esc는 기록을 취소합니다.";
+"prefs.shortcut.reset" = "기본 단축키로 되돌리기";
+"prefs.shortcut.conflict" = "표시된 단축키는 다른 앱이 이미 사용 중이라 동작하지 않습니다. 다른 조합을 고르거나 그 앱을 종료하세요.";
+"prefs.shortcut.conflict.help" = "다른 앱이 사용 중이라 동작하지 않음";
+"prefs.saveFolder" = "저장 폴더";
+"prefs.choose" = "선택…";
+"prefs.filenameTemplate" = "파일 이름 템플릿";
+"prefs.filenameTokens" = "사용 가능: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "매번 저장 위치 묻기";
+"prefs.copyOnSave" = "저장할 때 클립보드에도 복사";
+"prefs.downscaleRetina" = "논리 크기로 저장 (Retina ×2 없이)";
+"prefs.shutterSound" = "셔터 소리";
+"prefs.showMagnifier" = "색상 추출기가 있는 돋보기 표시";
+"prefs.showSizeBadge" = "선택 영역 크기 표시";
+"prefs.dimming" = "배경 어둡게";
+"prefs.tools.explainer" = "그리기 옵션은 그림 바로 옆 오버레이 안에 있습니다. 색상, 두께, 가리기, 텍스트 스타일은 모두 색상 원 뒤 패널에 있습니다.";
+"prefs.tools.reset" = "도구를 기본값으로";
+"prefs.overlayShortcuts" = "오버레이 단축키";
+"prefs.shortcuts.actions" = "⌘C 복사 · ⌘S 저장 · ⇧⌘S 다른 이름으로 저장 · ⌘P 프린트 · ⌘Z / ⇧⌘Z 실행 취소와 다시 실행 · ⌘A 전체 화면 · ↩ 복사 후 닫기 · Esc 취소";
+"prefs.shortcuts.modifiers" = "그리는 동안: ⇧ 정사각형 또는 45° · ⌥ 중심에서 그리기 · ⌃ 도구의 대체 동작 (채운 도형, 다른 가리기). 조합해서 쓸 수 있습니다.";
+
+"permission.title" = "화면 기록 권한이 필요합니다";
+"permission.body" = "시스템 설정 → 개인정보 보호 및 보안 → 화면 기록을 열고 %@ 을(를) 켜세요.\n\n그런 다음 앱을 다시 실행해야 합니다.";
+"permission.open" = "설정 열기";
+"permission.toast" = "화면 기록 권한 없음";
+"permission.toast.detail" = "‘화면 기록’에서 앱을 켜고 다시 실행하세요";
+
+"common.later" = "나중에";
+
+"error.permissionDenied" = "화면 기록 권한이 없습니다.";
+"error.noDisplays" = "디스플레이를 찾을 수 없습니다.";
+"error.captureFailed" = "캡처 실패: %@";
+"error.captureTitle" = "캡처 실패";
+"error.createFolder" = "저장 폴더를 만들 수 없습니다";
+"error.encodePNG" = "PNG로 인코딩할 수 없습니다";
+"error.saveFile" = "파일을 저장할 수 없습니다";
+
+"filename.fallback" = "스크린샷";
+
+"about.version" = "버전 %@ (빌드 %@)";
+"about.tagline" = "바로 주석을 다는 macOS 스크린샷 앱.";
+"about.privacy" = "모든 것이 여러분의 Mac 안에서 끝납니다. 계정도, 업로드도, 네트워크 접근도 전혀 없습니다.";
+"about.link.source" = "소스 코드";
+"about.link.releases" = "릴리스";
+"about.link.license" = "라이선스";
+"about.link.issues" = "문제 신고";
+"about.copyright" = "MIT 라이선스 · © 2026 ScreenCap 기여자";

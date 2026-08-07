@@ -1,0 +1,128 @@
+/* sv — ScreenCap */
+
+"tool.move" = "Flytta";
+"tool.pen" = "Penna";
+"tool.marker" = "Överstrykning";
+"tool.line" = "Linje";
+"tool.arrow" = "Pil";
+"tool.rectangle" = "Rektangel";
+"tool.ellipse" = "Oval";
+"tool.obfuscate" = "Maskera";
+"tool.counter" = "Numrering";
+"tool.text" = "Text";
+"tool.eraser" = "Radergummi";
+
+"hotkey.captureArea" = "Fånga ett område";
+"hotkey.repeatLastArea" = "Upprepa senaste området";
+"hotkey.captureWindow" = "Fånga fönstret under pekaren";
+"hotkey.captureFullScreen" = "Fånga hela skärmen";
+"hotkey.recording" = "Tryck en tangentkombination…";
+"hotkey.unset" = "Inte angiven";
+
+"obfuscation.style.pixelate" = "Pixelera";
+"obfuscation.style.blur" = "Oskärpa";
+"obfuscation.shape.rectangle" = "Rektangel";
+"obfuscation.shape.ellipse" = "Oval";
+"obfuscation.shape.brush" = "Pensel";
+
+"text.backdrop.none" = "Ingen bakgrund";
+"text.backdrop.solid" = "Heltäckande bakgrund";
+"text.backdrop.translucent" = "Genomskinlig bakgrund";
+"text.backdrop.shadow" = "Skugga";
+
+"action.copy" = "Kopiera";
+"action.save" = "Spara";
+"action.print" = "Skriv ut";
+"action.cancel" = "Avbryt";
+"action.undo" = "Ångra";
+"action.redo" = "Gör om";
+"action.style" = "Färg och alternativ";
+"action.cut" = "Klipp ut";
+"action.paste" = "Klistra in";
+"action.selectAll" = "Markera allt";
+
+"hint.control.alternate" = "Håll ⌃ för varianten";
+"hint.shift.saveAs" = "⇧-klick för att välja mapp";
+
+"style.recent" = "Senaste";
+"style.hex" = "HEX-färg";
+"style.eyedropper" = "Ta färg från skärmen";
+"style.eyedropper.hint" = "Klicka igen för att avbryta";
+"style.systemPalette" = "Systemets färgpalett";
+"style.thickness" = "Tjocklek";
+"style.fontSize" = "Storlek";
+"style.backdropColor" = "Bakgrundsfärg";
+"style.brushSize" = "Penselstorlek";
+"style.intensity" = "Intensitet";
+"style.eraserSize" = "Radergummits storlek";
+
+"overlay.hint.area" = "Dra för att markera ett område · Esc avbryter";
+"overlay.hint.window" = "Peka på ett fönster och klicka · Esc avbryter";
+
+"toast.copied" = "Kopierat till urklipp";
+"toast.saved" = "Sparat";
+"toast.color.copied" = "Färgen %@ kopierad";
+"toast.noLastArea" = "Inget sparat område";
+"toast.noLastArea.detail" = "Markera ett en gång så kommer det ihåg";
+
+"menu.language" = "Språk";
+"menu.language.system" = "Som i systemet";
+"menu.launchAtLogin" = "Öppna vid inloggning";
+"menu.settings" = "Inställningar…";
+"menu.about" = "Om %@";
+"menu.checkForUpdates" = "Sök efter uppdateringar…";
+"menu.quit" = "Avsluta %@";
+"menu.edit" = "Redigera";
+
+"prefs.title" = "Inställningar för %@";
+"prefs.tab.shortcuts" = "Kortkommandon";
+"prefs.tab.capture" = "Skärmbilder";
+"prefs.tab.tools" = "Verktyg";
+"prefs.launchAtLogin" = "Öppna vid inloggning";
+"prefs.shortcut.help" = "Klicka i fältet och tryck en kombination. Delete rensar, Esc avbryter inspelningen.";
+"prefs.shortcut.reset" = "Återställ standardkortkommandon";
+"prefs.shortcut.conflict" = "De markerade kortkommandona används redan av ett annat program och utlöses inte. Välj andra eller avsluta det programmet.";
+"prefs.shortcut.conflict.help" = "Upptaget av ett annat program och fungerar inte";
+"prefs.saveFolder" = "Mapp att spara i";
+"prefs.choose" = "Välj…";
+"prefs.filenameTemplate" = "Namnmall";
+"prefs.filenameTokens" = "Tillgängliga: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Fråga varje gång var filen ska sparas";
+"prefs.copyOnSave" = "Kopiera till urklipp vid sparande";
+"prefs.downscaleRetina" = "Spara i logisk storlek (utan Retina ×2)";
+"prefs.shutterSound" = "Slutarljud";
+"prefs.showMagnifier" = "Visa luppen med färgpipett";
+"prefs.showSizeBadge" = "Visa markeringens storlek";
+"prefs.dimming" = "Nedtoning av bakgrunden";
+"prefs.tools.explainer" = "Ritalternativen sitter i överlägget, precis intill teckningen: färg, tjocklek, maskering och textstil finns i panelen bakom färgpricken.";
+"prefs.tools.reset" = "Återställ verktygen";
+"prefs.overlayShortcuts" = "Kortkommandon i överlägget";
+"prefs.shortcuts.actions" = "⌘C kopiera · ⌘S spara · ⇧⌘S spara som · ⌘P skriv ut · ⌘Z / ⇧⌘Z ångra och gör om · ⌘A hela skärmen · ↩ kopiera och stäng · Esc avbryt";
+"prefs.shortcuts.modifiers" = "Medan du ritar: ⇧ kvadrat eller 45° · ⌥ rita från mitten · ⌃ verktygets variant (fylld form, annan maskering). Modifierarna går att kombinera.";
+
+"permission.title" = "Behörighet för skärminspelning krävs";
+"permission.body" = "Öppna Systeminställningar → Integritet och säkerhet → Skärminspelning och slå på %@.\n\nDärefter måste appen startas om.";
+"permission.open" = "Öppna inställningar";
+"permission.toast" = "Ingen åtkomst till skärminspelning";
+"permission.toast.detail" = "Slå på appen under ”Skärminspelning” och starta om den";
+
+"common.later" = "Senare";
+
+"error.permissionDenied" = "Ingen behörighet för skärminspelning.";
+"error.noDisplays" = "Ingen skärm hittades.";
+"error.captureFailed" = "Skärmbilden misslyckades: %@";
+"error.captureTitle" = "Skärmbilden misslyckades";
+"error.createFolder" = "Kunde inte skapa mappen";
+"error.encodePNG" = "Kunde inte koda PNG-filen";
+"error.saveFile" = "Kunde inte spara filen";
+
+"filename.fallback" = "Skärmbild";
+
+"about.version" = "Version %@ (build %@)";
+"about.tagline" = "Skärmbilder med direkta anteckningar för macOS.";
+"about.privacy" = "Allt sker på din Mac. Inga konton, inga uppladdningar, ingen nätverksåtkomst alls.";
+"about.link.source" = "Källkod";
+"about.link.releases" = "Utgåvor";
+"about.link.license" = "Licens";
+"about.link.issues" = "Rapportera ett problem";
+"about.copyright" = "MIT-licens · © 2026 ScreenCap-bidragsgivare";

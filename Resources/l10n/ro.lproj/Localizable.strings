@@ -1,0 +1,128 @@
+/* ro — ScreenCap */
+
+"tool.move" = "Mutare";
+"tool.pen" = "Creion";
+"tool.marker" = "Marker";
+"tool.line" = "Linie";
+"tool.arrow" = "Săgeată";
+"tool.rectangle" = "Dreptunghi";
+"tool.ellipse" = "Oval";
+"tool.obfuscate" = "Ascundere";
+"tool.counter" = "Numerotare";
+"tool.text" = "Text";
+"tool.eraser" = "Radieră";
+
+"hotkey.captureArea" = "Selectează o zonă";
+"hotkey.repeatLastArea" = "Repetă ultima zonă";
+"hotkey.captureWindow" = "Captează fereastra de sub cursor";
+"hotkey.captureFullScreen" = "Captează tot ecranul";
+"hotkey.recording" = "Apasă o combinație…";
+"hotkey.unset" = "Nesetat";
+
+"obfuscation.style.pixelate" = "Pixelare";
+"obfuscation.style.blur" = "Estompare";
+"obfuscation.shape.rectangle" = "Dreptunghi";
+"obfuscation.shape.ellipse" = "Oval";
+"obfuscation.shape.brush" = "Pensulă";
+
+"text.backdrop.none" = "Fără fundal";
+"text.backdrop.solid" = "Fundal opac";
+"text.backdrop.translucent" = "Fundal translucid";
+"text.backdrop.shadow" = "Umbră";
+
+"action.copy" = "Copiază";
+"action.save" = "Salvează";
+"action.print" = "Tipărește";
+"action.cancel" = "Anulează";
+"action.undo" = "Anulează acțiunea";
+"action.redo" = "Refă";
+"action.style" = "Culoare și opțiuni";
+"action.cut" = "Decupează";
+"action.paste" = "Lipește";
+"action.selectAll" = "Selectează tot";
+
+"hint.control.alternate" = "Ține ⌃ pentru varianta alternativă";
+"hint.shift.saveAs" = "⇧-clic pentru a alege un dosar";
+
+"style.recent" = "Recente";
+"style.hex" = "Culoare HEX";
+"style.eyedropper" = "Ia culoarea de pe ecran";
+"style.eyedropper.hint" = "Apasă din nou pentru a anula";
+"style.systemPalette" = "Paleta de sistem";
+"style.thickness" = "Grosime";
+"style.fontSize" = "Mărime";
+"style.backdropColor" = "Culoarea fundalului";
+"style.brushSize" = "Mărimea pensulei";
+"style.intensity" = "Intensitate";
+"style.eraserSize" = "Mărimea radierei";
+
+"overlay.hint.area" = "Trage pentru a selecta o zonă · Esc pentru anulare";
+"overlay.hint.window" = "Indică o fereastră și dă clic · Esc pentru anulare";
+
+"toast.copied" = "Copiat în clipboard";
+"toast.saved" = "Salvat";
+"toast.color.copied" = "Culoarea %@ a fost copiată";
+"toast.noLastArea" = "Nicio zonă salvată";
+"toast.noLastArea.detail" = "Selectează una o dată și va fi reținută";
+
+"menu.language" = "Limbă";
+"menu.language.system" = "Ca în sistem";
+"menu.launchAtLogin" = "Pornește la autentificare";
+"menu.settings" = "Setări…";
+"menu.about" = "Despre %@";
+"menu.checkForUpdates" = "Caută actualizări…";
+"menu.quit" = "Închide %@";
+"menu.edit" = "Editare";
+
+"prefs.title" = "Setări %@";
+"prefs.tab.shortcuts" = "Scurtături";
+"prefs.tab.capture" = "Capturi";
+"prefs.tab.tools" = "Instrumente";
+"prefs.launchAtLogin" = "Pornește la autentificare";
+"prefs.shortcut.help" = "Dă clic pe câmp și apasă o combinație. Delete o șterge, Esc anulează înregistrarea.";
+"prefs.shortcut.reset" = "Restabilește scurtăturile implicite";
+"prefs.shortcut.conflict" = "Combinațiile marcate sunt deja folosite de altă aplicație și nu vor funcționa. Alege altele sau închide acea aplicație.";
+"prefs.shortcut.conflict.help" = "Folosită de altă aplicație și nu funcționează";
+"prefs.saveFolder" = "Dosar de salvare";
+"prefs.choose" = "Alege…";
+"prefs.filenameTemplate" = "Șablon de nume";
+"prefs.filenameTokens" = "Disponibile: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Întreabă de fiecare dată unde să salveze";
+"prefs.copyOnSave" = "Copiază în clipboard la salvare";
+"prefs.downscaleRetina" = "Salvează la mărime logică (fără Retina ×2)";
+"prefs.shutterSound" = "Sunet de declanșator";
+"prefs.showMagnifier" = "Arată lupa cu selector de culoare";
+"prefs.showSizeBadge" = "Arată mărimea selecției";
+"prefs.dimming" = "Întunecarea fundalului";
+"prefs.tools.explainer" = "Opțiunile de desenare sunt chiar în overlay, lângă desen: culoarea, grosimea, ascunderea și stilul textului se află în panoul din spatele bulinei de culoare.";
+"prefs.tools.reset" = "Resetează instrumentele";
+"prefs.overlayShortcuts" = "Scurtături în overlay";
+"prefs.shortcuts.actions" = "⌘C copiază · ⌘S salvează · ⇧⌘S salvează ca · ⌘P tipărește · ⌘Z / ⇧⌘Z anulează și refă · ⌘A tot ecranul · ↩ copiază și închide · Esc anulează";
+"prefs.shortcuts.modifiers" = "În timpul desenării: ⇧ pătrat sau 45° · ⌥ desenează din centru · ⌃ varianta alternativă (formă plină, alt tip de ascundere). Modificatorii se combină.";
+
+"permission.title" = "Este necesară permisiunea de înregistrare a ecranului";
+"permission.body" = "Deschide Setări de sistem → Confidențialitate și securitate → Înregistrarea ecranului și activează %@.\n\nApoi aplicația trebuie repornită.";
+"permission.open" = "Deschide setările";
+"permission.toast" = "Fără acces la înregistrarea ecranului";
+"permission.toast.detail" = "Activează aplicația la Înregistrarea ecranului și repornește-o";
+
+"common.later" = "Mai târziu";
+
+"error.permissionDenied" = "Lipsește permisiunea de înregistrare a ecranului.";
+"error.noDisplays" = "Niciun ecran găsit.";
+"error.captureFailed" = "Captura a eșuat: %@";
+"error.captureTitle" = "Captura a eșuat";
+"error.createFolder" = "Nu s-a putut crea dosarul de salvare";
+"error.encodePNG" = "Nu s-a putut codifica PNG-ul";
+"error.saveFile" = "Nu s-a putut salva fișierul";
+
+"filename.fallback" = "Captură";
+
+"about.version" = "Versiunea %@ (build %@)";
+"about.tagline" = "Capturi de ecran cu adnotare instantanee pentru macOS.";
+"about.privacy" = "Totul se întâmplă pe Mac-ul tău. Fără conturi, fără încărcări, fără niciun acces la rețea.";
+"about.link.source" = "Cod sursă";
+"about.link.releases" = "Versiuni";
+"about.link.license" = "Licență";
+"about.link.issues" = "Raportează o problemă";
+"about.copyright" = "Licență MIT · © 2026 contribuitorii ScreenCap";

@@ -1,0 +1,128 @@
+/* ja — ScreenCap */
+
+"tool.move" = "移動";
+"tool.pen" = "ペン";
+"tool.marker" = "蛍光ペン";
+"tool.line" = "直線";
+"tool.arrow" = "矢印";
+"tool.rectangle" = "長方形";
+"tool.ellipse" = "楕円";
+"tool.obfuscate" = "目隠し";
+"tool.counter" = "番号付け";
+"tool.text" = "テキスト";
+"tool.eraser" = "消しゴム";
+
+"hotkey.captureArea" = "範囲を取り込む";
+"hotkey.repeatLastArea" = "直前の範囲をもう一度";
+"hotkey.captureWindow" = "ポインタの下のウインドウを取り込む";
+"hotkey.captureFullScreen" = "画面全体を取り込む";
+"hotkey.recording" = "キーの組み合わせを押してください…";
+"hotkey.unset" = "未設定";
+
+"obfuscation.style.pixelate" = "モザイク";
+"obfuscation.style.blur" = "ぼかし";
+"obfuscation.shape.rectangle" = "長方形";
+"obfuscation.shape.ellipse" = "楕円";
+"obfuscation.shape.brush" = "ブラシ";
+
+"text.backdrop.none" = "背景なし";
+"text.backdrop.solid" = "不透明な背景";
+"text.backdrop.translucent" = "半透明の背景";
+"text.backdrop.shadow" = "影";
+
+"action.copy" = "コピー";
+"action.save" = "保存";
+"action.print" = "プリント";
+"action.cancel" = "キャンセル";
+"action.undo" = "取り消す";
+"action.redo" = "やり直す";
+"action.style" = "カラーとオプション";
+"action.cut" = "カット";
+"action.paste" = "ペースト";
+"action.selectAll" = "すべてを選択";
+
+"hint.control.alternate" = "⌃ を押している間は代替動作";
+"hint.shift.saveAs" = "⇧-クリックでフォルダを選択";
+
+"style.recent" = "最近使った色";
+"style.hex" = "HEX カラー";
+"style.eyedropper" = "画面から色を取る";
+"style.eyedropper.hint" = "もう一度クリックで解除";
+"style.systemPalette" = "システムのカラーパレット";
+"style.thickness" = "太さ";
+"style.fontSize" = "サイズ";
+"style.backdropColor" = "背景のカラー";
+"style.brushSize" = "ブラシのサイズ";
+"style.intensity" = "強さ";
+"style.eraserSize" = "消しゴムのサイズ";
+
+"overlay.hint.area" = "ドラッグして範囲を選択 · Esc でキャンセル";
+"overlay.hint.window" = "ウインドウを指してクリック · Esc でキャンセル";
+
+"toast.copied" = "クリップボードにコピーしました";
+"toast.saved" = "保存しました";
+"toast.color.copied" = "カラー %@ をコピーしました";
+"toast.noLastArea" = "保存された範囲がありません";
+"toast.noLastArea.detail" = "一度選択すると記憶されます";
+
+"menu.language" = "言語";
+"menu.language.system" = "システムに合わせる";
+"menu.launchAtLogin" = "ログイン時に起動";
+"menu.settings" = "設定…";
+"menu.about" = "%@ について";
+"menu.checkForUpdates" = "アップデートを確認…";
+"menu.quit" = "%@ を終了";
+"menu.edit" = "編集";
+
+"prefs.title" = "%@ の設定";
+"prefs.tab.shortcuts" = "ショートカット";
+"prefs.tab.capture" = "スクリーンショット";
+"prefs.tab.tools" = "ツール";
+"prefs.launchAtLogin" = "ログイン時に起動";
+"prefs.shortcut.help" = "フィールドをクリックしてキーの組み合わせを押します。Delete で消去、Esc で記録を中止します。";
+"prefs.shortcut.reset" = "デフォルトのショートカットに戻す";
+"prefs.shortcut.conflict" = "印の付いたショートカットは他のアプリが使用中で動作しません。別の組み合わせにするか、そのアプリを終了してください。";
+"prefs.shortcut.conflict.help" = "他のアプリが使用中で動作しません";
+"prefs.saveFolder" = "保存先フォルダ";
+"prefs.choose" = "選択…";
+"prefs.filenameTemplate" = "ファイル名のテンプレート";
+"prefs.filenameTokens" = "使用可能: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "毎回保存先を確認する";
+"prefs.copyOnSave" = "保存時にクリップボードへコピー";
+"prefs.downscaleRetina" = "論理サイズで保存（Retina ×2 なし）";
+"prefs.shutterSound" = "シャッター音";
+"prefs.showMagnifier" = "カラーピッカー付きのルーペを表示";
+"prefs.showSizeBadge" = "選択範囲のサイズを表示";
+"prefs.dimming" = "背景を暗くする";
+"prefs.tools.explainer" = "描画のオプションは絵のすぐ隣、オーバーレイの中にあります。カラー、太さ、目隠し、テキストのスタイルはすべてカラー丸の裏のパネルです。";
+"prefs.tools.reset" = "ツールを初期状態に戻す";
+"prefs.overlayShortcuts" = "オーバーレイのショートカット";
+"prefs.shortcuts.actions" = "⌘C コピー · ⌘S 保存 · ⇧⌘S 別名で保存 · ⌘P プリント · ⌘Z / ⇧⌘Z 取り消しとやり直し · ⌘A 画面全体 · ↩ コピーして閉じる · Esc キャンセル";
+"prefs.shortcuts.modifiers" = "描画中: ⇧ 正方形または 45° · ⌥ 中心から描く · ⌃ ツールの代替動作（塗りつぶし、別の目隠し）。修飾キーは組み合わせられます。";
+
+"permission.title" = "画面収録の許可が必要です";
+"permission.body" = "システム設定 → プライバシーとセキュリティ → 画面収録 を開き、%@ をオンにしてください。\n\nその後アプリを再起動する必要があります。";
+"permission.open" = "設定を開く";
+"permission.toast" = "画面収録にアクセスできません";
+"permission.toast.detail" = "「画面収録」でアプリをオンにして再起動してください";
+
+"common.later" = "あとで";
+
+"error.permissionDenied" = "画面収録の許可がありません。";
+"error.noDisplays" = "ディスプレイが見つかりません。";
+"error.captureFailed" = "取り込みに失敗しました: %@";
+"error.captureTitle" = "取り込みに失敗しました";
+"error.createFolder" = "保存先フォルダを作成できませんでした";
+"error.encodePNG" = "PNG にエンコードできませんでした";
+"error.saveFile" = "ファイルを保存できませんでした";
+
+"filename.fallback" = "スクリーンショット";
+
+"about.version" = "バージョン %@（ビルド %@）";
+"about.tagline" = "macOS 用、すぐに書き込めるスクリーンショット。";
+"about.privacy" = "すべてお使いの Mac の中で完結します。アカウントもアップロードもなく、ネットワークには一切つなぎません。";
+"about.link.source" = "ソースコード";
+"about.link.releases" = "リリース";
+"about.link.license" = "ライセンス";
+"about.link.issues" = "問題を報告";
+"about.copyright" = "MIT ライセンス · © 2026 ScreenCap コントリビューター";

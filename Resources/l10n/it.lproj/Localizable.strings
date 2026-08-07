@@ -1,0 +1,128 @@
+/* it — ScreenCap */
+
+"tool.move" = "Sposta";
+"tool.pen" = "Matita";
+"tool.marker" = "Evidenziatore";
+"tool.line" = "Linea";
+"tool.arrow" = "Freccia";
+"tool.rectangle" = "Rettangolo";
+"tool.ellipse" = "Ovale";
+"tool.obfuscate" = "Oscura";
+"tool.counter" = "Numerazione";
+"tool.text" = "Testo";
+"tool.eraser" = "Gomma";
+
+"hotkey.captureArea" = "Cattura un’area";
+"hotkey.repeatLastArea" = "Ripeti l’ultima area";
+"hotkey.captureWindow" = "Cattura la finestra sotto il puntatore";
+"hotkey.captureFullScreen" = "Cattura tutto lo schermo";
+"hotkey.recording" = "Premi una combinazione…";
+"hotkey.unset" = "Non impostata";
+
+"obfuscation.style.pixelate" = "Pixel";
+"obfuscation.style.blur" = "Sfocatura";
+"obfuscation.shape.rectangle" = "Rettangolo";
+"obfuscation.shape.ellipse" = "Ovale";
+"obfuscation.shape.brush" = "Pennello";
+
+"text.backdrop.none" = "Senza sfondo";
+"text.backdrop.solid" = "Sfondo pieno";
+"text.backdrop.translucent" = "Sfondo traslucido";
+"text.backdrop.shadow" = "Ombra";
+
+"action.copy" = "Copia";
+"action.save" = "Salva";
+"action.print" = "Stampa";
+"action.cancel" = "Annulla";
+"action.undo" = "Annulla";
+"action.redo" = "Ripristina";
+"action.style" = "Colore e opzioni";
+"action.cut" = "Taglia";
+"action.paste" = "Incolla";
+"action.selectAll" = "Seleziona tutto";
+
+"hint.control.alternate" = "Tieni ⌃ per la variante";
+"hint.shift.saveAs" = "⇧-clic per scegliere una cartella";
+
+"style.recent" = "Recenti";
+"style.hex" = "Colore HEX";
+"style.eyedropper" = "Preleva un colore dallo schermo";
+"style.eyedropper.hint" = "Clicca di nuovo per annullare";
+"style.systemPalette" = "Palette di sistema";
+"style.thickness" = "Spessore";
+"style.fontSize" = "Corpo";
+"style.backdropColor" = "Colore dello sfondo";
+"style.brushSize" = "Dimensione pennello";
+"style.intensity" = "Intensità";
+"style.eraserSize" = "Dimensione gomma";
+
+"overlay.hint.area" = "Trascina per selezionare un’area · Esc per annullare";
+"overlay.hint.window" = "Punta una finestra e clicca · Esc per annullare";
+
+"toast.copied" = "Copiato negli appunti";
+"toast.saved" = "Salvato";
+"toast.color.copied" = "Colore %@ copiato";
+"toast.noLastArea" = "Nessuna area salvata";
+"toast.noLastArea.detail" = "Selezionane una una volta e verrà ricordata";
+
+"menu.language" = "Lingua";
+"menu.language.system" = "Come il sistema";
+"menu.launchAtLogin" = "Apri al login";
+"menu.settings" = "Impostazioni…";
+"menu.about" = "Informazioni su %@";
+"menu.checkForUpdates" = "Cerca aggiornamenti…";
+"menu.quit" = "Esci da %@";
+"menu.edit" = "Modifica";
+
+"prefs.title" = "Impostazioni di %@";
+"prefs.tab.shortcuts" = "Scorciatoie";
+"prefs.tab.capture" = "Catture";
+"prefs.tab.tools" = "Strumenti";
+"prefs.launchAtLogin" = "Apri all’accesso";
+"prefs.shortcut.help" = "Clicca un campo e premi una combinazione. Canc la cancella, Esc annulla la registrazione.";
+"prefs.shortcut.reset" = "Ripristina le scorciatoie di default";
+"prefs.shortcut.conflict" = "Le scorciatoie segnalate sono già occupate da un’altra app e non funzioneranno. Scegline altre o chiudi quell’app.";
+"prefs.shortcut.conflict.help" = "Occupata da un’altra app e non funzionante";
+"prefs.saveFolder" = "Cartella di salvataggio";
+"prefs.choose" = "Scegli…";
+"prefs.filenameTemplate" = "Modello del nome";
+"prefs.filenameTokens" = "Disponibili: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Chiedi ogni volta dove salvare";
+"prefs.copyOnSave" = "Copia negli appunti al salvataggio";
+"prefs.downscaleRetina" = "Salva a dimensione logica (senza Retina ×2)";
+"prefs.shutterSound" = "Suono dell’otturatore";
+"prefs.showMagnifier" = "Mostra la lente con contagocce";
+"prefs.showSizeBadge" = "Mostra la dimensione della selezione";
+"prefs.dimming" = "Oscuramento dello sfondo";
+"prefs.tools.explainer" = "Le opzioni di disegno stanno nell’overlay, accanto al disegno: colore, spessore, oscuramento e stile del testo sono nel pannello dietro il cerchio del colore.";
+"prefs.tools.reset" = "Ripristina gli strumenti";
+"prefs.overlayShortcuts" = "Scorciatoie nell’overlay";
+"prefs.shortcuts.actions" = "⌘C copia · ⌘S salva · ⇧⌘S salva col nome · ⌘P stampa · ⌘Z / ⇧⌘Z annulla e ripristina · ⌘A tutto lo schermo · ↩ copia e chiudi · Esc annulla";
+"prefs.shortcuts.modifiers" = "Mentre disegni: ⇧ quadrato o 45° · ⌥ disegna dal centro · ⌃ variante dello strumento (forma piena, altro oscuramento). I modificatori si combinano.";
+
+"permission.title" = "Serve il permesso di registrazione dello schermo";
+"permission.body" = "Apri Impostazioni di Sistema → Privacy e sicurezza → Registrazione schermo e attiva %@.\n\nPoi l’app va riavviata.";
+"permission.open" = "Apri le impostazioni";
+"permission.toast" = "Nessun accesso alla registrazione dello schermo";
+"permission.toast.detail" = "Attiva l’app in «Registrazione schermo» e riavviala";
+
+"common.later" = "Più tardi";
+
+"error.permissionDenied" = "Manca il permesso di registrazione dello schermo.";
+"error.noDisplays" = "Nessuno schermo trovato.";
+"error.captureFailed" = "Cattura non riuscita: %@";
+"error.captureTitle" = "Cattura non riuscita";
+"error.createFolder" = "Impossibile creare la cartella di salvataggio";
+"error.encodePNG" = "Impossibile codificare il PNG";
+"error.saveFile" = "Impossibile salvare il file";
+
+"filename.fallback" = "Schermata";
+
+"about.version" = "Versione %@ (build %@)";
+"about.tagline" = "Schermate con annotazioni istantanee per macOS.";
+"about.privacy" = "Tutto avviene sul tuo Mac. Nessun account, nessun caricamento, nessun accesso alla rete.";
+"about.link.source" = "Codice sorgente";
+"about.link.releases" = "Versioni";
+"about.link.license" = "Licenza";
+"about.link.issues" = "Segnala un problema";
+"about.copyright" = "Licenza MIT · © 2026 contributori di ScreenCap";

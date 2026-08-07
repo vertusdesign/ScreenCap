@@ -1,0 +1,144 @@
+import AppKit
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: StatusItemController?
+
+    /// Set from `--capture <mode>` so the app can be driven from a script.
+    var launchAction: HotkeyAction?
+    /// Set from `--window <name>`; see `main.swift`.
+    var launchWindow: String?
+
+    /// AppKit only wires `application(_:open:)` to the GetURL Apple Event under
+    /// conditions an accessory app with no nib does not reliably meet, so the
+    /// handler is installed by hand — and before launch finishes, or a URL that
+    /// arrives during startup is dropped.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLEvent(_:withReply:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
+    @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReply reply: NSAppleEventDescriptor) {
+        guard let string = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: string)
+        else { return }
+        handle(url)
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+        L10n.reload()
+        installMainMenu()
+
+        statusItem = StatusItemController()
+
+        HotkeyManager.shared.handler = { action in
+            CaptureController.shared.perform(action)
+        }
+        HotkeyManager.shared.apply(Settings.shared.hotkeys)
+
+        NotificationCenter.default.addObserver(
+            forName: .languageChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.installMainMenu()
+        }
+
+        // Deliberately no permission prompt at launch. `CGRequestScreenCaptureAccess`
+        // blocks the main thread until the system dialog is answered, and that
+        // dialog can end up behind other windows or on another display — leaving
+        // the app wedged, unable to open its own windows or answer Apple Events.
+        // The first capture attempt asks instead, when the user is right there.
+
+        if let launchAction {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                CaptureController.shared.perform(launchAction)
+            }
+        }
+        if let launchWindow {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.handle(URL(string: "screencap://\(launchWindow)")!)
+            }
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        HotkeyManager.shared.unregisterAll()
+    }
+
+    /// `screencap://area|repeat|window|fullscreen|preferences`.
+    ///
+    /// Gives Shortcuts, Raycast, Automator and plain `open` a way in when a
+    /// global shortcut is already taken by another app.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        urls.forEach(handle)
+    }
+
+    private func handle(_ url: URL) {
+        guard url.scheme == "screencap" else { return }
+        let command = (url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))).lowercased()
+        Log.debug("url command: \(command)")
+
+        switch command {
+        case "area", "": CaptureController.shared.perform(.captureArea)
+        case "repeat", "last": CaptureController.shared.perform(.repeatLastArea)
+        case "window": CaptureController.shared.perform(.captureWindow)
+        case "fullscreen", "screen": CaptureController.shared.perform(.captureFullScreen)
+        case "preferences", "settings": PreferencesWindowController.shared.show()
+        case "about": AboutWindowController.shared.show()
+        default: NSLog("ScreenCap: unknown URL command — \(command)")
+        }
+    }
+
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
+
+    /// An accessory app has no menu bar of its own, but the standard Edit menu is
+    /// still needed for copy/paste inside the text tool and Preferences.
+    private func installMainMenu() {
+        let mainMenu = NSMenu()
+
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(
+            withTitle: L10n.t("menu.about", AppInfo.name),
+            action: #selector(showAbout),
+            keyEquivalent: ""
+        ).target = self
+        appMenu.addItem(.separator())
+        appMenu.addItem(
+            withTitle: L10n.t("menu.settings"),
+            action: #selector(StatusItemController.openPreferences),
+            keyEquivalent: ","
+        )
+        appMenu.addItem(.separator())
+        appMenu.addItem(
+            withTitle: L10n.t("menu.quit", AppInfo.name),
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: L10n.t("menu.edit"))
+        editMenu.addItem(withTitle: L10n.t("action.undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: L10n.t("action.redo"), action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: L10n.t("action.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: L10n.t("action.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: L10n.t("action.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: L10n.t("action.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func showAbout() {
+        AboutWindowController.shared.show()
+    }
+}

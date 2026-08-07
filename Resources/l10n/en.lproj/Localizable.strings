@@ -1,0 +1,128 @@
+/* en — ScreenCap */
+
+"tool.move" = "Move";
+"tool.pen" = "Pen";
+"tool.marker" = "Highlighter";
+"tool.line" = "Line";
+"tool.arrow" = "Arrow";
+"tool.rectangle" = "Rectangle";
+"tool.ellipse" = "Ellipse";
+"tool.obfuscate" = "Redact";
+"tool.counter" = "Numbering";
+"tool.text" = "Text";
+"tool.eraser" = "Eraser";
+
+"hotkey.captureArea" = "Capture area";
+"hotkey.repeatLastArea" = "Repeat last area";
+"hotkey.captureWindow" = "Capture window under cursor";
+"hotkey.captureFullScreen" = "Capture full screen";
+"hotkey.recording" = "Press a shortcut…";
+"hotkey.unset" = "Not set";
+
+"obfuscation.style.pixelate" = "Pixelate";
+"obfuscation.style.blur" = "Blur";
+"obfuscation.shape.rectangle" = "Rectangle";
+"obfuscation.shape.ellipse" = "Ellipse";
+"obfuscation.shape.brush" = "Brush";
+
+"text.backdrop.none" = "No backdrop";
+"text.backdrop.solid" = "Solid background";
+"text.backdrop.translucent" = "Translucent background";
+"text.backdrop.shadow" = "Shadow";
+
+"action.copy" = "Copy";
+"action.save" = "Save";
+"action.print" = "Print";
+"action.cancel" = "Cancel";
+"action.undo" = "Undo";
+"action.redo" = "Redo";
+"action.style" = "Colour and options";
+"action.cut" = "Cut";
+"action.paste" = "Paste";
+"action.selectAll" = "Select All";
+
+"hint.control.alternate" = "Hold ⌃ for the alternate";
+"hint.shift.saveAs" = "⇧-click to choose a folder";
+
+"style.recent" = "Recent";
+"style.hex" = "Hex colour";
+"style.eyedropper" = "Pick colour from screen";
+"style.eyedropper.hint" = "Click again to cancel";
+"style.systemPalette" = "System colour palette";
+"style.thickness" = "Thickness";
+"style.fontSize" = "Font size";
+"style.backdropColor" = "Backdrop colour";
+"style.brushSize" = "Brush size";
+"style.intensity" = "Intensity";
+"style.eraserSize" = "Eraser size";
+
+"overlay.hint.area" = "Drag to select an area · Esc to cancel";
+"overlay.hint.window" = "Point at a window and click · Esc to cancel";
+
+"toast.copied" = "Copied to clipboard";
+"toast.saved" = "Saved";
+"toast.color.copied" = "Colour %@ copied";
+"toast.noLastArea" = "No saved area yet";
+"toast.noLastArea.detail" = "Select one once and it will be remembered";
+
+"menu.language" = "Language";
+"menu.language.system" = "System default";
+"menu.launchAtLogin" = "Launch at Login";
+"menu.settings" = "Settings…";
+"menu.about" = "About %@";
+"menu.checkForUpdates" = "Check for Updates…";
+"menu.quit" = "Quit %@";
+"menu.edit" = "Edit";
+
+"prefs.title" = "%@ Settings";
+"prefs.tab.shortcuts" = "Shortcuts";
+"prefs.tab.capture" = "Capture";
+"prefs.tab.tools" = "Tools";
+"prefs.launchAtLogin" = "Launch at login";
+"prefs.shortcut.help" = "Click a field and press a shortcut. Delete clears it, Esc cancels recording.";
+"prefs.shortcut.reset" = "Restore default shortcuts";
+"prefs.shortcut.conflict" = "The marked shortcuts are already taken by another app and will not fire. Pick different ones, or quit the other app.";
+"prefs.shortcut.conflict.help" = "Taken by another app and not working";
+"prefs.saveFolder" = "Save folder";
+"prefs.choose" = "Choose…";
+"prefs.filenameTemplate" = "Filename template";
+"prefs.filenameTokens" = "Available: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Ask where to save every time";
+"prefs.copyOnSave" = "Copy to clipboard when saving";
+"prefs.downscaleRetina" = "Save at logical size (no Retina ×2)";
+"prefs.shutterSound" = "Shutter sound";
+"prefs.showMagnifier" = "Show loupe with colour picker";
+"prefs.showSizeBadge" = "Show selection size";
+"prefs.dimming" = "Background dimming";
+"prefs.tools.explainer" = "Drawing options live in the overlay, right next to the drawing: colour, thickness, redaction and text style are all in the panel behind the colour swatch.";
+"prefs.tools.reset" = "Reset tools to defaults";
+"prefs.overlayShortcuts" = "Overlay shortcuts";
+"prefs.shortcuts.actions" = "⌘C copy · ⌘S save · ⇧⌘S save as · ⌘P print · ⌘Z / ⇧⌘Z undo and redo · ⌘A whole screen · ↩ copy and close · Esc cancel";
+"prefs.shortcuts.modifiers" = "While drawing: ⇧ square or 45° · ⌥ draw from the centre · ⌃ alternate tool (filled shape, other redaction). Modifiers combine.";
+
+"permission.title" = "Screen Recording permission needed";
+"permission.body" = "Open System Settings → Privacy & Security → Screen Recording and enable %@.\n\nThe app has to be restarted afterwards.";
+"permission.open" = "Open Settings";
+"permission.toast" = "No Screen Recording access";
+"permission.toast.detail" = "Enable the app under Screen Recording and restart it";
+
+"common.later" = "Later";
+
+"error.permissionDenied" = "No Screen Recording permission.";
+"error.noDisplays" = "No displays found.";
+"error.captureFailed" = "Capture failed: %@";
+"error.captureTitle" = "Capture failed";
+"error.createFolder" = "Could not create the save folder";
+"error.encodePNG" = "Could not encode the PNG";
+"error.saveFile" = "Could not save the file";
+
+"filename.fallback" = "Screenshot";
+
+"about.version" = "Version %@ (build %@)";
+"about.tagline" = "Screenshots with instant annotation for macOS.";
+"about.privacy" = "Everything happens on your Mac. No accounts, no uploads, no network access at all.";
+"about.link.source" = "Source code";
+"about.link.releases" = "Releases";
+"about.link.license" = "License";
+"about.link.issues" = "Report an issue";
+"about.copyright" = "MIT License · © 2026 ScreenCap contributors";

@@ -1,0 +1,128 @@
+/* hi — ScreenCap */
+
+"tool.move" = "खिसकाएँ";
+"tool.pen" = "पेंसिल";
+"tool.marker" = "हाइलाइटर";
+"tool.line" = "रेखा";
+"tool.arrow" = "तीर";
+"tool.rectangle" = "आयत";
+"tool.ellipse" = "अंडाकार";
+"tool.obfuscate" = "छिपाएँ";
+"tool.counter" = "क्रमांक";
+"tool.text" = "टेक्स्ट";
+"tool.eraser" = "रबर";
+
+"hotkey.captureArea" = "क्षेत्र कैप्चर करें";
+"hotkey.repeatLastArea" = "पिछला क्षेत्र दोहराएँ";
+"hotkey.captureWindow" = "कर्सर के नीचे की विंडो कैप्चर करें";
+"hotkey.captureFullScreen" = "पूरी स्क्रीन कैप्चर करें";
+"hotkey.recording" = "कोई शॉर्टकट दबाएँ…";
+"hotkey.unset" = "सेट नहीं है";
+
+"obfuscation.style.pixelate" = "पिक्सेलेट";
+"obfuscation.style.blur" = "धुंधला";
+"obfuscation.shape.rectangle" = "आयत";
+"obfuscation.shape.ellipse" = "अंडाकार";
+"obfuscation.shape.brush" = "ब्रश";
+
+"text.backdrop.none" = "कोई पृष्ठभूमि नहीं";
+"text.backdrop.solid" = "ठोस पृष्ठभूमि";
+"text.backdrop.translucent" = "पारभासी पृष्ठभूमि";
+"text.backdrop.shadow" = "छाया";
+
+"action.copy" = "कॉपी";
+"action.save" = "सहेजें";
+"action.print" = "प्रिंट";
+"action.cancel" = "रद्द करें";
+"action.undo" = "पूर्ववत करें";
+"action.redo" = "फिर से करें";
+"action.style" = "रंग और विकल्प";
+"action.cut" = "काटें";
+"action.paste" = "चिपकाएँ";
+"action.selectAll" = "सब चुनें";
+
+"hint.control.alternate" = "वैकल्पिक व्यवहार के लिए ⌃ दबाए रखें";
+"hint.shift.saveAs" = "फ़ोल्डर चुनने के लिए ⇧-क्लिक करें";
+
+"style.recent" = "हाल के";
+"style.hex" = "HEX रंग";
+"style.eyedropper" = "स्क्रीन से रंग लें";
+"style.eyedropper.hint" = "रद्द करने के लिए फिर क्लिक करें";
+"style.systemPalette" = "सिस्टम रंग पैलेट";
+"style.thickness" = "मोटाई";
+"style.fontSize" = "आकार";
+"style.backdropColor" = "पृष्ठभूमि का रंग";
+"style.brushSize" = "ब्रश का आकार";
+"style.intensity" = "तीव्रता";
+"style.eraserSize" = "रबर का आकार";
+
+"overlay.hint.area" = "क्षेत्र चुनने के लिए खींचें · Esc रद्द करता है";
+"overlay.hint.window" = "किसी विंडो पर ले जाएँ और क्लिक करें · Esc रद्द करता है";
+
+"toast.copied" = "क्लिपबोर्ड पर कॉपी हो गया";
+"toast.saved" = "सहेजा गया";
+"toast.color.copied" = "रंग %@ कॉपी हो गया";
+"toast.noLastArea" = "कोई सहेजा गया क्षेत्र नहीं";
+"toast.noLastArea.detail" = "एक बार चुनें, फिर याद रहेगा";
+
+"menu.language" = "भाषा";
+"menu.language.system" = "सिस्टम के अनुसार";
+"menu.launchAtLogin" = "लॉगिन पर चालू करें";
+"menu.settings" = "सेटिंग्स…";
+"menu.about" = "%@ के बारे में";
+"menu.checkForUpdates" = "अपडेट देखें…";
+"menu.quit" = "%@ बंद करें";
+"menu.edit" = "संपादन";
+
+"prefs.title" = "%@ सेटिंग्स";
+"prefs.tab.shortcuts" = "शॉर्टकट";
+"prefs.tab.capture" = "स्क्रीनशॉट";
+"prefs.tab.tools" = "उपकरण";
+"prefs.launchAtLogin" = "लॉगिन पर चालू करें";
+"prefs.shortcut.help" = "फ़ील्ड पर क्लिक करें और शॉर्टकट दबाएँ। Delete उसे मिटाता है, Esc रिकॉर्डिंग रद्द करता है।";
+"prefs.shortcut.reset" = "डिफ़ॉल्ट शॉर्टकट लौटाएँ";
+"prefs.shortcut.conflict" = "चिह्नित शॉर्टकट पहले से किसी और ऐप के पास हैं और काम नहीं करेंगे। दूसरे चुनें या वह ऐप बंद करें।";
+"prefs.shortcut.conflict.help" = "किसी और ऐप के पास है, काम नहीं कर रहा";
+"prefs.saveFolder" = "सहेजने का फ़ोल्डर";
+"prefs.choose" = "चुनें…";
+"prefs.filenameTemplate" = "फ़ाइल नाम टेम्पलेट";
+"prefs.filenameTokens" = "उपलब्ध: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "हर बार पूछें कि कहाँ सहेजना है";
+"prefs.copyOnSave" = "सहेजते समय क्लिपबोर्ड पर भी कॉपी करें";
+"prefs.downscaleRetina" = "लॉजिकल आकार में सहेजें (Retina ×2 के बिना)";
+"prefs.shutterSound" = "शटर की आवाज़";
+"prefs.showMagnifier" = "रंग चुनने वाले आवर्धक को दिखाएँ";
+"prefs.showSizeBadge" = "चयन का आकार दिखाएँ";
+"prefs.dimming" = "पृष्ठभूमि धुँधली करना";
+"prefs.tools.explainer" = "ड्रॉइंग के विकल्प ओवरले में ही, चित्र के पास हैं: रंग, मोटाई, छिपाना और टेक्स्ट शैली सब रंग वाले गोले के पीछे के पैनल में हैं।";
+"prefs.tools.reset" = "उपकरण डिफ़ॉल्ट पर लाएँ";
+"prefs.overlayShortcuts" = "ओवरले के शॉर्टकट";
+"prefs.shortcuts.actions" = "⌘C कॉपी · ⌘S सहेजें · ⇧⌘S इस रूप में सहेजें · ⌘P प्रिंट · ⌘Z / ⇧⌘Z पूर्ववत और फिर से · ⌘A पूरी स्क्रीन · ↩ कॉपी करके बंद करें · Esc रद्द";
+"prefs.shortcuts.modifiers" = "चित्र बनाते समय: ⇧ वर्ग या 45° · ⌥ केंद्र से बनाएँ · ⌃ उपकरण का विकल्प (भरी हुई आकृति, दूसरा छिपाव)। कुंजियाँ साथ में चल सकती हैं।";
+
+"permission.title" = "स्क्रीन रिकॉर्डिंग की अनुमति चाहिए";
+"permission.body" = "सिस्टम सेटिंग्स → गोपनीयता और सुरक्षा → स्क्रीन रिकॉर्डिंग खोलें और %@ चालू करें।\n\nउसके बाद ऐप को फिर से शुरू करना होगा।";
+"permission.open" = "सेटिंग्स खोलें";
+"permission.toast" = "स्क्रीन रिकॉर्डिंग की पहुँच नहीं है";
+"permission.toast.detail" = "«स्क्रीन रिकॉर्डिंग» में ऐप चालू करें और उसे फिर से शुरू करें";
+
+"common.later" = "बाद में";
+
+"error.permissionDenied" = "स्क्रीन रिकॉर्डिंग की अनुमति नहीं है।";
+"error.noDisplays" = "कोई डिस्प्ले नहीं मिला।";
+"error.captureFailed" = "कैप्चर विफल: %@";
+"error.captureTitle" = "कैप्चर विफल";
+"error.createFolder" = "सहेजने का फ़ोल्डर नहीं बना";
+"error.encodePNG" = "PNG एन्कोड नहीं हो सका";
+"error.saveFile" = "फ़ाइल सहेजी नहीं जा सकी";
+
+"filename.fallback" = "स्क्रीनशॉट";
+
+"about.version" = "संस्करण %@ (बिल्ड %@)";
+"about.tagline" = "macOS के लिए तुरंत टिप्पणी वाले स्क्रीनशॉट।";
+"about.privacy" = "सब कुछ आपके Mac पर ही होता है। न खाते, न अपलोड, नेटवर्क तक कोई पहुँच नहीं।";
+"about.link.source" = "सोर्स कोड";
+"about.link.releases" = "रिलीज़";
+"about.link.license" = "लाइसेंस";
+"about.link.issues" = "समस्या की रिपोर्ट करें";
+"about.copyright" = "MIT लाइसेंस · © 2026 ScreenCap योगदानकर्ता";

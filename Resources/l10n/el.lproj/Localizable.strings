@@ -1,0 +1,128 @@
+/* el — ScreenCap */
+
+"tool.move" = "Μετακίνηση";
+"tool.pen" = "Μολύβι";
+"tool.marker" = "Μαρκαδόρος";
+"tool.line" = "Γραμμή";
+"tool.arrow" = "Βέλος";
+"tool.rectangle" = "Ορθογώνιο";
+"tool.ellipse" = "Οβάλ";
+"tool.obfuscate" = "Απόκρυψη";
+"tool.counter" = "Αρίθμηση";
+"tool.text" = "Κείμενο";
+"tool.eraser" = "Γόμα";
+
+"hotkey.captureArea" = "Λήψη περιοχής";
+"hotkey.repeatLastArea" = "Επανάληψη τελευταίας περιοχής";
+"hotkey.captureWindow" = "Λήψη παραθύρου κάτω από τον δείκτη";
+"hotkey.captureFullScreen" = "Λήψη όλης της οθόνης";
+"hotkey.recording" = "Πατήστε συνδυασμό…";
+"hotkey.unset" = "Δεν ορίστηκε";
+
+"obfuscation.style.pixelate" = "Ψηφιδοποίηση";
+"obfuscation.style.blur" = "Θόλωμα";
+"obfuscation.shape.rectangle" = "Ορθογώνιο";
+"obfuscation.shape.ellipse" = "Οβάλ";
+"obfuscation.shape.brush" = "Πινέλο";
+
+"text.backdrop.none" = "Χωρίς φόντο";
+"text.backdrop.solid" = "Συμπαγές φόντο";
+"text.backdrop.translucent" = "Ημιδιαφανές φόντο";
+"text.backdrop.shadow" = "Σκιά";
+
+"action.copy" = "Αντιγραφή";
+"action.save" = "Αποθήκευση";
+"action.print" = "Εκτύπωση";
+"action.cancel" = "Ακύρωση";
+"action.undo" = "Αναίρεση";
+"action.redo" = "Επανάληψη";
+"action.style" = "Χρώμα και επιλογές";
+"action.cut" = "Αποκοπή";
+"action.paste" = "Επικόλληση";
+"action.selectAll" = "Επιλογή όλων";
+
+"hint.control.alternate" = "Κρατήστε ⌃ για την εναλλακτική";
+"hint.shift.saveAs" = "⇧-κλικ για επιλογή φακέλου";
+
+"style.recent" = "Πρόσφατα";
+"style.hex" = "Χρώμα HEX";
+"style.eyedropper" = "Λήψη χρώματος από την οθόνη";
+"style.eyedropper.hint" = "Κάντε ξανά κλικ για ακύρωση";
+"style.systemPalette" = "Παλέτα συστήματος";
+"style.thickness" = "Πάχος";
+"style.fontSize" = "Μέγεθος";
+"style.backdropColor" = "Χρώμα φόντου";
+"style.brushSize" = "Μέγεθος πινέλου";
+"style.intensity" = "Ένταση";
+"style.eraserSize" = "Μέγεθος γόμας";
+
+"overlay.hint.area" = "Σύρετε για να επιλέξετε περιοχή · Esc για ακύρωση";
+"overlay.hint.window" = "Δείξτε ένα παράθυρο και κάντε κλικ · Esc για ακύρωση";
+
+"toast.copied" = "Αντιγράφηκε στο πρόχειρο";
+"toast.saved" = "Αποθηκεύτηκε";
+"toast.color.copied" = "Το χρώμα %@ αντιγράφηκε";
+"toast.noLastArea" = "Δεν υπάρχει αποθηκευμένη περιοχή";
+"toast.noLastArea.detail" = "Επιλέξτε μία φορά και θα απομνημονευτεί";
+
+"menu.language" = "Γλώσσα";
+"menu.language.system" = "Όπως το σύστημα";
+"menu.launchAtLogin" = "Άνοιγμα κατά τη σύνδεση";
+"menu.settings" = "Ρυθμίσεις…";
+"menu.about" = "Σχετικά με το %@";
+"menu.checkForUpdates" = "Έλεγχος για ενημερώσεις…";
+"menu.quit" = "Τερματισμός %@";
+"menu.edit" = "Επεξεργασία";
+
+"prefs.title" = "Ρυθμίσεις %@";
+"prefs.tab.shortcuts" = "Συντομεύσεις";
+"prefs.tab.capture" = "Στιγμιότυπα";
+"prefs.tab.tools" = "Εργαλεία";
+"prefs.launchAtLogin" = "Άνοιγμα κατά τη σύνδεση";
+"prefs.shortcut.help" = "Κάντε κλικ σε ένα πεδίο και πατήστε συνδυασμό. Το Delete τον σβήνει, το Esc ακυρώνει την καταγραφή.";
+"prefs.shortcut.reset" = "Επαναφορά προεπιλεγμένων συντομεύσεων";
+"prefs.shortcut.conflict" = "Οι σημειωμένες συντομεύσεις χρησιμοποιούνται ήδη από άλλη εφαρμογή και δεν θα λειτουργήσουν. Επιλέξτε άλλες ή κλείστε εκείνη την εφαρμογή.";
+"prefs.shortcut.conflict.help" = "Χρησιμοποιείται από άλλη εφαρμογή και δεν λειτουργεί";
+"prefs.saveFolder" = "Φάκελος αποθήκευσης";
+"prefs.choose" = "Επιλογή…";
+"prefs.filenameTemplate" = "Πρότυπο ονόματος";
+"prefs.filenameTokens" = "Διαθέσιμα: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Ερώτηση κάθε φορά για τη θέση αποθήκευσης";
+"prefs.copyOnSave" = "Αντιγραφή στο πρόχειρο κατά την αποθήκευση";
+"prefs.downscaleRetina" = "Αποθήκευση σε λογικό μέγεθος (χωρίς Retina ×2)";
+"prefs.shutterSound" = "Ήχος κλείστρου";
+"prefs.showMagnifier" = "Εμφάνιση μεγεθυντικού με σταγονόμετρο";
+"prefs.showSizeBadge" = "Εμφάνιση μεγέθους επιλογής";
+"prefs.dimming" = "Σκοτείνιασμα φόντου";
+"prefs.tools.explainer" = "Οι επιλογές σχεδίασης βρίσκονται μέσα στην επικάλυψη, δίπλα στο σχέδιο: χρώμα, πάχος, απόκρυψη και στυλ κειμένου είναι στον πίνακα πίσω από τον κύκλο χρώματος.";
+"prefs.tools.reset" = "Επαναφορά εργαλείων";
+"prefs.overlayShortcuts" = "Συντομεύσεις στην επικάλυψη";
+"prefs.shortcuts.actions" = "⌘C αντιγραφή · ⌘S αποθήκευση · ⇧⌘S αποθήκευση ως · ⌘P εκτύπωση · ⌘Z / ⇧⌘Z αναίρεση και επανάληψη · ⌘A όλη η οθόνη · ↩ αντιγραφή και κλείσιμο · Esc ακύρωση";
+"prefs.shortcuts.modifiers" = "Κατά τη σχεδίαση: ⇧ τετράγωνο ή 45° · ⌥ σχεδίαση από το κέντρο · ⌃ εναλλακτική του εργαλείου (γεμάτο σχήμα, άλλη απόκρυψη). Τα πλήκτρα συνδυάζονται.";
+
+"permission.title" = "Απαιτείται άδεια εγγραφής οθόνης";
+"permission.body" = "Ανοίξτε Ρυθμίσεις συστήματος → Απόρρητο και ασφάλεια → Εγγραφή οθόνης και ενεργοποιήστε το %@.\n\nΈπειτα η εφαρμογή πρέπει να επανεκκινηθεί.";
+"permission.open" = "Άνοιγμα ρυθμίσεων";
+"permission.toast" = "Δεν υπάρχει πρόσβαση στην εγγραφή οθόνης";
+"permission.toast.detail" = "Ενεργοποιήστε την εφαρμογή στην «Εγγραφή οθόνης» και επανεκκινήστε την";
+
+"common.later" = "Αργότερα";
+
+"error.permissionDenied" = "Δεν υπάρχει άδεια εγγραφής οθόνης.";
+"error.noDisplays" = "Δεν βρέθηκε καμία οθόνη.";
+"error.captureFailed" = "Η λήψη απέτυχε: %@";
+"error.captureTitle" = "Η λήψη απέτυχε";
+"error.createFolder" = "Δεν ήταν δυνατή η δημιουργία του φακέλου";
+"error.encodePNG" = "Δεν ήταν δυνατή η κωδικοποίηση του PNG";
+"error.saveFile" = "Δεν ήταν δυνατή η αποθήκευση του αρχείου";
+
+"filename.fallback" = "Στιγμιότυπο";
+
+"about.version" = "Έκδοση %@ (build %@)";
+"about.tagline" = "Στιγμιότυπα οθόνης με άμεσο σχολιασμό για macOS.";
+"about.privacy" = "Όλα γίνονται στο δικό σας Mac. Χωρίς λογαριασμούς, χωρίς μεταφορτώσεις, χωρίς καμία πρόσβαση στο δίκτυο.";
+"about.link.source" = "Πηγαίος κώδικας";
+"about.link.releases" = "Εκδόσεις";
+"about.link.license" = "Άδεια";
+"about.link.issues" = "Αναφορά προβλήματος";
+"about.copyright" = "Άδεια MIT · © 2026 συνεισφέροντες του ScreenCap";

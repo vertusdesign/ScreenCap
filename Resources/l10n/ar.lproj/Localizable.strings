@@ -1,0 +1,128 @@
+/* ar — ScreenCap */
+
+"tool.move" = "تحريك";
+"tool.pen" = "قلم";
+"tool.marker" = "قلم تظليل";
+"tool.line" = "خط";
+"tool.arrow" = "سهم";
+"tool.rectangle" = "مستطيل";
+"tool.ellipse" = "بيضاوي";
+"tool.obfuscate" = "إخفاء";
+"tool.counter" = "ترقيم";
+"tool.text" = "نص";
+"tool.eraser" = "ممحاة";
+
+"hotkey.captureArea" = "التقاط منطقة";
+"hotkey.repeatLastArea" = "تكرار آخر منطقة";
+"hotkey.captureWindow" = "التقاط النافذة تحت المؤشر";
+"hotkey.captureFullScreen" = "التقاط الشاشة كاملة";
+"hotkey.recording" = "اضغط اختصارًا…";
+"hotkey.unset" = "غير محدد";
+
+"obfuscation.style.pixelate" = "تبكسل";
+"obfuscation.style.blur" = "تمويه";
+"obfuscation.shape.rectangle" = "مستطيل";
+"obfuscation.shape.ellipse" = "بيضاوي";
+"obfuscation.shape.brush" = "فرشاة";
+
+"text.backdrop.none" = "بدون خلفية";
+"text.backdrop.solid" = "خلفية صلبة";
+"text.backdrop.translucent" = "خلفية شبه شفافة";
+"text.backdrop.shadow" = "ظل";
+
+"action.copy" = "نسخ";
+"action.save" = "حفظ";
+"action.print" = "طباعة";
+"action.cancel" = "إلغاء";
+"action.undo" = "تراجع";
+"action.redo" = "إعادة";
+"action.style" = "اللون والخيارات";
+"action.cut" = "قص";
+"action.paste" = "لصق";
+"action.selectAll" = "تحديد الكل";
+
+"hint.control.alternate" = "اضغط ⌃ للحصول على البديل";
+"hint.shift.saveAs" = "⇧-نقرة لاختيار مجلد";
+
+"style.recent" = "الأخيرة";
+"style.hex" = "لون HEX";
+"style.eyedropper" = "التقاط لون من الشاشة";
+"style.eyedropper.hint" = "انقر مرة أخرى للإلغاء";
+"style.systemPalette" = "لوحة ألوان النظام";
+"style.thickness" = "السماكة";
+"style.fontSize" = "الحجم";
+"style.backdropColor" = "لون الخلفية";
+"style.brushSize" = "حجم الفرشاة";
+"style.intensity" = "الشدة";
+"style.eraserSize" = "حجم الممحاة";
+
+"overlay.hint.area" = "اسحب لتحديد منطقة · Esc للإلغاء";
+"overlay.hint.window" = "أشر إلى نافذة وانقر · Esc للإلغاء";
+
+"toast.copied" = "تم النسخ إلى الحافظة";
+"toast.saved" = "تم الحفظ";
+"toast.color.copied" = "تم نسخ اللون %@";
+"toast.noLastArea" = "لا توجد منطقة محفوظة";
+"toast.noLastArea.detail" = "حدّدها مرة واحدة وسيتم تذكرها";
+
+"menu.language" = "اللغة";
+"menu.language.system" = "حسب النظام";
+"menu.launchAtLogin" = "التشغيل عند تسجيل الدخول";
+"menu.settings" = "الإعدادات…";
+"menu.about" = "حول %@";
+"menu.checkForUpdates" = "التحقق من التحديثات…";
+"menu.quit" = "إنهاء %@";
+"menu.edit" = "تحرير";
+
+"prefs.title" = "إعدادات %@";
+"prefs.tab.shortcuts" = "الاختصارات";
+"prefs.tab.capture" = "اللقطات";
+"prefs.tab.tools" = "الأدوات";
+"prefs.launchAtLogin" = "التشغيل عند تسجيل الدخول";
+"prefs.shortcut.help" = "انقر على الحقل واضغط اختصارًا. مفتاح Delete يمسحه، وEsc يلغي التسجيل.";
+"prefs.shortcut.reset" = "استعادة الاختصارات الافتراضية";
+"prefs.shortcut.conflict" = "الاختصارات المعلّمة مستخدمة من تطبيق آخر ولن تعمل. اختر غيرها أو أغلق ذلك التطبيق.";
+"prefs.shortcut.conflict.help" = "مستخدم من تطبيق آخر ولا يعمل";
+"prefs.saveFolder" = "مجلد الحفظ";
+"prefs.choose" = "اختيار…";
+"prefs.filenameTemplate" = "قالب اسم الملف";
+"prefs.filenameTokens" = "المتاح: {date} و{time} و{timestamp} و{width} و{height}";
+"prefs.askWhereToSave" = "اسأل في كل مرة عن مكان الحفظ";
+"prefs.copyOnSave" = "نسخ إلى الحافظة عند الحفظ";
+"prefs.downscaleRetina" = "الحفظ بالحجم المنطقي (بدون Retina ×2)";
+"prefs.shutterSound" = "صوت الغالق";
+"prefs.showMagnifier" = "إظهار المكبّر مع أداة اللون";
+"prefs.showSizeBadge" = "إظهار حجم التحديد";
+"prefs.dimming" = "تعتيم الخلفية";
+"prefs.tools.explainer" = "خيارات الرسم موجودة داخل الطبقة نفسها بجوار الرسم: اللون والسماكة والإخفاء ونمط النص كلها في اللوحة خلف دائرة اللون.";
+"prefs.tools.reset" = "إعادة ضبط الأدوات";
+"prefs.overlayShortcuts" = "اختصارات الطبقة";
+"prefs.shortcuts.actions" = "⌘C نسخ · ⌘S حفظ · ⇧⌘S حفظ باسم · ⌘P طباعة · ⌘Z / ⇧⌘Z تراجع وإعادة · ⌘A الشاشة كاملة · ↩ نسخ وإغلاق · Esc إلغاء";
+"prefs.shortcuts.modifiers" = "أثناء الرسم: ⇧ مربع أو ٤٥° · ⌥ الرسم من المركز · ⌃ بديل الأداة (شكل ممتلئ، إخفاء آخر). يمكن الجمع بين المفاتيح.";
+
+"permission.title" = "مطلوب إذن تسجيل الشاشة";
+"permission.body" = "افتح إعدادات النظام ← الخصوصية والأمان ← تسجيل الشاشة وفعّل %@.\n\nبعد ذلك يجب إعادة تشغيل التطبيق.";
+"permission.open" = "فتح الإعدادات";
+"permission.toast" = "لا يوجد وصول إلى تسجيل الشاشة";
+"permission.toast.detail" = "فعّل التطبيق في «تسجيل الشاشة» ثم أعد تشغيله";
+
+"common.later" = "لاحقًا";
+
+"error.permissionDenied" = "لا يوجد إذن لتسجيل الشاشة.";
+"error.noDisplays" = "لم يُعثر على أي شاشة.";
+"error.captureFailed" = "فشل الالتقاط: %@";
+"error.captureTitle" = "فشل الالتقاط";
+"error.createFolder" = "تعذّر إنشاء مجلد الحفظ";
+"error.encodePNG" = "تعذّر ترميز ملف PNG";
+"error.saveFile" = "تعذّر حفظ الملف";
+
+"filename.fallback" = "لقطة شاشة";
+
+"about.version" = "الإصدار %@ (بنية %@)";
+"about.tagline" = "لقطات شاشة مع تعليق فوري لنظام macOS.";
+"about.privacy" = "كل شيء يجري على جهاز Mac الخاص بك. بلا حسابات، بلا رفع، وبلا أي اتصال بالشبكة.";
+"about.link.source" = "الكود المصدري";
+"about.link.releases" = "الإصدارات";
+"about.link.license" = "الرخصة";
+"about.link.issues" = "الإبلاغ عن مشكلة";
+"about.copyright" = "رخصة MIT · © 2026 مساهمو ScreenCap";

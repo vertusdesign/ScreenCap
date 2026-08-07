@@ -1,0 +1,128 @@
+/* nl — ScreenCap */
+
+"tool.move" = "Verplaatsen";
+"tool.pen" = "Potlood";
+"tool.marker" = "Markeerstift";
+"tool.line" = "Lijn";
+"tool.arrow" = "Pijl";
+"tool.rectangle" = "Rechthoek";
+"tool.ellipse" = "Ovaal";
+"tool.obfuscate" = "Onleesbaar maken";
+"tool.counter" = "Nummering";
+"tool.text" = "Tekst";
+"tool.eraser" = "Gum";
+
+"hotkey.captureArea" = "Gebied vastleggen";
+"hotkey.repeatLastArea" = "Laatste gebied herhalen";
+"hotkey.captureWindow" = "Venster onder de aanwijzer vastleggen";
+"hotkey.captureFullScreen" = "Volledig scherm vastleggen";
+"hotkey.recording" = "Druk op een toetscombinatie…";
+"hotkey.unset" = "Niet ingesteld";
+
+"obfuscation.style.pixelate" = "Pixelen";
+"obfuscation.style.blur" = "Vervagen";
+"obfuscation.shape.rectangle" = "Rechthoek";
+"obfuscation.shape.ellipse" = "Ovaal";
+"obfuscation.shape.brush" = "Kwast";
+
+"text.backdrop.none" = "Geen achtergrond";
+"text.backdrop.solid" = "Volle achtergrond";
+"text.backdrop.translucent" = "Doorschijnende achtergrond";
+"text.backdrop.shadow" = "Schaduw";
+
+"action.copy" = "Kopieer";
+"action.save" = "Bewaar";
+"action.print" = "Print";
+"action.cancel" = "Annuleer";
+"action.undo" = "Herstel";
+"action.redo" = "Opnieuw";
+"action.style" = "Kleur en opties";
+"action.cut" = "Knip";
+"action.paste" = "Plak";
+"action.selectAll" = "Selecteer alles";
+
+"hint.control.alternate" = "Houd ⌃ ingedrukt voor de variant";
+"hint.shift.saveAs" = "⇧-klik om een map te kiezen";
+
+"style.recent" = "Recent";
+"style.hex" = "HEX-kleur";
+"style.eyedropper" = "Kleur van het scherm pakken";
+"style.eyedropper.hint" = "Klik nogmaals om te annuleren";
+"style.systemPalette" = "Systeemkleurenpalet";
+"style.thickness" = "Dikte";
+"style.fontSize" = "Grootte";
+"style.backdropColor" = "Achtergrondkleur";
+"style.brushSize" = "Kwastgrootte";
+"style.intensity" = "Intensiteit";
+"style.eraserSize" = "Gumgrootte";
+
+"overlay.hint.area" = "Sleep om een gebied te kiezen · Esc annuleert";
+"overlay.hint.window" = "Wijs een venster aan en klik · Esc annuleert";
+
+"toast.copied" = "Gekopieerd naar het klembord";
+"toast.saved" = "Bewaard";
+"toast.color.copied" = "Kleur %@ gekopieerd";
+"toast.noLastArea" = "Nog geen gebied bewaard";
+"toast.noLastArea.detail" = "Kies er één keer een, dan wordt het onthouden";
+
+"menu.language" = "Taal";
+"menu.language.system" = "Systeemstandaard";
+"menu.launchAtLogin" = "Open bij inloggen";
+"menu.settings" = "Instellingen…";
+"menu.about" = "Over %@";
+"menu.checkForUpdates" = "Zoek naar updates…";
+"menu.quit" = "Stop %@";
+"menu.edit" = "Wijzig";
+
+"prefs.title" = "%@-instellingen";
+"prefs.tab.shortcuts" = "Sneltoetsen";
+"prefs.tab.capture" = "Opnamen";
+"prefs.tab.tools" = "Gereedschap";
+"prefs.launchAtLogin" = "Open bij inloggen";
+"prefs.shortcut.help" = "Klik op een veld en druk op een combinatie. Delete wist hem, Esc annuleert het opnemen.";
+"prefs.shortcut.reset" = "Herstel de standaardsneltoetsen";
+"prefs.shortcut.conflict" = "De gemarkeerde sneltoetsen zijn al door een andere app bezet en doen niets. Kies andere of sluit die app.";
+"prefs.shortcut.conflict.help" = "Bezet door een andere app en werkt niet";
+"prefs.saveFolder" = "Bewaarmap";
+"prefs.choose" = "Kies…";
+"prefs.filenameTemplate" = "Naamsjabloon";
+"prefs.filenameTokens" = "Beschikbaar: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Vraag elke keer waar te bewaren";
+"prefs.copyOnSave" = "Kopieer naar klembord bij bewaren";
+"prefs.downscaleRetina" = "Bewaar op logische grootte (zonder Retina ×2)";
+"prefs.shutterSound" = "Sluitergeluid";
+"prefs.showMagnifier" = "Toon de loep met kleurenpikker";
+"prefs.showSizeBadge" = "Toon de grootte van de selectie";
+"prefs.dimming" = "Achtergrond dimmen";
+"prefs.tools.explainer" = "De tekenopties zitten in de overlay, vlak naast de tekening: kleur, dikte, onleesbaar maken en tekststijl staan in het paneel achter de kleurstip.";
+"prefs.tools.reset" = "Zet gereedschap terug op standaard";
+"prefs.overlayShortcuts" = "Sneltoetsen in de overlay";
+"prefs.shortcuts.actions" = "⌘C kopieer · ⌘S bewaar · ⇧⌘S bewaar als · ⌘P print · ⌘Z / ⇧⌘Z herstel en opnieuw · ⌘A hele scherm · ↩ kopieer en sluit · Esc annuleer";
+"prefs.shortcuts.modifiers" = "Tijdens het tekenen: ⇧ vierkant of 45° · ⌥ teken vanuit het midden · ⌃ variant van het gereedschap (gevulde vorm, andere onleesbaarheid). De toetsen zijn te combineren.";
+
+"permission.title" = "Toestemming voor schermopname nodig";
+"permission.body" = "Open Systeeminstellingen → Privacy en beveiliging → Schermopname en zet %@ aan.\n\nDaarna moet de app opnieuw worden gestart.";
+"permission.open" = "Open instellingen";
+"permission.toast" = "Geen toegang tot schermopname";
+"permission.toast.detail" = "Zet de app aan bij ‘Schermopname’ en start hem opnieuw";
+
+"common.later" = "Later";
+
+"error.permissionDenied" = "Geen toestemming voor schermopname.";
+"error.noDisplays" = "Geen scherm gevonden.";
+"error.captureFailed" = "Opname mislukt: %@";
+"error.captureTitle" = "Opname mislukt";
+"error.createFolder" = "Kon de bewaarmap niet aanmaken";
+"error.encodePNG" = "Kon de PNG niet coderen";
+"error.saveFile" = "Kon het bestand niet bewaren";
+
+"filename.fallback" = "Schermafbeelding";
+
+"about.version" = "Versie %@ (build %@)";
+"about.tagline" = "Schermafbeeldingen met directe aantekeningen voor macOS.";
+"about.privacy" = "Alles gebeurt op je Mac. Geen accounts, geen uploads, helemaal geen netwerktoegang.";
+"about.link.source" = "Broncode";
+"about.link.releases" = "Releases";
+"about.link.license" = "Licentie";
+"about.link.issues" = "Meld een probleem";
+"about.copyright" = "MIT-licentie · © 2026 ScreenCap-bijdragers";

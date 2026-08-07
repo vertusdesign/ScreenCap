@@ -1,0 +1,271 @@
+import AppKit
+import Combine
+import ServiceManagement
+
+/// User-visible preferences, persisted in `UserDefaults`.
+///
+/// Everything is a plain value type so the settings object can be observed by
+/// SwiftUI and read synchronously from AppKit drawing code.
+final class Settings: ObservableObject {
+    static let shared = Settings()
+
+    private let defaults = UserDefaults.standard
+
+    private enum Key {
+        static let hotkeys = "hotkeys"
+        static let language = "language"
+        static let saveDirectory = "saveDirectory"
+        static let filenameTemplate = "filenameTemplate"
+        static let askWhereToSave = "askWhereToSave"
+        static let copyOnSave = "copyOnSave"
+        static let dimOpacity = "dimOpacity"
+        static let showMagnifier = "showMagnifier"
+        static let showSizeBadge = "showSizeBadge"
+        static let downscaleRetina = "downscaleRetina"
+        static let playShutterSound = "playShutterSound"
+        static let toolColor = "toolColor"
+        static let strokeWidth = "strokeWidth"
+        static let fontSize = "fontSize"
+        static let recentColors = "recentColors"
+        static let textBackdrop = "textBackdrop"
+        static let textBackdropColor = "textBackdropColor"
+        static let obfuscationStyle = "obfuscationStyle"
+        static let obfuscationShape = "obfuscationShape"
+        static let obfuscationBrushSize = "obfuscationBrushSize"
+        static let obfuscationIntensity = "obfuscationIntensity"
+        static let eraserRadius = "eraserRadius"
+    }
+
+    private static let toolDefaults: [String: Any] = [
+        Key.toolColor: "#FF3B30",
+        Key.strokeWidth: 3.0,
+        Key.fontSize: 24.0,
+        Key.textBackdrop: TextBackdrop.none.rawValue,
+        Key.textBackdropColor: "#000000",
+        Key.obfuscationStyle: ObfuscationStyle.pixelate.rawValue,
+        Key.obfuscationShape: ObfuscationShape.rectangle.rawValue,
+        Key.obfuscationBrushSize: 40.0,
+        Key.obfuscationIntensity: 11.0,
+        Key.eraserRadius: 24.0
+    ]
+
+    private init() {
+        var registered: [String: Any] = [
+            Key.filenameTemplate: "Screenshot {date} at {time}",
+            Key.askWhereToSave: false,
+            Key.copyOnSave: true,
+            Key.dimOpacity: 0.45,
+            Key.showMagnifier: true,
+            Key.showSizeBadge: true,
+            Key.downscaleRetina: false,
+            Key.playShutterSound: true
+        ]
+        registered.merge(Self.toolDefaults) { current, _ in current }
+        defaults.register(defaults: registered)
+    }
+
+    // MARK: - Language
+
+    /// `nil` means "follow the system".
+    var preferredLanguage: AppLanguage? {
+        get {
+            guard let raw = defaults.string(forKey: Key.language) else { return nil }
+            return AppLanguage(rawValue: raw)
+        }
+        set {
+            defaults.set(newValue?.rawValue, forKey: Key.language)
+            objectWillChange.send()
+            L10n.reload()
+            NotificationCenter.default.post(name: .languageChanged, object: nil)
+        }
+    }
+
+    // MARK: - Hotkeys
+
+    var hotkeys: [HotkeyAction: Hotkey] {
+        get {
+            guard let data = defaults.data(forKey: Key.hotkeys),
+                  let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data)
+            else { return Self.defaultHotkeys }
+
+            var result: [HotkeyAction: Hotkey] = [:]
+            for (rawAction, hotkey) in stored {
+                if let action = HotkeyAction(rawValue: rawAction) { result[action] = hotkey }
+            }
+            return result
+        }
+        set {
+            let stored = Dictionary(uniqueKeysWithValues: newValue.map { ($0.key.rawValue, $0.value) })
+            defaults.set(try? JSONEncoder().encode(stored), forKey: Key.hotkeys)
+            objectWillChange.send()
+            HotkeyManager.shared.apply(newValue)
+        }
+    }
+
+    static var defaultHotkeys: [HotkeyAction: Hotkey] {
+        var result: [HotkeyAction: Hotkey] = [:]
+        for action in HotkeyAction.allCases {
+            if let hotkey = action.defaultHotkey { result[action] = hotkey }
+        }
+        return result
+    }
+
+    // MARK: - Saving
+
+    var saveDirectory: URL {
+        get {
+            if let path = defaults.string(forKey: Key.saveDirectory) {
+                return URL(fileURLWithPath: path, isDirectory: true)
+            }
+            return FileManager.default
+                .urls(for: .picturesDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("ScreenCap", isDirectory: true)
+                ?? FileManager.default.homeDirectoryForCurrentUser
+        }
+        set { set(newValue.path, Key.saveDirectory) }
+    }
+
+    /// Supports `{date}`, `{time}`, `{timestamp}`, `{width}`, `{height}`.
+    var filenameTemplate: String {
+        get { defaults.string(forKey: Key.filenameTemplate) ?? "Screenshot {date} at {time}" }
+        set { set(newValue, Key.filenameTemplate) }
+    }
+
+    var askWhereToSave: Bool {
+        get { defaults.bool(forKey: Key.askWhereToSave) }
+        set { set(newValue, Key.askWhereToSave) }
+    }
+
+    var copyOnSave: Bool {
+        get { defaults.bool(forKey: Key.copyOnSave) }
+        set { set(newValue, Key.copyOnSave) }
+    }
+
+    var playShutterSound: Bool {
+        get { defaults.bool(forKey: Key.playShutterSound) }
+        set { set(newValue, Key.playShutterSound) }
+    }
+
+    /// When enabled, a Retina capture is written at logical (1×) size.
+    var downscaleRetina: Bool {
+        get { defaults.bool(forKey: Key.downscaleRetina) }
+        set { set(newValue, Key.downscaleRetina) }
+    }
+
+    // MARK: - Overlay appearance
+
+    var dimOpacity: Double {
+        get { defaults.double(forKey: Key.dimOpacity) }
+        set { set(min(max(newValue, 0), 0.9), Key.dimOpacity) }
+    }
+
+    var showMagnifier: Bool {
+        get { defaults.bool(forKey: Key.showMagnifier) }
+        set { set(newValue, Key.showMagnifier) }
+    }
+
+    var showSizeBadge: Bool {
+        get { defaults.bool(forKey: Key.showSizeBadge) }
+        set { set(newValue, Key.showSizeBadge) }
+    }
+
+    // MARK: - Tool state
+    //
+    // These are last-used values rather than preferences: they are edited from the
+    // overlay's style popover and simply persist between captures. Preferences only
+    // offers a reset.
+
+    var toolColor: NSColor {
+        get { NSColor(hex: defaults.string(forKey: Key.toolColor) ?? "#FF3B30") ?? .systemRed }
+        set { set(newValue.hexString, Key.toolColor) }
+    }
+
+    var strokeWidth: CGFloat {
+        get { CGFloat(defaults.double(forKey: Key.strokeWidth)) }
+        set { set(Double(newValue), Key.strokeWidth) }
+    }
+
+    var fontSize: CGFloat {
+        get { CGFloat(defaults.double(forKey: Key.fontSize)) }
+        set { set(Double(newValue), Key.fontSize) }
+    }
+
+    var textBackdrop: TextBackdrop {
+        get { TextBackdrop(rawValue: defaults.string(forKey: Key.textBackdrop) ?? "") ?? .none }
+        set { set(newValue.rawValue, Key.textBackdrop) }
+    }
+
+    var textBackdropColor: NSColor {
+        get { NSColor(hex: defaults.string(forKey: Key.textBackdropColor) ?? "#000000") ?? .black }
+        set { set(newValue.hexString, Key.textBackdropColor) }
+    }
+
+    var eraserRadius: CGFloat {
+        get { CGFloat(defaults.double(forKey: Key.eraserRadius)) }
+        set { set(Double(newValue), Key.eraserRadius) }
+    }
+
+    var obfuscation: ObfuscationSettings {
+        get {
+            ObfuscationSettings(
+                style: ObfuscationStyle(rawValue: defaults.string(forKey: Key.obfuscationStyle) ?? "") ?? .pixelate,
+                shape: ObfuscationShape(rawValue: defaults.string(forKey: Key.obfuscationShape) ?? "") ?? .rectangle,
+                brushSize: CGFloat(defaults.double(forKey: Key.obfuscationBrushSize)),
+                intensity: CGFloat(defaults.double(forKey: Key.obfuscationIntensity))
+            )
+        }
+        set {
+            defaults.set(newValue.style.rawValue, forKey: Key.obfuscationStyle)
+            defaults.set(newValue.shape.rawValue, forKey: Key.obfuscationShape)
+            defaults.set(Double(newValue.brushSize), forKey: Key.obfuscationBrushSize)
+            defaults.set(Double(newValue.intensity), forKey: Key.obfuscationIntensity)
+            objectWillChange.send()
+        }
+    }
+
+    var recentColors: [NSColor] {
+        get { (defaults.stringArray(forKey: Key.recentColors) ?? []).compactMap { NSColor(hex: $0) } }
+        set { set(newValue.prefix(8).map(\.hexString), Key.recentColors) }
+    }
+
+    func noteColorUsed(_ color: NSColor) {
+        let hex = color.hexString
+        var colors = recentColors.filter { $0.hexString != hex }
+        colors.insert(color, at: 0)
+        recentColors = Array(colors.prefix(8))
+    }
+
+    /// Restores every drawing-tool value, leaving capture and shortcut settings alone.
+    func resetToolDefaults() {
+        for (key, value) in Self.toolDefaults {
+            defaults.set(value, forKey: key)
+        }
+        defaults.removeObject(forKey: Key.recentColors)
+        objectWillChange.send()
+    }
+
+    // MARK: - Launch at login
+
+    var launchAtLogin: Bool {
+        get { SMAppService.mainApp.status == .enabled }
+        set {
+            do {
+                if newValue {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                NSLog("ScreenCap: could not change login item — \(error.localizedDescription)")
+            }
+            objectWillChange.send()
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func set(_ value: Any?, _ key: String) {
+        defaults.set(value, forKey: key)
+        objectWillChange.send()
+    }
+}

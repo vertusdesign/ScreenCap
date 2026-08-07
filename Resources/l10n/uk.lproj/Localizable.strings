@@ -1,0 +1,128 @@
+/* uk — ScreenCap */
+
+"tool.move" = "Переміщення";
+"tool.pen" = "Олівець";
+"tool.marker" = "Маркер";
+"tool.line" = "Лінія";
+"tool.arrow" = "Стрілка";
+"tool.rectangle" = "Прямокутник";
+"tool.ellipse" = "Овал";
+"tool.obfuscate" = "Замазати";
+"tool.counter" = "Нумерація";
+"tool.text" = "Текст";
+"tool.eraser" = "Гумка";
+
+"hotkey.captureArea" = "Виділити область";
+"hotkey.repeatLastArea" = "Повторити останню область";
+"hotkey.captureWindow" = "Зняти вікно під курсором";
+"hotkey.captureFullScreen" = "Зняти весь екран";
+"hotkey.recording" = "Натисніть сполучення…";
+"hotkey.unset" = "Не задано";
+
+"obfuscation.style.pixelate" = "Пікселізація";
+"obfuscation.style.blur" = "Розмиття";
+"obfuscation.shape.rectangle" = "Прямокутник";
+"obfuscation.shape.ellipse" = "Овал";
+"obfuscation.shape.brush" = "Пензлик";
+
+"text.backdrop.none" = "Без підкладки";
+"text.backdrop.solid" = "Суцільний фон";
+"text.backdrop.translucent" = "Напівпрозорий фон";
+"text.backdrop.shadow" = "Тінь";
+
+"action.copy" = "Копіювати";
+"action.save" = "Зберегти";
+"action.print" = "Друк";
+"action.cancel" = "Скасувати";
+"action.undo" = "Скасувати дію";
+"action.redo" = "Повторити дію";
+"action.style" = "Колір і параметри";
+"action.cut" = "Вирізати";
+"action.paste" = "Вставити";
+"action.selectAll" = "Вибрати все";
+
+"hint.control.alternate" = "Утримуйте ⌃ для альтернативи";
+"hint.shift.saveAs" = "⇧-клік — вибрати теку";
+
+"style.recent" = "Нещодавні";
+"style.hex" = "Колір у HEX";
+"style.eyedropper" = "Взяти колір з екрана";
+"style.eyedropper.hint" = "Натисніть ще раз, щоб скасувати";
+"style.systemPalette" = "Системна палітра";
+"style.thickness" = "Товщина";
+"style.fontSize" = "Розмір";
+"style.backdropColor" = "Колір підкладки";
+"style.brushSize" = "Розмір пензля";
+"style.intensity" = "Інтенсивність";
+"style.eraserSize" = "Розмір гумки";
+
+"overlay.hint.area" = "Виділіть область · Esc — скасувати";
+"overlay.hint.window" = "Наведіть на вікно й клацніть · Esc — скасувати";
+
+"toast.copied" = "Скопійовано в буфер обміну";
+"toast.saved" = "Збережено";
+"toast.color.copied" = "Колір %@ скопійовано";
+"toast.noLastArea" = "Немає збереженої області";
+"toast.noLastArea.detail" = "Виділіть її один раз — і вона запам’ятається";
+
+"menu.language" = "Мова";
+"menu.language.system" = "Як у системі";
+"menu.launchAtLogin" = "Запускати при вході";
+"menu.settings" = "Налаштування…";
+"menu.about" = "Про %@";
+"menu.checkForUpdates" = "Перевірити оновлення…";
+"menu.quit" = "Завершити %@";
+"menu.edit" = "Редагування";
+
+"prefs.title" = "Налаштування %@";
+"prefs.tab.shortcuts" = "Гарячі клавіші";
+"prefs.tab.capture" = "Знімки";
+"prefs.tab.tools" = "Інструменти";
+"prefs.launchAtLogin" = "Запускати при вході в систему";
+"prefs.shortcut.help" = "Клацніть поле й натисніть сполучення. Delete — очистити, Esc — скасувати запис.";
+"prefs.shortcut.reset" = "Повернути типові сполучення";
+"prefs.shortcut.conflict" = "Позначені сполучення вже зайняті іншою програмою й не спрацюють. Задайте інші або закрийте ту програму.";
+"prefs.shortcut.conflict.help" = "Зайнято іншою програмою й не працює";
+"prefs.saveFolder" = "Тека для збереження";
+"prefs.choose" = "Вибрати…";
+"prefs.filenameTemplate" = "Шаблон імені";
+"prefs.filenameTokens" = "Доступні: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.askWhereToSave" = "Щоразу питати, куди зберігати";
+"prefs.copyOnSave" = "Копіювати в буфер при збереженні";
+"prefs.downscaleRetina" = "Зберігати в логічному розмірі (без Retina ×2)";
+"prefs.shutterSound" = "Звук затвора";
+"prefs.showMagnifier" = "Показувати лупу з піпеткою";
+"prefs.showSizeBadge" = "Показувати розмір виділення";
+"prefs.dimming" = "Затемнення тла";
+"prefs.tools.explainer" = "Параметри малювання — просто в оверлеї, поруч із малюнком: колір, товщина, замазування й стиль тексту зібрані в панелі за кружком кольору.";
+"prefs.tools.reset" = "Скинути інструменти до типових";
+"prefs.overlayShortcuts" = "Гарячі клавіші в оверлеї";
+"prefs.shortcuts.actions" = "⌘C копіювати · ⌘S зберегти · ⇧⌘S зберегти як · ⌘P друк · ⌘Z / ⇧⌘Z скасувати й повторити · ⌘A весь екран · ↩ копіювати й закрити · Esc скасувати";
+"prefs.shortcuts.modifiers" = "Під час малювання: ⇧ квадрат або 45° · ⌥ малювати від центру · ⌃ альтернатива інструмента (фігура із заливкою, інший тип замазування). Модифікатори поєднуються.";
+
+"permission.title" = "Потрібен дозвіл на запис екрана";
+"permission.body" = "Відкрийте «Системні параметри» → «Конфіденційність і безпека» → «Запис екрана» й увімкніть %@.\n\nПісля цього програму потрібно перезапустити.";
+"permission.open" = "Відкрити параметри";
+"permission.toast" = "Немає доступу до запису екрана";
+"permission.toast.detail" = "Увімкніть програму в «Записі екрана» й перезапустіть її";
+
+"common.later" = "Пізніше";
+
+"error.permissionDenied" = "Немає дозволу на запис екрана.";
+"error.noDisplays" = "Не знайдено жодного дисплея.";
+"error.captureFailed" = "Не вдалося зробити знімок: %@";
+"error.captureTitle" = "Не вдалося зробити знімок";
+"error.createFolder" = "Не вдалося створити теку для збереження";
+"error.encodePNG" = "Не вдалося закодувати PNG";
+"error.saveFile" = "Не вдалося зберегти файл";
+
+"filename.fallback" = "Знімок";
+
+"about.version" = "Версія %@ (збірка %@)";
+"about.tagline" = "Знімки екрана з миттєвими позначками для macOS.";
+"about.privacy" = "Усе відбувається на вашому Mac. Без акаунтів, без завантажень, без доступу до мережі взагалі.";
+"about.link.source" = "Вихідний код";
+"about.link.releases" = "Релізи";
+"about.link.license" = "Ліцензія";
+"about.link.issues" = "Повідомити про проблему";
+"about.copyright" = "Ліцензія MIT · © 2026 учасники ScreenCap";

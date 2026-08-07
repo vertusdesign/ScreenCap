@@ -1,0 +1,128 @@
+/* zh-Hans — ScreenCap */
+
+"tool.move" = "移动";
+"tool.pen" = "铅笔";
+"tool.marker" = "荧光笔";
+"tool.line" = "直线";
+"tool.arrow" = "箭头";
+"tool.rectangle" = "矩形";
+"tool.ellipse" = "椭圆";
+"tool.obfuscate" = "遮挡";
+"tool.counter" = "编号";
+"tool.text" = "文本";
+"tool.eraser" = "橡皮擦";
+
+"hotkey.captureArea" = "截取区域";
+"hotkey.repeatLastArea" = "重复上次区域";
+"hotkey.captureWindow" = "截取指针下的窗口";
+"hotkey.captureFullScreen" = "截取整个屏幕";
+"hotkey.recording" = "请按下快捷键…";
+"hotkey.unset" = "未设置";
+
+"obfuscation.style.pixelate" = "马赛克";
+"obfuscation.style.blur" = "模糊";
+"obfuscation.shape.rectangle" = "矩形";
+"obfuscation.shape.ellipse" = "椭圆";
+"obfuscation.shape.brush" = "画笔";
+
+"text.backdrop.none" = "无背景";
+"text.backdrop.solid" = "实色背景";
+"text.backdrop.translucent" = "半透明背景";
+"text.backdrop.shadow" = "阴影";
+
+"action.copy" = "拷贝";
+"action.save" = "存储";
+"action.print" = "打印";
+"action.cancel" = "取消";
+"action.undo" = "撤销";
+"action.redo" = "重做";
+"action.style" = "颜色与选项";
+"action.cut" = "剪切";
+"action.paste" = "粘贴";
+"action.selectAll" = "全选";
+
+"hint.control.alternate" = "按住 ⌃ 使用备选方式";
+"hint.shift.saveAs" = "⇧-点按可选择文件夹";
+
+"style.recent" = "最近使用";
+"style.hex" = "HEX 颜色";
+"style.eyedropper" = "从屏幕拾取颜色";
+"style.eyedropper.hint" = "再次点按可取消";
+"style.systemPalette" = "系统调色板";
+"style.thickness" = "粗细";
+"style.fontSize" = "字号";
+"style.backdropColor" = "背景颜色";
+"style.brushSize" = "画笔大小";
+"style.intensity" = "强度";
+"style.eraserSize" = "橡皮擦大小";
+
+"overlay.hint.area" = "拖移以选取区域 · Esc 取消";
+"overlay.hint.window" = "指向窗口并点按 · Esc 取消";
+
+"toast.copied" = "已拷贝到剪贴板";
+"toast.saved" = "已存储";
+"toast.color.copied" = "已拷贝颜色 %@";
+"toast.noLastArea" = "还没有保存的区域";
+"toast.noLastArea.detail" = "先选一次，之后会记住";
+
+"menu.language" = "语言";
+"menu.language.system" = "跟随系统";
+"menu.launchAtLogin" = "登录时启动";
+"menu.settings" = "设置…";
+"menu.about" = "关于 %@";
+"menu.checkForUpdates" = "检查更新…";
+"menu.quit" = "退出 %@";
+"menu.edit" = "编辑";
+
+"prefs.title" = "%@ 设置";
+"prefs.tab.shortcuts" = "快捷键";
+"prefs.tab.capture" = "截图";
+"prefs.tab.tools" = "工具";
+"prefs.launchAtLogin" = "登录时启动";
+"prefs.shortcut.help" = "点按输入框并按下快捷键。Delete 清除，Esc 取消录制。";
+"prefs.shortcut.reset" = "恢复默认快捷键";
+"prefs.shortcut.conflict" = "标记的快捷键已被其他 App 占用，不会生效。请换一组，或退出那个 App。";
+"prefs.shortcut.conflict.help" = "已被其他 App 占用，无法使用";
+"prefs.saveFolder" = "存储文件夹";
+"prefs.choose" = "选择…";
+"prefs.filenameTemplate" = "文件名模板";
+"prefs.filenameTokens" = "可用：{date}、{time}、{timestamp}、{width}、{height}";
+"prefs.askWhereToSave" = "每次都询问存储位置";
+"prefs.copyOnSave" = "存储时同时拷贝到剪贴板";
+"prefs.downscaleRetina" = "按逻辑尺寸存储（不使用 Retina ×2）";
+"prefs.shutterSound" = "快门声";
+"prefs.showMagnifier" = "显示带取色器的放大镜";
+"prefs.showSizeBadge" = "显示选区尺寸";
+"prefs.dimming" = "背景变暗";
+"prefs.tools.explainer" = "绘图选项就在覆盖层里、紧挨着画面：颜色、粗细、遮挡和文本样式都在色块后面的面板中。";
+"prefs.tools.reset" = "将工具恢复为默认";
+"prefs.overlayShortcuts" = "覆盖层快捷键";
+"prefs.shortcuts.actions" = "⌘C 拷贝 · ⌘S 存储 · ⇧⌘S 存储为 · ⌘P 打印 · ⌘Z / ⇧⌘Z 撤销与重做 · ⌘A 整个屏幕 · ↩ 拷贝并关闭 · Esc 取消";
+"prefs.shortcuts.modifiers" = "绘制时：⇧ 正方形或 45° · ⌥ 从中心绘制 · ⌃ 工具的备选方式（填充图形、另一种遮挡）。修饰键可以组合使用。";
+
+"permission.title" = "需要“屏幕录制”权限";
+"permission.body" = "打开系统设置 → 隐私与安全性 → 屏幕录制，并开启 %@。\n\n之后需要重新启动 App。";
+"permission.open" = "打开设置";
+"permission.toast" = "没有屏幕录制权限";
+"permission.toast.detail" = "在“屏幕录制”中开启本 App 并重新启动";
+
+"common.later" = "稍后";
+
+"error.permissionDenied" = "没有屏幕录制权限。";
+"error.noDisplays" = "未找到任何显示器。";
+"error.captureFailed" = "截图失败：%@";
+"error.captureTitle" = "截图失败";
+"error.createFolder" = "无法创建存储文件夹";
+"error.encodePNG" = "无法编码 PNG";
+"error.saveFile" = "无法存储文件";
+
+"filename.fallback" = "截屏";
+
+"about.version" = "版本 %@（构建 %@）";
+"about.tagline" = "随手标注的 macOS 截图工具。";
+"about.privacy" = "一切都在你的 Mac 上完成。没有账号，不上传，完全不联网。";
+"about.link.source" = "源代码";
+"about.link.releases" = "版本发布";
+"about.link.license" = "许可证";
+"about.link.issues" = "报告问题";
+"about.copyright" = "MIT 许可证 · © 2026 ScreenCap 贡献者";
