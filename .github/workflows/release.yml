@@ -14,8 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # No Xcode pin: the runner's default toolchain is a supported one, and a
+      # hard-coded path breaks whenever the image drops that exact version.
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
 
       - name: Self-test
         run: |
