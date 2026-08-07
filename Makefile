@@ -28,7 +28,10 @@ ICONSET     := $(DIST)/AppIcon.iconset
 #   make dmg                                     -> ad-hoc
 #   make dmg SIGN_ID="Developer ID Application: Name (TEAMID)"
 LOCAL_CERT  := ScreenCap Local Signing
-DETECTED_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | \
+# No -v: a self-signed certificate is reported CSSMERR_TP_NOT_TRUSTED and so is
+# left out of the "valid identities" list, but codesign accepts it perfectly well
+# and system trust is irrelevant for an app you built yourself.
+DETECTED_ID := $(shell security find-identity -p codesigning 2>/dev/null | \
 	grep -F "$(LOCAL_CERT)" >/dev/null 2>&1 && echo "$(LOCAL_CERT)")
 ifeq ($(strip $(DETECTED_ID)),)
 DETECTED_ID := -
