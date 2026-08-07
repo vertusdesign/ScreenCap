@@ -72,10 +72,6 @@ jobs:
           files: |
             dist/*.dmg
             dist/*.sha256
-          body: |
-            Built from tag ${{ github.ref_name }}.
-
-            **Not notarized** — macOS blocks the first launch. Press **Done**, then
-            **System Settings → Privacy & Security → Security → Open Anyway**. Once only.
-
-            **Full changelog:** https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md
+          # Notes live in the repository so a re-run of this workflow reproduces the
+          # release text exactly instead of overwriting it with something shorter.
+          body_path: .github/RELEASE_NOTES.md
