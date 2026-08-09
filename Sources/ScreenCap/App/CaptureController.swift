@@ -128,6 +128,11 @@ final class CaptureController {
         overlay?.dismiss()
         overlay = nil
         isCapturing = false
+        // The tooltip is a singleton window outliving any one overlay — if the
+        // session ends (e.g. a shortcut fires) while the pointer is still
+        // sitting over a button, its scheduled/visible tooltip would otherwise
+        // hang around with nothing left to dismiss it.
+        TooltipWindow.shared.hide()
 
         if restoreFocus, let previousApp, previousApp.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             previousApp.activate()

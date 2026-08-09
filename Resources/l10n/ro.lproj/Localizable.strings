@@ -51,10 +51,19 @@
 "style.systemPalette" = "Paleta de sistem";
 "style.thickness" = "Grosime";
 "style.fontSize" = "Mărime";
+"style.size" = "Mărime";
+"style.arrowThickness" = "Grosimea săgeții";
 "style.backdropColor" = "Culoarea fundalului";
 "style.brushSize" = "Mărimea pensulei";
 "style.intensity" = "Intensitate";
 "style.eraserSize" = "Mărimea radierei";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Contur";
+"style.shapeFilled" = "Umplut";
+"style.arrowSingle" = "Un singur vârf";
+"style.arrowDouble" = "Două vârfuri";
+"text.moveHandle" = "Trage pentru a muta";
 
 "overlay.hint.area" = "Trage pentru a selecta o zonă · Esc pentru anulare";
 "overlay.hint.window" = "Indică o fereastră și dă clic · Esc pentru anulare";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Restabilește scurtăturile implicite";
 "prefs.shortcut.conflict" = "Combinațiile marcate sunt deja folosite de altă aplicație și nu vor funcționa. Alege altele sau închide acea aplicație.";
 "prefs.shortcut.conflict.help" = "Folosită de altă aplicație și nu funcționează";
+"prefs.shortcut.clear" = "Șterge comanda rapidă";
 "prefs.saveFolder" = "Dosar de salvare";
 "prefs.choose" = "Alege…";
 "prefs.filenameTemplate" = "Șablon de nume";
-"prefs.filenameTokens" = "Disponibile: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Disponibile — clic pentru a insera:";
 "prefs.askWhereToSave" = "Întreabă de fiecare dată unde să salveze";
 "prefs.copyOnSave" = "Copiază în clipboard la salvare";
 "prefs.downscaleRetina" = "Salvează la mărime logică (fără Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Arată lupa cu selector de culoare";
 "prefs.showSizeBadge" = "Arată mărimea selecției";
 "prefs.dimming" = "Întunecarea fundalului";
+"prefs.imageFormat" = "Format imagine";
+"prefs.resetCapture" = "Restabilește setările de captură implicite";
 "prefs.tools.explainer" = "Opțiunile de desenare sunt chiar în overlay, lângă desen: culoarea, grosimea, ascunderea și stilul textului se află în panoul din spatele bulinei de culoare.";
 "prefs.tools.reset" = "Resetează instrumentele";
 "prefs.overlayShortcuts" = "Scurtături în overlay";
 "prefs.shortcuts.actions" = "⌘C copiază · ⌘S salvează · ⇧⌘S salvează ca · ⌘P tipărește · ⌘Z / ⇧⌘Z anulează și refă · ⌘A tot ecranul · ↩ copiază și închide · Esc anulează";
 "prefs.shortcuts.modifiers" = "În timpul desenării: ⇧ pătrat sau 45° · ⌥ desenează din centru · ⌃ varianta alternativă (formă plină, alt tip de ascundere). Modificatorii se combină.";
+
+"save.format" = "Format:";
 
 "permission.title" = "Este necesară permisiunea de înregistrare a ecranului";
 "permission.body" = "Deschide Setări de sistem → Confidențialitate și securitate → Înregistrarea ecranului și activează %@.\n\nApoi aplicația trebuie repornită.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Captura a eșuat";
 "error.createFolder" = "Nu s-a putut crea dosarul de salvare";
 "error.encodePNG" = "Nu s-a putut codifica PNG-ul";
+"error.encodeJPEG" = "JPEG nu a putut fi codificat";
 "error.saveFile" = "Nu s-a putut salva fișierul";
 
 "filename.fallback" = "Captură";
 
 "about.version" = "Versiunea %@ (build %@)";
 "about.tagline" = "Capturi de ecran cu adnotare instantanee pentru macOS.";
-"about.alpha" = "Versiune alfa — au mai rămas câteva asperități.";
+"about.thankDeveloper" = "Spune-i mulțumesc dezvoltatorului";
 "about.link.source" = "Cod sursă";
 "about.link.releases" = "Versiuni";
 "about.link.privacy" = "Confidențialitate";

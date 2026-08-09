@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 7 August 2026. Applies to ScreenCap 0.9.0-alpha.**
+**Last updated: 9 August 2026. Applies to ScreenCap 1.0.0.**
 
 ScreenCap collects nothing, stores nothing about you, and sends nothing anywhere. This
 document exists because the app requests a powerful permission, and you deserve a precise
@@ -51,7 +51,7 @@ deliberately has none.
 
 User defaults under `com.vertusdesign.ScreenCap`: your shortcuts, save folder, filename
 template, interface language, and the tool settings you last used, including the recently
-used colours. Plain preferences, no content, no history of what you captured.
+used colors. Plain preferences, no content, no history of what you captured.
 
 Removing the app and running `defaults delete com.vertusdesign.ScreenCap` removes all of it.
 

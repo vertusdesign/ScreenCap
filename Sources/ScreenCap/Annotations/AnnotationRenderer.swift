@@ -9,7 +9,8 @@ enum AnnotationRenderer {
     static func draw(
         _ annotations: [Annotation],
         obfuscation: ObfuscationSource?,
-        clipTo clipRect: CGRect? = nil
+        clipTo clipRect: CGRect? = nil,
+        obfuscationBlendMode: CGBlendMode = .destinationOver
     ) {
         guard let context = NSGraphicsContext.current else { return }
 
@@ -18,12 +19,20 @@ enum AnnotationRenderer {
             NSBezierPath(rect: clipRect).addClip()
         }
         for annotation in annotations {
-            draw(annotation, obfuscation: obfuscation)
+            draw(
+                annotation,
+                obfuscation: obfuscation,
+                obfuscationBlendMode: obfuscationBlendMode
+            )
         }
         context.restoreGraphicsState()
     }
 
-    static func draw(_ annotation: Annotation, obfuscation: ObfuscationSource?) {
+    static func draw(
+        _ annotation: Annotation,
+        obfuscation: ObfuscationSource?,
+        obfuscationBlendMode: CGBlendMode = .destinationOver
+    ) {
         guard let context = NSGraphicsContext.current else { return }
         let style = annotation.style
 
@@ -49,10 +58,10 @@ enum AnnotationRenderer {
             path.line(to: to)
             strokePath(path, width: style.lineWidth)
 
-        case .arrow(let from, let to):
+        case .arrow(let from, let to, let doubleHeaded):
             style.color.setFill()
             style.color.setStroke()
-            drawArrow(from: from, to: to, width: style.lineWidth)
+            drawArrow(from: from, to: to, width: style.lineWidth, doubleHeaded: doubleHeaded)
 
         case .rectangle(let rect):
             let path = NSBezierPath(
@@ -66,6 +75,11 @@ enum AnnotationRenderer {
             fillAndStroke(NSBezierPath(ovalIn: rect), style: style)
 
         case .obfuscateRect(let rect):
+            // The processed screenshot is an opaque image. Put it behind the
+            // transparent annotation pixels already in this layer; drawing it
+            // source-over would make an obfuscation region behave like an eraser
+            // for every annotation painted before it.
+            context.cgContext.setBlendMode(obfuscationBlendMode)
             obfuscation?.draw(
                 clip: NSBezierPath(rect: rect),
                 style: style.obfuscation.style,
@@ -73,6 +87,7 @@ enum AnnotationRenderer {
             )
 
         case .obfuscateEllipse(let rect):
+            context.cgContext.setBlendMode(obfuscationBlendMode)
             obfuscation?.draw(
                 clip: NSBezierPath(ovalIn: rect),
                 style: style.obfuscation.style,
@@ -81,13 +96,19 @@ enum AnnotationRenderer {
 
         case .obfuscateBrush(let points):
             guard let clip = brushOutline(points: points, width: style.obfuscation.brushSize) else { break }
+            context.cgContext.setBlendMode(obfuscationBlendMode)
             obfuscation?.draw(
                 clip: clip,
                 style: style.obfuscation.style,
                 intensity: style.obfuscation.intensity
             )
 
-        case .counter(let center, let number):
+        case .counter(let center, let number, let arrowTo):
+            if let arrowTo {
+                style.color.setFill()
+                style.color.setStroke()
+                drawArrow(from: center, to: arrowTo, width: style.counterArrowWidth, doubleHeaded: false)
+            }
             drawCounter(at: center, number: number, style: style)
 
         case .text(let origin, let string):
@@ -95,6 +116,12 @@ enum AnnotationRenderer {
 
         case .erase(let points, let width):
             erase(points: points, width: width)
+
+        case .eraseRect(let rect):
+            eraseShape(NSBezierPath(rect: rect))
+
+        case .eraseEllipse(let rect):
+            eraseShape(NSBezierPath(ovalIn: rect))
         }
     }
 
@@ -116,6 +143,17 @@ enum AnnotationRenderer {
         } else {
             strokePath(smoothPath(through: points), width: width)
         }
+        context.restoreGraphicsState()
+    }
+
+    /// Shared by `.eraseRect`/`.eraseEllipse`: cuts a filled shape out of
+    /// whatever is already on the layer, same as the brush stroke above.
+    private static func eraseShape(_ path: NSBezierPath) {
+        guard let context = NSGraphicsContext.current else { return }
+        context.saveGraphicsState()
+        context.cgContext.setBlendMode(.destinationOut)
+        NSColor.black.setFill()
+        path.fill()
         context.restoreGraphicsState()
     }
 
@@ -158,28 +196,38 @@ enum AnnotationRenderer {
         return NSBezierPath(cgPath: stroked)
     }
 
-    private static func drawArrow(from: CGPoint, to: CGPoint, width: CGFloat) {
+    private static func drawArrow(from: CGPoint, to: CGPoint, width: CGFloat, doubleHeaded: Bool) {
         let length = from.distance(to: to)
         guard length > 0.5 else { return }
 
-        let headLength = min(max(width * 4.5, 12), length)
-        let headWidth = max(width * 3.2, 9)
+        let headLength = min(max(width * 4.5, 12), length / (doubleHeaded ? 2 : 1))
         let angle = atan2(to.y - from.y, to.x - from.x)
 
-        // Stop the shaft short of the head so the tip stays crisp.
+        // Stop the shaft short of each head so the tips stay crisp.
+        let shaftStart = doubleHeaded
+            ? CGPoint(x: from.x + cos(angle) * headLength * 0.75, y: from.y + sin(angle) * headLength * 0.75)
+            : from
         let shaftEnd = CGPoint(
             x: to.x - cos(angle) * headLength * 0.75,
             y: to.y - sin(angle) * headLength * 0.75
         )
 
         let shaft = NSBezierPath()
-        shaft.move(to: from)
+        shaft.move(to: shaftStart)
         shaft.line(to: shaftEnd)
         strokePath(shaft, width: width)
 
-        let base = CGPoint(x: to.x - cos(angle) * headLength, y: to.y - sin(angle) * headLength)
+        drawArrowhead(at: to, angle: angle, length: headLength, width: width)
+        if doubleHeaded {
+            drawArrowhead(at: from, angle: angle + .pi, length: headLength, width: width)
+        }
+    }
+
+    private static func drawArrowhead(at tip: CGPoint, angle: CGFloat, length: CGFloat, width: CGFloat) {
+        let headWidth = max(width * 3.2, 9)
+        let base = CGPoint(x: tip.x - cos(angle) * length, y: tip.y - sin(angle) * length)
         let head = NSBezierPath()
-        head.move(to: to)
+        head.move(to: tip)
         head.line(to: CGPoint(
             x: base.x + cos(angle + .pi / 2) * headWidth,
             y: base.y + sin(angle + .pi / 2) * headWidth

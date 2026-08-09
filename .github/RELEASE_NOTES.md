@@ -1,17 +1,20 @@
 Freeze the screen, select an area, mark it up in place, then copy or save. Universal binary — runs natively on Apple silicon and Intel.
 
-First public release. Everything below works and has been tested by hand; the alpha label is about the rough edges around it, listed under [Known limitations](https://github.com/vertusdesign/ScreenCap#known-limitations).
+This is the first stable release of ScreenCap. It brings the complete capture and annotation
+workflow together with cross-display Undo/Redo, live text editing, object deletion, safe
+pixelation and blur, a polished overlay, 24 interface languages, and a universal Intel/Apple
+Silicon build. See the [changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md#100--2026-08-09) for the full list.
 
 ### What it does
 
-- **Four capture modes** on configurable global shortcuts: area (⌘F2), repeat last area (⌘F3), window under the cursor (⌘F4), full screen (⌘F5).
+- **Four capture modes** on configurable global shortcuts: area (⌘F2), repeat last area (⌘F3), window under the cursor (⌘F4), full screen (⌘⌥F4).
 - **The screen freezes** the instant the shortcut fires, so an open menu or a hover tooltip stays put while you frame the shot.
 - **Drawing tools**: pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbered circles, text and an eraser, each on a single-key shortcut.
 - **Redaction** with pixelation or blur, in a rectangle, an ellipse or a free brush stroke, with adjustable intensity.
 - **An eraser that erases.** Annotations are composited into a transparent raster layer above the screenshot and the eraser punches transparency into it, so it takes away part of a stroke instead of deleting whole objects. The vector data stays underneath, and the layer is re-flattened at the export scale on save.
 - **Modifiers while drawing**, combinable: `⇧` square or 45°, `⌥` grow from the centre, `⌃` the tool's alternate — a filled shape, or the other redaction style. The tool's icon changes while `⌃` is held.
-- **Colour panel** with palette, recently used colours, a hex field, an eyedropper that samples the frozen screenshot, and a route out to the system colour panel.
-- **Pixel loupe** with coordinates and the colour under the cursor in hex and RGB.
+- **Color panel** with palette, recently used colors, a hex field, an eyedropper that samples the frozen screenshot, and a route out to the system color panel.
+- **Pixel loupe** with coordinates and the color under the cursor in hex and RGB.
 - **Undo covers the selection**, not just the drawing — moving and resizing the frame are undoable steps.
 - **24 interface languages**, switchable from the menu without a restart, with English filling in for anything untranslated.
 - **A `screencap://` URL scheme** for Shortcuts, Raycast, Automator or a script, for when the shortcut you want is already taken.
@@ -46,7 +49,7 @@ Nothing leaves your machine: the app contains no networking code at all. See [PR
 ### Verify the download
 
 ```
-shasum -a 256 -c ScreenCap-0.9.0-alpha.dmg.sha256
+shasum -a 256 -c ScreenCap-1.0.0.dmg.sha256
 ```
 
 ### Requirements

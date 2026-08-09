@@ -1,8 +1,8 @@
 APP_NAME    := ScreenCap
 BUNDLE_ID   := com.vertusdesign.ScreenCap
-VERSION     ?= 0.9.0
+VERSION     ?= 1.0.0
 # "alpha", "beta", or empty for a stable build.
-CHANNEL     ?= alpha
+CHANNEL     ?=
 BUILD       ?= 1
 FULLVERSION := $(VERSION)$(if $(CHANNEL),-$(CHANNEL),)
 

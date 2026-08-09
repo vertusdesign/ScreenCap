@@ -51,10 +51,19 @@
 "style.systemPalette" = "Bảng màu hệ thống";
 "style.thickness" = "Độ dày";
 "style.fontSize" = "Cỡ chữ";
+"style.size" = "Kích thước";
+"style.arrowThickness" = "Độ dày mũi tên";
 "style.backdropColor" = "Màu nền";
 "style.brushSize" = "Cỡ cọ";
 "style.intensity" = "Cường độ";
 "style.eraserSize" = "Cỡ tẩy";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Đường viền";
+"style.shapeFilled" = "Tô đầy";
+"style.arrowSingle" = "Một đầu mũi tên";
+"style.arrowDouble" = "Hai đầu mũi tên";
+"text.moveHandle" = "Kéo để di chuyển";
 
 "overlay.hint.area" = "Kéo để chọn một vùng · Esc để huỷ";
 "overlay.hint.window" = "Trỏ vào một cửa sổ rồi nhấp · Esc để huỷ";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Khôi phục phím tắt mặc định";
 "prefs.shortcut.conflict" = "Các phím tắt được đánh dấu đã bị ứng dụng khác chiếm và sẽ không hoạt động. Hãy chọn tổ hợp khác hoặc thoát ứng dụng đó.";
 "prefs.shortcut.conflict.help" = "Bị ứng dụng khác chiếm và không hoạt động";
+"prefs.shortcut.clear" = "Xóa phím tắt";
 "prefs.saveFolder" = "Thư mục lưu";
 "prefs.choose" = "Chọn…";
 "prefs.filenameTemplate" = "Mẫu tên tệp";
-"prefs.filenameTokens" = "Có thể dùng: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Có sẵn — nhấp để chèn:";
 "prefs.askWhereToSave" = "Luôn hỏi nơi lưu";
 "prefs.copyOnSave" = "Sao chép vào bảng nháp khi lưu";
 "prefs.downscaleRetina" = "Lưu ở kích thước lôgic (không Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Hiện kính lúp kèm ống hút màu";
 "prefs.showSizeBadge" = "Hiện kích thước vùng chọn";
 "prefs.dimming" = "Làm tối nền";
+"prefs.imageFormat" = "Định dạng ảnh";
+"prefs.resetCapture" = "Đặt lại cài đặt chụp về mặc định";
 "prefs.tools.explainer" = "Tuỳ chọn vẽ nằm ngay trong lớp phủ, cạnh bản vẽ: màu, độ dày, che và kiểu chữ đều ở bảng phía sau chấm màu.";
 "prefs.tools.reset" = "Đặt lại công cụ";
 "prefs.overlayShortcuts" = "Phím tắt trong lớp phủ";
 "prefs.shortcuts.actions" = "⌘C sao chép · ⌘S lưu · ⇧⌘S lưu thành · ⌘P in · ⌘Z / ⇧⌘Z hoàn tác và làm lại · ⌘A toàn màn hình · ↩ sao chép rồi đóng · Esc huỷ";
 "prefs.shortcuts.modifiers" = "Khi vẽ: ⇧ hình vuông hoặc 45° · ⌥ vẽ từ tâm · ⌃ biến thể của công cụ (hình tô đặc, kiểu che khác). Có thể kết hợp các phím.";
+
+"save.format" = "Định dạng:";
 
 "permission.title" = "Cần quyền Ghi màn hình";
 "permission.body" = "Mở Cài đặt hệ thống → Quyền riêng tư và Bảo mật → Ghi màn hình rồi bật %@.\n\nSau đó phải khởi động lại ứng dụng.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Chụp thất bại";
 "error.createFolder" = "Không tạo được thư mục lưu";
 "error.encodePNG" = "Không mã hoá được PNG";
+"error.encodeJPEG" = "Không thể mã hóa JPEG";
 "error.saveFile" = "Không lưu được tệp";
 
 "filename.fallback" = "Ảnh chụp màn hình";
 
 "about.version" = "Phiên bản %@ (bản dựng %@)";
 "about.tagline" = "Ảnh chụp màn hình kèm chú thích tức thì cho macOS.";
-"about.alpha" = "Bản alpha — vẫn còn vài chỗ chưa hoàn thiện.";
+"about.thankDeveloper" = "Gửi lời cảm ơn đến nhà phát triển";
 "about.link.source" = "Mã nguồn";
 "about.link.releases" = "Bản phát hành";
 "about.link.privacy" = "Quyền riêng tư";

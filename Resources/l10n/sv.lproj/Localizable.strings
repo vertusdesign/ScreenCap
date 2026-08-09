@@ -51,10 +51,19 @@
 "style.systemPalette" = "Systemets färgpalett";
 "style.thickness" = "Tjocklek";
 "style.fontSize" = "Storlek";
+"style.size" = "Storlek";
+"style.arrowThickness" = "Pilens tjocklek";
 "style.backdropColor" = "Bakgrundsfärg";
 "style.brushSize" = "Penselstorlek";
 "style.intensity" = "Intensitet";
 "style.eraserSize" = "Radergummits storlek";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Kontur";
+"style.shapeFilled" = "Fylld";
+"style.arrowSingle" = "En pilspets";
+"style.arrowDouble" = "Två pilspetsar";
+"text.moveHandle" = "Dra för att flytta";
 
 "overlay.hint.area" = "Dra för att markera ett område · Esc avbryter";
 "overlay.hint.window" = "Peka på ett fönster och klicka · Esc avbryter";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Återställ standardkortkommandon";
 "prefs.shortcut.conflict" = "De markerade kortkommandona används redan av ett annat program och utlöses inte. Välj andra eller avsluta det programmet.";
 "prefs.shortcut.conflict.help" = "Upptaget av ett annat program och fungerar inte";
+"prefs.shortcut.clear" = "Rensa genväg";
 "prefs.saveFolder" = "Mapp att spara i";
 "prefs.choose" = "Välj…";
 "prefs.filenameTemplate" = "Namnmall";
-"prefs.filenameTokens" = "Tillgängliga: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Tillgängliga — klicka för att infoga:";
 "prefs.askWhereToSave" = "Fråga varje gång var filen ska sparas";
 "prefs.copyOnSave" = "Kopiera till urklipp vid sparande";
 "prefs.downscaleRetina" = "Spara i logisk storlek (utan Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Visa luppen med färgpipett";
 "prefs.showSizeBadge" = "Visa markeringens storlek";
 "prefs.dimming" = "Nedtoning av bakgrunden";
+"prefs.imageFormat" = "Bildformat";
+"prefs.resetCapture" = "Återställ inspelningsinställningarna";
 "prefs.tools.explainer" = "Ritalternativen sitter i överlägget, precis intill teckningen: färg, tjocklek, maskering och textstil finns i panelen bakom färgpricken.";
 "prefs.tools.reset" = "Återställ verktygen";
 "prefs.overlayShortcuts" = "Kortkommandon i överlägget";
 "prefs.shortcuts.actions" = "⌘C kopiera · ⌘S spara · ⇧⌘S spara som · ⌘P skriv ut · ⌘Z / ⇧⌘Z ångra och gör om · ⌘A hela skärmen · ↩ kopiera och stäng · Esc avbryt";
 "prefs.shortcuts.modifiers" = "Medan du ritar: ⇧ kvadrat eller 45° · ⌥ rita från mitten · ⌃ verktygets variant (fylld form, annan maskering). Modifierarna går att kombinera.";
+
+"save.format" = "Format:";
 
 "permission.title" = "Behörighet för skärminspelning krävs";
 "permission.body" = "Öppna Systeminställningar → Integritet och säkerhet → Skärminspelning och slå på %@.\n\nDärefter måste appen startas om.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Skärmbilden misslyckades";
 "error.createFolder" = "Kunde inte skapa mappen";
 "error.encodePNG" = "Kunde inte koda PNG-filen";
+"error.encodeJPEG" = "Det gick inte att koda JPEG-filen";
 "error.saveFile" = "Kunde inte spara filen";
 
 "filename.fallback" = "Skärmbild";
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Skärmbilder med direkta anteckningar för macOS.";
-"about.alpha" = "Alfaversion — en del skavanker finns kvar.";
+"about.thankDeveloper" = "Säg tack till utvecklaren";
 "about.link.source" = "Källkod";
 "about.link.releases" = "Utgåvor";
 "about.link.privacy" = "Integritet";

@@ -51,10 +51,19 @@
 "style.systemPalette" = "Systeemkleurenpalet";
 "style.thickness" = "Dikte";
 "style.fontSize" = "Grootte";
+"style.size" = "Grootte";
+"style.arrowThickness" = "Dikte van pijl";
 "style.backdropColor" = "Achtergrondkleur";
 "style.brushSize" = "Kwastgrootte";
 "style.intensity" = "Intensiteit";
 "style.eraserSize" = "Gumgrootte";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Omtrek";
+"style.shapeFilled" = "Gevuld";
+"style.arrowSingle" = "Enkele punt";
+"style.arrowDouble" = "Dubbele punt";
+"text.moveHandle" = "Sleep om te verplaatsen";
 
 "overlay.hint.area" = "Sleep om een gebied te kiezen · Esc annuleert";
 "overlay.hint.window" = "Wijs een venster aan en klik · Esc annuleert";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Herstel de standaardsneltoetsen";
 "prefs.shortcut.conflict" = "De gemarkeerde sneltoetsen zijn al door een andere app bezet en doen niets. Kies andere of sluit die app.";
 "prefs.shortcut.conflict.help" = "Bezet door een andere app en werkt niet";
+"prefs.shortcut.clear" = "Sneltoets wissen";
 "prefs.saveFolder" = "Bewaarmap";
 "prefs.choose" = "Kies…";
 "prefs.filenameTemplate" = "Naamsjabloon";
-"prefs.filenameTokens" = "Beschikbaar: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Beschikbaar — klik om in te voegen:";
 "prefs.askWhereToSave" = "Vraag elke keer waar te bewaren";
 "prefs.copyOnSave" = "Kopieer naar klembord bij bewaren";
 "prefs.downscaleRetina" = "Bewaar op logische grootte (zonder Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Toon de loep met kleurenpikker";
 "prefs.showSizeBadge" = "Toon de grootte van de selectie";
 "prefs.dimming" = "Achtergrond dimmen";
+"prefs.imageFormat" = "Afbeeldingsformaat";
+"prefs.resetCapture" = "Opnamevoorkeuren terugzetten";
 "prefs.tools.explainer" = "De tekenopties zitten in de overlay, vlak naast de tekening: kleur, dikte, onleesbaar maken en tekststijl staan in het paneel achter de kleurstip.";
 "prefs.tools.reset" = "Zet gereedschap terug op standaard";
 "prefs.overlayShortcuts" = "Sneltoetsen in de overlay";
 "prefs.shortcuts.actions" = "⌘C kopieer · ⌘S bewaar · ⇧⌘S bewaar als · ⌘P print · ⌘Z / ⇧⌘Z herstel en opnieuw · ⌘A hele scherm · ↩ kopieer en sluit · Esc annuleer";
 "prefs.shortcuts.modifiers" = "Tijdens het tekenen: ⇧ vierkant of 45° · ⌥ teken vanuit het midden · ⌃ variant van het gereedschap (gevulde vorm, andere onleesbaarheid). De toetsen zijn te combineren.";
+
+"save.format" = "Formaat:";
 
 "permission.title" = "Toestemming voor schermopname nodig";
 "permission.body" = "Open Systeeminstellingen → Privacy en beveiliging → Schermopname en zet %@ aan.\n\nDaarna moet de app opnieuw worden gestart.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Opname mislukt";
 "error.createFolder" = "Kon de bewaarmap niet aanmaken";
 "error.encodePNG" = "Kon de PNG niet coderen";
+"error.encodeJPEG" = "Kan de JPEG niet coderen";
 "error.saveFile" = "Kon het bestand niet bewaren";
 
 "filename.fallback" = "Schermafbeelding";
 
 "about.version" = "Versie %@ (build %@)";
 "about.tagline" = "Schermafbeeldingen met directe aantekeningen voor macOS.";
-"about.alpha" = "Alfaversie — er zitten nog wat ruwe randjes aan.";
+"about.thankDeveloper" = "Bedank de ontwikkelaar";
 "about.link.source" = "Broncode";
 "about.link.releases" = "Releases";
 "about.link.privacy" = "Privacy";

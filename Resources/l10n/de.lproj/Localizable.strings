@@ -51,10 +51,19 @@
 "style.systemPalette" = "Systemfarbpalette";
 "style.thickness" = "Stärke";
 "style.fontSize" = "Größe";
+"style.size" = "Größe";
+"style.arrowThickness" = "Pfeildicke";
 "style.backdropColor" = "Hintergrundfarbe";
 "style.brushSize" = "Pinselgröße";
 "style.intensity" = "Intensität";
 "style.eraserSize" = "Radierergröße";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Umriss";
+"style.shapeFilled" = "Gefüllt";
+"style.arrowSingle" = "Einfache Spitze";
+"style.arrowDouble" = "Doppelte Spitze";
+"text.moveHandle" = "Ziehen zum Verschieben";
 
 "overlay.hint.area" = "Bereich aufziehen · Esc bricht ab";
 "overlay.hint.window" = "Auf ein Fenster zeigen und klicken · Esc bricht ab";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Standardkurzbefehle wiederherstellen";
 "prefs.shortcut.conflict" = "Die markierten Kurzbefehle sind bereits von einer anderen App belegt und lösen nicht aus. Wähle andere oder beende die andere App.";
 "prefs.shortcut.conflict.help" = "Von einer anderen App belegt und ohne Funktion";
+"prefs.shortcut.clear" = "Kurzbefehl löschen";
 "prefs.saveFolder" = "Zielordner";
 "prefs.choose" = "Auswählen…";
 "prefs.filenameTemplate" = "Namensvorlage";
-"prefs.filenameTokens" = "Verfügbar: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Verfügbar — zum Einfügen klicken:";
 "prefs.askWhereToSave" = "Jedes Mal nach dem Speicherort fragen";
 "prefs.copyOnSave" = "Beim Sichern in die Zwischenablage kopieren";
 "prefs.downscaleRetina" = "In logischer Größe sichern (ohne Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Lupe mit Farbwähler anzeigen";
 "prefs.showSizeBadge" = "Größe der Auswahl anzeigen";
 "prefs.dimming" = "Hintergrund abdunkeln";
+"prefs.imageFormat" = "Bildformat";
+"prefs.resetCapture" = "Aufnahmeeinstellungen zurücksetzen";
 "prefs.tools.explainer" = "Die Zeichenoptionen sitzen direkt im Overlay, neben der Zeichnung: Farbe, Stärke, Unkenntlichmachung und Textstil liegen im Panel hinter dem Farbkreis.";
 "prefs.tools.reset" = "Werkzeuge zurücksetzen";
 "prefs.overlayShortcuts" = "Kurzbefehle im Overlay";
 "prefs.shortcuts.actions" = "⌘C kopieren · ⌘S sichern · ⇧⌘S sichern unter · ⌘P drucken · ⌘Z / ⇧⌘Z widerrufen und wiederholen · ⌘A ganzer Bildschirm · ↩ kopieren und schließen · Esc abbrechen";
 "prefs.shortcuts.modifiers" = "Beim Zeichnen: ⇧ Quadrat oder 45° · ⌥ aus der Mitte zeichnen · ⌃ alternatives Verhalten (gefüllte Form, andere Unkenntlichmachung). Die Modifikatoren lassen sich kombinieren.";
+
+"save.format" = "Format:";
 
 "permission.title" = "Berechtigung zur Bildschirmaufnahme erforderlich";
 "permission.body" = "Öffne Systemeinstellungen → Datenschutz & Sicherheit → Bildschirmaufnahme und aktiviere %@.\n\nDanach muss die App neu gestartet werden.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Aufnahme fehlgeschlagen";
 "error.createFolder" = "Zielordner konnte nicht erstellt werden";
 "error.encodePNG" = "PNG konnte nicht codiert werden";
+"error.encodeJPEG" = "JPEG konnte nicht codiert werden";
 "error.saveFile" = "Datei konnte nicht gesichert werden";
 
 "filename.fallback" = "Bildschirmfoto";
 
 "about.version" = "Version %@ (Build %@)";
 "about.tagline" = "Bildschirmfotos mit sofortigen Anmerkungen für macOS.";
-"about.alpha" = "Alpha-Version — einige Ecken und Kanten sind geblieben.";
+"about.thankDeveloper" = "Dem Entwickler danken";
 "about.link.source" = "Quellcode";
 "about.link.releases" = "Releases";
 "about.link.privacy" = "Datenschutz";

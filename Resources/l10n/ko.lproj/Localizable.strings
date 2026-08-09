@@ -51,10 +51,19 @@
 "style.systemPalette" = "시스템 색상 팔레트";
 "style.thickness" = "두께";
 "style.fontSize" = "크기";
+"style.size" = "크기";
+"style.arrowThickness" = "화살표 두께";
 "style.backdropColor" = "배경 색상";
 "style.brushSize" = "브러시 크기";
 "style.intensity" = "강도";
 "style.eraserSize" = "지우개 크기";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "윤곽선";
+"style.shapeFilled" = "채우기";
+"style.arrowSingle" = "한쪽 화살촉";
+"style.arrowDouble" = "양쪽 화살촉";
+"text.moveHandle" = "드래그하여 이동";
 
 "overlay.hint.area" = "드래그해서 영역 선택 · Esc 취소";
 "overlay.hint.window" = "윈도우를 가리키고 클릭 · Esc 취소";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "기본 단축키로 되돌리기";
 "prefs.shortcut.conflict" = "표시된 단축키는 다른 앱이 이미 사용 중이라 동작하지 않습니다. 다른 조합을 고르거나 그 앱을 종료하세요.";
 "prefs.shortcut.conflict.help" = "다른 앱이 사용 중이라 동작하지 않음";
+"prefs.shortcut.clear" = "단축키 지우기";
 "prefs.saveFolder" = "저장 폴더";
 "prefs.choose" = "선택…";
 "prefs.filenameTemplate" = "파일 이름 템플릿";
-"prefs.filenameTokens" = "사용 가능: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "사용 가능 — 클릭하여 삽입:";
 "prefs.askWhereToSave" = "매번 저장 위치 묻기";
 "prefs.copyOnSave" = "저장할 때 클립보드에도 복사";
 "prefs.downscaleRetina" = "논리 크기로 저장 (Retina ×2 없이)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "색상 추출기가 있는 돋보기 표시";
 "prefs.showSizeBadge" = "선택 영역 크기 표시";
 "prefs.dimming" = "배경 어둡게";
+"prefs.imageFormat" = "이미지 형식";
+"prefs.resetCapture" = "캡처 설정을 기본값으로 재설정";
 "prefs.tools.explainer" = "그리기 옵션은 그림 바로 옆 오버레이 안에 있습니다. 색상, 두께, 가리기, 텍스트 스타일은 모두 색상 원 뒤 패널에 있습니다.";
 "prefs.tools.reset" = "도구를 기본값으로";
 "prefs.overlayShortcuts" = "오버레이 단축키";
 "prefs.shortcuts.actions" = "⌘C 복사 · ⌘S 저장 · ⇧⌘S 다른 이름으로 저장 · ⌘P 프린트 · ⌘Z / ⇧⌘Z 실행 취소와 다시 실행 · ⌘A 전체 화면 · ↩ 복사 후 닫기 · Esc 취소";
 "prefs.shortcuts.modifiers" = "그리는 동안: ⇧ 정사각형 또는 45° · ⌥ 중심에서 그리기 · ⌃ 도구의 대체 동작 (채운 도형, 다른 가리기). 조합해서 쓸 수 있습니다.";
+
+"save.format" = "형식:";
 
 "permission.title" = "화면 기록 권한이 필요합니다";
 "permission.body" = "시스템 설정 → 개인정보 보호 및 보안 → 화면 기록을 열고 %@ 을(를) 켜세요.\n\n그런 다음 앱을 다시 실행해야 합니다.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "캡처 실패";
 "error.createFolder" = "저장 폴더를 만들 수 없습니다";
 "error.encodePNG" = "PNG로 인코딩할 수 없습니다";
+"error.encodeJPEG" = "JPEG를 인코딩할 수 없습니다";
 "error.saveFile" = "파일을 저장할 수 없습니다";
 
 "filename.fallback" = "스크린샷";
 
 "about.version" = "버전 %@ (빌드 %@)";
 "about.tagline" = "바로 주석을 다는 macOS 스크린샷 앱.";
-"about.alpha" = "알파 버전 — 다듬어지지 않은 부분이 남아 있습니다.";
+"about.thankDeveloper" = "개발자에게 감사 인사하기";
 "about.link.source" = "소스 코드";
 "about.link.releases" = "릴리스";
 "about.link.privacy" = "개인정보 보호";

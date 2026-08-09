@@ -51,10 +51,19 @@
 "style.systemPalette" = "Järjestelmän väripaletti";
 "style.thickness" = "Paksuus";
 "style.fontSize" = "Koko";
+"style.size" = "Koko";
+"style.arrowThickness" = "Nuolen paksuus";
 "style.backdropColor" = "Taustan väri";
 "style.brushSize" = "Siveltimen koko";
 "style.intensity" = "Voimakkuus";
 "style.eraserSize" = "Pyyhekumin koko";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Ääriviiva";
+"style.shapeFilled" = "Täytetty";
+"style.arrowSingle" = "Yksi kärki";
+"style.arrowDouble" = "Kaksi kärkeä";
+"text.moveHandle" = "Siirrä vetämällä";
 
 "overlay.hint.area" = "Vedä valitaksesi alueen · Esc peruu";
 "overlay.hint.window" = "Osoita ikkunaa ja napsauta · Esc peruu";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Palauta oletusoikotiet";
 "prefs.shortcut.conflict" = "Merkityt oikotiet ovat jo toisen ohjelman käytössä eivätkä toimi. Valitse muut tai sulje se ohjelma.";
 "prefs.shortcut.conflict.help" = "Toisen ohjelman käytössä, ei toimi";
+"prefs.shortcut.clear" = "Tyhjennä pikanäppäin";
 "prefs.saveFolder" = "Tallennuskansio";
 "prefs.choose" = "Valitse…";
 "prefs.filenameTemplate" = "Nimimalli";
-"prefs.filenameTokens" = "Käytettävissä: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Saatavilla — lisää napsauttamalla:";
 "prefs.askWhereToSave" = "Kysy joka kerta, minne tallennetaan";
 "prefs.copyOnSave" = "Kopioi leikepöydälle tallennettaessa";
 "prefs.downscaleRetina" = "Tallenna loogisessa koossa (ei Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Näytä suurennuslasi väripoimijalla";
 "prefs.showSizeBadge" = "Näytä valinnan koko";
 "prefs.dimming" = "Taustan himmennys";
+"prefs.imageFormat" = "Kuvan muoto";
+"prefs.resetCapture" = "Palauta kaappausasetukset oletuksiin";
 "prefs.tools.explainer" = "Piirtoasetukset ovat peittokerroksessa aivan piirroksen vieressä: väri, paksuus, peittäminen ja tekstityyli löytyvät väripallon takana olevasta paneelista.";
 "prefs.tools.reset" = "Palauta työkalujen oletukset";
 "prefs.overlayShortcuts" = "Peittokerroksen oikotiet";
 "prefs.shortcuts.actions" = "⌘C kopioi · ⌘S tallenna · ⇧⌘S tallenna nimellä · ⌘P tulosta · ⌘Z / ⇧⌘Z peru ja tee uudelleen · ⌘A koko näyttö · ↩ kopioi ja sulje · Esc peruuta";
 "prefs.shortcuts.modifiers" = "Piirtäessä: ⇧ neliö tai 45° · ⌥ piirrä keskeltä · ⌃ työkalun vaihtoehto (täytetty muoto, toinen peittotapa). Näppäimiä voi yhdistellä.";
+
+"save.format" = "Muoto:";
 
 "permission.title" = "Näytön tallennuksen käyttöoikeus tarvitaan";
 "permission.body" = "Avaa Järjestelmäasetukset → Tietosuoja ja turvallisuus → Näytön tallennus ja laita %@ päälle.\n\nSen jälkeen ohjelma pitää käynnistää uudelleen.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Kaappaus epäonnistui";
 "error.createFolder" = "Tallennuskansiota ei voitu luoda";
 "error.encodePNG" = "PNG-koodaus epäonnistui";
+"error.encodeJPEG" = "JPEG-koodaus epäonnistui";
 "error.saveFile" = "Tiedostoa ei voitu tallentaa";
 
 "filename.fallback" = "Näyttökuva";
 
 "about.version" = "Versio %@ (koontiversio %@)";
 "about.tagline" = "Näyttökuvat välittömillä merkinnöillä macOS:lle.";
-"about.alpha" = "Alfaversio — muutamia karkeuksia on vielä jäljellä.";
+"about.thankDeveloper" = "Kiitä kehittäjää";
 "about.link.source" = "Lähdekoodi";
 "about.link.releases" = "Julkaisut";
 "about.link.privacy" = "Tietosuoja";

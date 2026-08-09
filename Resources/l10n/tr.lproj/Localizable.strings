@@ -51,10 +51,19 @@
 "style.systemPalette" = "Sistem renk paleti";
 "style.thickness" = "Kalınlık";
 "style.fontSize" = "Boyut";
+"style.size" = "Boyut";
+"style.arrowThickness" = "Ok kalınlığı";
 "style.backdropColor" = "Arka plan rengi";
 "style.brushSize" = "Fırça boyutu";
 "style.intensity" = "Yoğunluk";
 "style.eraserSize" = "Silgi boyutu";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Anahat";
+"style.shapeFilled" = "Dolgulu";
+"style.arrowSingle" = "Tek uçlu";
+"style.arrowDouble" = "Çift uçlu";
+"text.moveHandle" = "Taşımak için sürükleyin";
 
 "overlay.hint.area" = "Alan seçmek için sürükleyin · Esc vazgeçer";
 "overlay.hint.window" = "Bir pencereyi işaret edip tıklayın · Esc vazgeçer";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Varsayılan kısayolları geri yükle";
 "prefs.shortcut.conflict" = "İşaretli kısayollar başka bir uygulama tarafından kullanılıyor ve çalışmaz. Başka bir kısayol seçin ya da o uygulamadan çıkın.";
 "prefs.shortcut.conflict.help" = "Başka bir uygulamada kullanılıyor, çalışmıyor";
+"prefs.shortcut.clear" = "Kısayolu temizle";
 "prefs.saveFolder" = "Kayıt klasörü";
 "prefs.choose" = "Seç…";
 "prefs.filenameTemplate" = "Ad şablonu";
-"prefs.filenameTokens" = "Kullanılabilir: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Kullanılabilir — eklemek için tıklayın:";
 "prefs.askWhereToSave" = "Her seferinde nereye kaydedileceğini sor";
 "prefs.copyOnSave" = "Kaydederken panoya kopyala";
 "prefs.downscaleRetina" = "Mantıksal boyutta kaydet (Retina ×2 olmadan)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Renk seçicili büyüteci göster";
 "prefs.showSizeBadge" = "Seçim boyutunu göster";
 "prefs.dimming" = "Arka planı karartma";
+"prefs.imageFormat" = "Görüntü biçimi";
+"prefs.resetCapture" = "Yakalama ayarlarını varsayılana sıfırla";
 "prefs.tools.explainer" = "Çizim seçenekleri, çizimin hemen yanında kaplamanın içinde: renk, kalınlık, gizleme ve metin stili renk dairesinin arkasındaki panelde.";
 "prefs.tools.reset" = "Araçları varsayılana döndür";
 "prefs.overlayShortcuts" = "Kaplamadaki kısayollar";
 "prefs.shortcuts.actions" = "⌘C kopyala · ⌘S kaydet · ⇧⌘S farklı kaydet · ⌘P yazdır · ⌘Z / ⇧⌘Z geri al ve yinele · ⌘A tüm ekran · ↩ kopyala ve kapat · Esc vazgeç";
 "prefs.shortcuts.modifiers" = "Çizerken: ⇧ kare veya 45° · ⌥ merkezden çiz · ⌃ aracın alternatifi (dolu şekil, diğer gizleme). Değiştiriciler birlikte kullanılabilir.";
+
+"save.format" = "Biçim:";
 
 "permission.title" = "Ekran kaydı izni gerekiyor";
 "permission.body" = "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı bölümünü açıp %@ uygulamasını etkinleştirin.\n\nArdından uygulamanın yeniden başlatılması gerekir.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Yakalama başarısız";
 "error.createFolder" = "Kayıt klasörü oluşturulamadı";
 "error.encodePNG" = "PNG kodlanamadı";
+"error.encodeJPEG" = "JPEG kodlanamadı";
 "error.saveFile" = "Dosya kaydedilemedi";
 
 "filename.fallback" = "Ekran görüntüsü";
 
 "about.version" = "Sürüm %@ (yapı %@)";
 "about.tagline" = "macOS için anında işaretlemeli ekran görüntüleri.";
-"about.alpha" = "Alfa sürümü — bazı pürüzler hâlâ duruyor.";
+"about.thankDeveloper" = "Geliştiriciye teşekkür et";
 "about.link.source" = "Kaynak kodu";
 "about.link.releases" = "Sürümler";
 "about.link.privacy" = "Gizlilik";

@@ -33,7 +33,7 @@ body:
     attributes:
       label: ScreenCap version
       description: Menu → About ScreenCap
-      placeholder: 0.9.0-alpha (build 1)
+      placeholder: 1.0.0 (build 1)
     validations:
       required: true
 

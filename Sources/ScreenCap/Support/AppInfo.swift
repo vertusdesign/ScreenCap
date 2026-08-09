@@ -19,7 +19,7 @@ enum AppInfo {
         Bundle.main.object(forInfoDictionaryKey: "SCVersionChannel") as? String ?? ""
     }
 
-    /// `0.9.0-alpha`, or just `1.2.0` once the channel is empty.
+    /// `1.0.0`, or `1.1.0-beta` for a prerelease build.
     static var displayVersion: String {
         channel.isEmpty ? version : "\(version)-\(channel)"
     }
@@ -41,4 +41,5 @@ enum AppInfo {
     static let licenseURL = URL(string: "\(repository)/blob/main/LICENSE")!
     static let privacyURL = URL(string: "\(repository)/blob/main/PRIVACY.md")!
     static let issuesURL = URL(string: "\(repository)/issues")!
+    static let supportURL = URL(string: "https://www.patreon.com/cw/RomanVert/shop")!
 }

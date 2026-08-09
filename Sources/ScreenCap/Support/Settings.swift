@@ -27,6 +27,8 @@ final class Settings: ObservableObject {
         static let strokeWidth = "strokeWidth"
         static let fontSize = "fontSize"
         static let recentColors = "recentColors"
+        static let recentStrokeColors = "recentStrokeColors"
+        static let recentBackdropColors = "recentBackdropColors"
         static let textBackdrop = "textBackdrop"
         static let textBackdropColor = "textBackdropColor"
         static let obfuscationStyle = "obfuscationStyle"
@@ -34,6 +36,13 @@ final class Settings: ObservableObject {
         static let obfuscationBrushSize = "obfuscationBrushSize"
         static let obfuscationIntensity = "obfuscationIntensity"
         static let eraserRadius = "eraserRadius"
+        static let eraserShape = "eraserShape"
+        static let eraserMode = "eraserMode"
+        static let counterSize = "counterSize"
+        static let counterArrowWidth = "counterArrowWidth"
+        static let shapeFilled = "shapeFilled"
+        static let arrowDoubleHeaded = "arrowDoubleHeaded"
+        static let imageFormat = "imageFormat"
     }
 
     private static let toolDefaults: [String: Any] = [
@@ -43,23 +52,36 @@ final class Settings: ObservableObject {
         Key.textBackdrop: TextBackdrop.none.rawValue,
         Key.textBackdropColor: "#000000",
         Key.obfuscationStyle: ObfuscationStyle.pixelate.rawValue,
-        Key.obfuscationShape: ObfuscationShape.rectangle.rawValue,
+        Key.obfuscationShape: ObfuscationShape.brush.rawValue,
         Key.obfuscationBrushSize: 40.0,
         Key.obfuscationIntensity: 11.0,
-        Key.eraserRadius: 24.0
+        Key.eraserRadius: 24.0,
+        Key.eraserShape: ObfuscationShape.brush.rawValue,
+        Key.eraserMode: EraserMode.pixels.rawValue,
+        Key.counterSize: 3.0,
+        Key.counterArrowWidth: 3.0,
+        Key.shapeFilled: false,
+        Key.arrowDoubleHeaded: false
+    ]
+
+    /// Registered defaults for every value on the Capture tab, used both to seed
+    /// `UserDefaults` and to reset that tab. `saveDirectory` is deliberately
+    /// absent: it has no fixed default value, only a computed fallback (see its
+    /// getter), so resetting it means removing the key, not writing one.
+    private static let captureDefaults: [String: Any] = [
+        Key.filenameTemplate: "Screenshot_{timestamp}",
+        Key.askWhereToSave: false,
+        Key.copyOnSave: true,
+        Key.dimOpacity: 0.45,
+        Key.showMagnifier: true,
+        Key.showSizeBadge: true,
+        Key.downscaleRetina: false,
+        Key.playShutterSound: true,
+        Key.imageFormat: ImageFormat.png.rawValue
     ]
 
     private init() {
-        var registered: [String: Any] = [
-            Key.filenameTemplate: "Screenshot {date} at {time}",
-            Key.askWhereToSave: false,
-            Key.copyOnSave: true,
-            Key.dimOpacity: 0.45,
-            Key.showMagnifier: true,
-            Key.showSizeBadge: true,
-            Key.downscaleRetina: false,
-            Key.playShutterSound: true
-        ]
+        var registered = Self.captureDefaults
         registered.merge(Self.toolDefaults) { current, _ in current }
         defaults.register(defaults: registered)
     }
@@ -127,7 +149,7 @@ final class Settings: ObservableObject {
 
     /// Supports `{date}`, `{time}`, `{timestamp}`, `{width}`, `{height}`.
     var filenameTemplate: String {
-        get { defaults.string(forKey: Key.filenameTemplate) ?? "Screenshot {date} at {time}" }
+        get { defaults.string(forKey: Key.filenameTemplate) ?? "Screenshot_{timestamp}" }
         set { set(newValue, Key.filenameTemplate) }
     }
 
@@ -205,6 +227,43 @@ final class Settings: ObservableObject {
         set { set(Double(newValue), Key.eraserRadius) }
     }
 
+    var eraserShape: ObfuscationShape {
+        get { ObfuscationShape(rawValue: defaults.string(forKey: Key.eraserShape) ?? "") ?? .brush }
+        set { set(newValue.rawValue, Key.eraserShape) }
+    }
+
+    var eraserMode: EraserMode {
+        get { EraserMode(rawValue: defaults.string(forKey: Key.eraserMode) ?? "") ?? .pixels }
+        set { set(newValue.rawValue, Key.eraserMode) }
+    }
+
+    var counterSize: CGFloat {
+        get { CGFloat(defaults.double(forKey: Key.counterSize)) }
+        set { set(Double(newValue), Key.counterSize) }
+    }
+
+    var counterArrowWidth: CGFloat {
+        get { CGFloat(defaults.double(forKey: Key.counterArrowWidth)) }
+        set { set(Double(newValue), Key.counterArrowWidth) }
+    }
+
+    /// Persisted default for rectangle/ellipse: filled vs outlined.
+    var shapeFilled: Bool {
+        get { defaults.bool(forKey: Key.shapeFilled) }
+        set { set(newValue, Key.shapeFilled) }
+    }
+
+    /// Persisted default for the arrow tool: one head vs two.
+    var arrowDoubleHeaded: Bool {
+        get { defaults.bool(forKey: Key.arrowDoubleHeaded) }
+        set { set(newValue, Key.arrowDoubleHeaded) }
+    }
+
+    var imageFormat: ImageFormat {
+        get { ImageFormat(rawValue: defaults.string(forKey: Key.imageFormat) ?? "") ?? .png }
+        set { set(newValue.rawValue, Key.imageFormat) }
+    }
+
     var obfuscation: ObfuscationSettings {
         get {
             ObfuscationSettings(
@@ -223,16 +282,53 @@ final class Settings: ObservableObject {
         }
     }
 
-    var recentColors: [NSColor] {
-        get { (defaults.stringArray(forKey: Key.recentColors) ?? []).compactMap { NSColor(hex: $0) } }
-        set { set(newValue.prefix(8).map(\.hexString), Key.recentColors) }
+    static let maximumRecentColors = 9
+
+    /// Recent stroke colors. The old shared key is used as a one-time
+    /// compatibility fallback so existing users do not lose their history.
+    var recentStrokeColors: [NSColor] {
+        get { recentColors(forKey: Key.recentStrokeColors, fallbackKey: Key.recentColors) }
+        set { storeRecentColors(newValue, forKey: Key.recentStrokeColors) }
     }
 
-    func noteColorUsed(_ color: NSColor) {
-        let hex = color.hexString
-        var colors = recentColors.filter { $0.hexString != hex }
+    /// Recent backdrop colors are intentionally independent from stroke
+    /// colors: choosing a text background must not change the main palette.
+    var recentBackdropColors: [NSColor] {
+        get { recentColors(forKey: Key.recentBackdropColors) }
+        set { storeRecentColors(newValue, forKey: Key.recentBackdropColors) }
+    }
+
+    /// Compatibility alias for callers that still mean the primary/stroke list.
+    var recentColors: [NSColor] {
+        get { recentStrokeColors }
+        set { recentStrokeColors = newValue }
+    }
+
+    func noteStrokeColorUsed(_ color: NSColor) {
+        var colors = recentStrokeColors.filter { $0.hexString != color.hexString }
         colors.insert(color, at: 0)
-        recentColors = Array(colors.prefix(8))
+        recentStrokeColors = Array(colors.prefix(Self.maximumRecentColors))
+    }
+
+    func noteBackdropColorUsed(_ color: NSColor) {
+        var colors = recentBackdropColors.filter { $0.hexString != color.hexString }
+        colors.insert(color, at: 0)
+        recentBackdropColors = Array(colors.prefix(Self.maximumRecentColors))
+    }
+
+    private func recentColors(forKey key: String, fallbackKey: String? = nil) -> [NSColor] {
+        let stored = defaults.stringArray(forKey: key)
+        let values = stored ?? fallbackKey.flatMap { defaults.stringArray(forKey: $0) } ?? []
+        return values.prefix(Self.maximumRecentColors).compactMap { NSColor(hex: $0) }
+    }
+
+    private func storeRecentColors(_ colors: [NSColor], forKey key: String) {
+        set(colors.prefix(Self.maximumRecentColors).map(\.hexString), key)
+    }
+
+    /// Kept for source compatibility with older overlay code.
+    func noteColorUsed(_ color: NSColor) {
+        noteStrokeColorUsed(color)
     }
 
     /// Restores every drawing-tool value, leaving capture and shortcut settings alone.
@@ -241,6 +337,18 @@ final class Settings: ObservableObject {
             defaults.set(value, forKey: key)
         }
         defaults.removeObject(forKey: Key.recentColors)
+        defaults.removeObject(forKey: Key.recentStrokeColors)
+        defaults.removeObject(forKey: Key.recentBackdropColors)
+        objectWillChange.send()
+    }
+
+    /// Restores every value on the Capture tab, leaving drawing tools and
+    /// shortcuts alone.
+    func resetCaptureDefaults() {
+        for (key, value) in Self.captureDefaults {
+            defaults.set(value, forKey: key)
+        }
+        defaults.removeObject(forKey: Key.saveDirectory)
         objectWillChange.send()
     }
 

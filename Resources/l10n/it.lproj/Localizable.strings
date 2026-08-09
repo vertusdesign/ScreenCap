@@ -51,10 +51,19 @@
 "style.systemPalette" = "Palette di sistema";
 "style.thickness" = "Spessore";
 "style.fontSize" = "Corpo";
+"style.size" = "Dimensione";
+"style.arrowThickness" = "Spessore della freccia";
 "style.backdropColor" = "Colore dello sfondo";
 "style.brushSize" = "Dimensione pennello";
 "style.intensity" = "Intensità";
 "style.eraserSize" = "Dimensione gomma";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Contorno";
+"style.shapeFilled" = "Riempito";
+"style.arrowSingle" = "Punta singola";
+"style.arrowDouble" = "Punta doppia";
+"text.moveHandle" = "Trascina per spostare";
 
 "overlay.hint.area" = "Trascina per selezionare un’area · Esc per annullare";
 "overlay.hint.window" = "Punta una finestra e clicca · Esc per annullare";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Ripristina le scorciatoie di default";
 "prefs.shortcut.conflict" = "Le scorciatoie segnalate sono già occupate da un’altra app e non funzioneranno. Scegline altre o chiudi quell’app.";
 "prefs.shortcut.conflict.help" = "Occupata da un’altra app e non funzionante";
+"prefs.shortcut.clear" = "Cancella scorciatoia";
 "prefs.saveFolder" = "Cartella di salvataggio";
 "prefs.choose" = "Scegli…";
 "prefs.filenameTemplate" = "Modello del nome";
-"prefs.filenameTokens" = "Disponibili: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Disponibili — clicca per inserire:";
 "prefs.askWhereToSave" = "Chiedi ogni volta dove salvare";
 "prefs.copyOnSave" = "Copia negli appunti al salvataggio";
 "prefs.downscaleRetina" = "Salva a dimensione logica (senza Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Mostra la lente con contagocce";
 "prefs.showSizeBadge" = "Mostra la dimensione della selezione";
 "prefs.dimming" = "Oscuramento dello sfondo";
+"prefs.imageFormat" = "Formato immagine";
+"prefs.resetCapture" = "Ripristina le impostazioni di acquisizione predefinite";
 "prefs.tools.explainer" = "Le opzioni di disegno stanno nell’overlay, accanto al disegno: colore, spessore, oscuramento e stile del testo sono nel pannello dietro il cerchio del colore.";
 "prefs.tools.reset" = "Ripristina gli strumenti";
 "prefs.overlayShortcuts" = "Scorciatoie nell’overlay";
 "prefs.shortcuts.actions" = "⌘C copia · ⌘S salva · ⇧⌘S salva col nome · ⌘P stampa · ⌘Z / ⇧⌘Z annulla e ripristina · ⌘A tutto lo schermo · ↩ copia e chiudi · Esc annulla";
 "prefs.shortcuts.modifiers" = "Mentre disegni: ⇧ quadrato o 45° · ⌥ disegna dal centro · ⌃ variante dello strumento (forma piena, altro oscuramento). I modificatori si combinano.";
+
+"save.format" = "Formato:";
 
 "permission.title" = "Serve il permesso di registrazione dello schermo";
 "permission.body" = "Apri Impostazioni di Sistema → Privacy e sicurezza → Registrazione schermo e attiva %@.\n\nPoi l’app va riavviata.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Cattura non riuscita";
 "error.createFolder" = "Impossibile creare la cartella di salvataggio";
 "error.encodePNG" = "Impossibile codificare il PNG";
+"error.encodeJPEG" = "Impossibile codificare il JPEG";
 "error.saveFile" = "Impossibile salvare il file";
 
 "filename.fallback" = "Schermata";
 
 "about.version" = "Versione %@ (build %@)";
 "about.tagline" = "Schermate con annotazioni istantanee per macOS.";
-"about.alpha" = "Versione alfa — restano alcune ruvidità.";
+"about.thankDeveloper" = "Ringrazia lo sviluppatore";
 "about.link.source" = "Codice sorgente";
 "about.link.releases" = "Versioni";
 "about.link.privacy" = "Privacy";

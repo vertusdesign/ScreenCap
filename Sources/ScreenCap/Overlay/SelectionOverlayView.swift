@@ -4,6 +4,13 @@ import Carbon.HIToolbox
 protocol SelectionOverlayViewDelegate: AnyObject {
     /// The pointer entered this display — it should take keyboard focus.
     func overlayWantsKeyFocus(_ view: SelectionOverlayView)
+    /// This display just started a brand-new selection — every other display's
+    /// selection is no longer the only one and must clear itself.
+    func overlayDidBeginSelection(_ view: SelectionOverlayView)
+    func overlayWillChange(_ view: SelectionOverlayView)
+    func overlayDidRequestUndo(_ view: SelectionOverlayView)
+    func overlayDidRequestRedo(_ view: SelectionOverlayView)
+    func overlayHistoryAvailabilityDidChange(_ view: SelectionOverlayView)
     func overlayDidRequestCancel(_ view: SelectionOverlayView)
     func overlay(
         _ view: SelectionOverlayView,
@@ -11,6 +18,15 @@ protocol SelectionOverlayViewDelegate: AnyObject {
         action: OutputAction,
         globalRect: CGRect
     )
+}
+
+/// State of one display inside a capture session. The controller stores an
+/// array of these states, one per overlay window, so history can cross display
+/// boundaries without converting the selection into global coordinates.
+struct SelectionOverlayState {
+    var annotations: [Annotation]
+    var selection: CGRect?
+    var counterNext: Int
 }
 
 /// The whole capture experience for one display: frozen screenshot, dimming,
@@ -44,13 +60,8 @@ final class SelectionOverlayView: NSView {
     private var draft: Annotation?
 
     /// One undo step. Resizing or moving the selection is an edit like any other,
-    /// so the frame travels through history together with the drawing.
-    private struct HistoryState {
-        var annotations: [Annotation]
-        var selection: CGRect?
-        var counterNext: Int
-    }
-
+    /// so the frame travels through history together with the drawing. The actual
+    /// stack lives in `OverlayController`, allowing one step to cover every display.
     private enum HistoryReason {
         case annotation
         case selection
@@ -58,8 +69,6 @@ final class SelectionOverlayView: NSView {
         case nudge
     }
 
-    private var undoStack: [HistoryState] = []
-    private var redoStack: [HistoryState] = []
     private var lastHistoryReason: HistoryReason?
 
     /// Everything the user drew, flattened into one transparent raster sheet over
@@ -81,14 +90,19 @@ final class SelectionOverlayView: NSView {
     private var activeModifiers: NSEvent.ModifierFlags = []
     private var hoveredWindow: WindowTarget?
     private var eyedropperActive = false
+    private var eyedropperTarget: StyleColorTarget = .stroke
 
     // MARK: - Chrome
 
     private let toolStrip = ToolStrip()
     private let actionBar = ActionBar()
+    private let magnifierView = MagnifierOverlayView()
     private var stylePopover: StylePopover?
     private var textEditor: AnnotationTextView?
     private var textEditorOrigin: CGPoint = .zero
+    private var textMoveHandle: TextMoveHandle?
+    private var textEditorStyle: ToolStyle?
+    private var editingTextID: UUID?
 
     private var trackingAreaRef: NSTrackingArea?
     private let handleRadius: CGFloat = 4.5
@@ -185,6 +199,19 @@ final class SelectionOverlayView: NSView {
         needsDisplay = true
     }
 
+    /// Called by the controller when a SIBLING display's view is about to take
+    /// key focus. Relying solely on this view's own `mouseExited` was not
+    /// reliable enough in practice — crossing the boundary between two adjacent
+    /// shielding-level windows could leave the loupe stuck showing on the
+    /// display the pointer just left. Clearing it explicitly, from the one place
+    /// that always knows focus moved, makes it unconditional.
+    func clearPointerState() {
+        guard pointerInside else { return }
+        pointerInside = false
+        hoveredWindow = nil
+        needsDisplay = true
+    }
+
     override func mouseMoved(with event: NSEvent) {
         if !pointerInside {
             pointerInside = true
@@ -235,10 +262,7 @@ final class SelectionOverlayView: NSView {
         activeModifiers = updated
         // ⌃ swaps what the current tool draws; the strip shows that immediately so
         // the alternate is discoverable without committing to a drag.
-        toolStrip.setAlternate(
-            activeModifiers.contains(.control),
-            obfuscationStyle: style.obfuscation.style
-        )
+        toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
         if case .drawing(let origin) = phase {
             draft = makeDraft(from: origin, to: cursorPoint)
         }
@@ -255,6 +279,16 @@ final class SelectionOverlayView: NSView {
             panel.isHidden = true
             addSubview(panel)
         }
+        magnifierView.frame = bounds
+        magnifierView.autoresizingMask = [.width, .height]
+        magnifierView.isHidden = true
+        magnifierView.drawContent = { [weak self] in
+            guard let self else { return }
+            self.drawMagnifier(at: self.cursorPoint)
+        }
+        // The loupe is a transparent, non-hit-testing view above the in-overlay
+        // chrome. The style popover is added later and is raised above it too.
+        addSubview(magnifierView, positioned: .above, relativeTo: nil)
 
         toolStrip.onToolSelected = { [weak self] in self?.select(tool: $0) }
         toolStrip.onStyleTapped = { [weak self] in self?.toggleStylePopover() }
@@ -284,10 +318,7 @@ final class SelectionOverlayView: NSView {
         commitTextEditorIfNeeded()
         tool = newTool
         toolStrip.setSelected(newTool)
-        toolStrip.setAlternate(
-            activeModifiers.contains(.control),
-            obfuscationStyle: style.obfuscation.style
-        )
+        toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
         stylePopover?.configure(for: newTool, style: style)
         layoutChrome()
         updateCursor()
@@ -317,61 +348,90 @@ final class SelectionOverlayView: NSView {
             Settings.shared.textBackdropColor = newStyle.backdropColor
             Settings.shared.obfuscation = newStyle.obfuscation
             Settings.shared.eraserRadius = newStyle.eraserRadius
-            if colorChanged { Settings.shared.noteColorUsed(newStyle.color) }
+            Settings.shared.eraserShape = newStyle.eraserShape
+            Settings.shared.eraserMode = newStyle.eraserMode
+            Settings.shared.counterSize = newStyle.counterSize
+            Settings.shared.counterArrowWidth = newStyle.counterArrowWidth
+            Settings.shared.shapeFilled = newStyle.filled
+            Settings.shared.arrowDoubleHeaded = newStyle.arrowDoubleHeaded
+            if colorChanged { Settings.shared.noteStrokeColorUsed(newStyle.color) }
             toolStrip.setColor(newStyle.color)
-            toolStrip.setAlternate(
-                activeModifiers.contains(.control),
-                obfuscationStyle: newStyle.obfuscation.style
-            )
-            textEditor?.font = NSFont.systemFont(ofSize: newStyle.fontSize, weight: .semibold)
-            textEditor?.textColor = newStyle.color
+            toolStrip.setAlternate(activeModifiers.contains(.control), style: newStyle)
+            // The editor's own glyphs stay `.clear` — see `beginTextEditing` —
+            // so only the caret color and the layout-affecting font need to
+            // track the new style here. The visible, styled preview (color,
+            // backdrop, shadow) is the `draft` annotation rebuilt below;
+            // without that rebuild a color/backdrop change wouldn't show up
+            // until the next keystroke happened to trigger it.
+            let activeEditorStyle = textEditorStyle ?? newStyle
+            textEditor?.font = NSFont.systemFont(ofSize: activeEditorStyle.fontSize, weight: .semibold)
+            textEditor?.insertionPointColor = activeEditorStyle.color
+            if textEditor != nil { updateLiveTextDraft() }
             needsDisplay = true
         }
         // Any content change can resize the panel — a new swatch row, a tool with
         // different controls — so its frame is recomputed instead of being left at
         // whatever it measured on creation.
         popover.onContentChanged = { [weak self] in self?.layoutChrome() }
-        popover.onEyedropperToggled = { [weak self] active in
+        popover.onEyedropperToggled = { [weak self] active, target in
             guard let self else { return }
             eyedropperActive = active
+            eyedropperTarget = target
             updateCursor()
             needsDisplay = true
         }
         addSubview(popover)
         stylePopover = popover
+        addSubview(magnifierView, positioned: .above, relativeTo: nil)
         layoutChrome()
     }
 
     // MARK: - History
 
-    private var currentState: HistoryState {
-        HistoryState(annotations: annotations, selection: selection, counterNext: counterNext)
+    func sessionState() -> SelectionOverlayState {
+        SelectionOverlayState(annotations: annotations, selection: selection, counterNext: counterNext)
     }
 
     private func pushUndoState(_ reason: HistoryReason = .annotation) {
         // A run of nudges collapses into the step before the run started.
         if reason == .nudge, lastHistoryReason == .nudge { return }
-        undoStack.append(currentState)
-        redoStack.removeAll()
-        if undoStack.count > 64 { undoStack.removeFirst() }
+        delegate?.overlayWillChange(self)
         lastHistoryReason = reason
         updateHistoryButtons()
     }
 
     private func undo() {
         commitTextEditorIfNeeded()
-        guard let previous = undoStack.popLast() else { return }
-        redoStack.append(currentState)
-        apply(previous)
+        delegate?.overlayDidRequestUndo(self)
     }
 
     private func redo() {
-        guard let next = redoStack.popLast() else { return }
-        undoStack.append(currentState)
-        apply(next)
+        delegate?.overlayDidRequestRedo(self)
     }
 
-    private func apply(_ state: HistoryState) {
+    /// Called by the controller when a SIBLING display just started a new
+    /// selection. Only one selection may exist across the whole capture
+    /// session, so this one gives up everything it had — there is nothing
+    /// useful left to keep once it can no longer be the chosen area.
+    func discardSelectionForSelectionElsewhere() {
+        guard selection != nil else { return }
+        commitTextEditorIfNeeded()
+        lastHistoryReason = nil
+        annotations = []
+        selection = nil
+        counterNext = 1
+        draft = nil
+        eraseStroke = []
+        phase = .idle
+        rebuildLayer()
+        updateChromeVisibility()
+        layoutChrome()
+        updateCursor()
+        updateHistoryButtons()
+        needsDisplay = true
+    }
+
+    func apply(_ state: SelectionOverlayState) {
         annotations = state.annotations
         selection = state.selection
         counterNext = state.counterNext
@@ -390,19 +450,26 @@ final class SelectionOverlayView: NSView {
     /// Repaints the raster sheet. Called whenever the annotation list changes by
     /// any route other than an in-progress eraser drag, which punches directly.
     private func rebuildLayer() {
-        annotationLayer?.rebuild(annotations: annotations, obfuscation: obfuscation)
+        let visibleAnnotations = editingTextID.map { id in
+            annotations.filter { $0.id != id }
+        } ?? annotations
+        annotationLayer?.rebuild(annotations: visibleAnnotations, obfuscation: obfuscation)
     }
 
     private func recomputeCounter() {
         var highest = 0
         for annotation in annotations {
-            if case .counter(_, let number) = annotation.shape { highest = max(highest, number) }
+            if case .counter(_, let number, _) = annotation.shape { highest = max(highest, number) }
         }
         counterNext = highest + 1
     }
 
     private func updateHistoryButtons() {
-        toolStrip.setHistoryState(canUndo: !undoStack.isEmpty, canRedo: !redoStack.isEmpty)
+        delegate?.overlayHistoryAvailabilityDidChange(self)
+    }
+
+    func setHistoryState(canUndo: Bool, canRedo: Bool) {
+        toolStrip.setHistoryState(canUndo: canUndo, canRedo: canRedo)
     }
 
     // MARK: - Mouse
@@ -437,14 +504,10 @@ final class SelectionOverlayView: NSView {
 
         if eyedropperActive {
             if let color = sampleColor(at: point) {
-                style.color = color
-                Settings.shared.toolColor = color
-                Settings.shared.noteColorUsed(color)
-                toolStrip.setColor(color)
-                stylePopover?.updateSampledColor(color)
+                stylePopover?.updateSampledColor(color, target: eyedropperTarget)
             }
             eyedropperActive = false
-            stylePopover?.setEyedropperActive(false)
+            stylePopover?.setEyedropperActive(false, target: eyedropperTarget)
             updateCursor()
             needsDisplay = true
             return
@@ -455,9 +518,22 @@ final class SelectionOverlayView: NSView {
             return
         }
 
+        // A double-click outside the selection (or with none yet) closes the
+        // whole session — chrome panels swallow their own clicks before this
+        // method ever sees them, so reaching here already means the click
+        // landed on the capture surface, not a button.
+        if event.clickCount >= 2 {
+            let outsideSelection = selection.map { !$0.contains(point) } ?? true
+            if outsideSelection {
+                cancel()
+                return
+            }
+        }
+
         guard let selection else {
             if case .window = mode, let hovered = hoveredWindow {
                 pushUndoState(.selection)
+                delegate?.overlayDidBeginSelection(self)
                 self.selection = hovered.frame.clamped(to: bounds)
                 phase = .ready
                 finishSelectionChange()
@@ -470,6 +546,8 @@ final class SelectionOverlayView: NSView {
         if let handle = handle(at: point, in: selection) {
             pushUndoState(.selection)
             phase = .resizing(handle: handle)
+            updateChromeVisibility()
+            needsDisplay = true
             return
         }
 
@@ -488,23 +566,50 @@ final class SelectionOverlayView: NSView {
                 width: point.x - selection.minX,
                 height: point.y - selection.minY
             ))
+            updateChromeVisibility()
+            needsDisplay = true
         case .text:
-            beginTextEditing(at: point)
+            if let existing = editableTextAnnotation(at: point) {
+                beginTextEditing(existing: existing)
+            } else {
+                beginTextEditing(at: point)
+            }
         case .counter:
-            pushUndoState()
-            annotations.append(Annotation(
-                shape: .counter(center: point, number: counterNext),
-                style: style
-            ))
-            counterNext += 1
-            rebuildLayer()
+            // A click commits a plain numbered circle; dragging keeps the same
+            // number at the start point and previews an arrow to the cursor.
+            phase = .drawing(origin: point)
+            draft = makeDraft(from: point, to: point)
             needsDisplay = true
         case .eraser:
-            pushUndoState()
-            phase = .drawing(origin: point)
-            eraseStroke = [point]
-            annotationLayer?.erase(points: eraseStroke, width: style.eraserRadius * 2)
-            needsDisplay = true
+            if style.eraserMode == .objects {
+                if let index = annotationIndex(at: point) {
+                    pushUndoState()
+                    annotations.remove(at: index)
+                    recomputeCounter()
+                    rebuildLayer()
+                    updateHistoryButtons()
+                    needsDisplay = true
+                }
+                phase = .ready
+                return
+            }
+            switch style.eraserShape {
+            case .brush:
+                // Punched straight into the layer as it moves — see below —
+                // rather than staged through `draft`, so undo is pushed
+                // up front like the pen/marker tools it behaves like.
+                pushUndoState()
+                phase = .drawing(origin: point)
+                eraseStroke = [point]
+                annotationLayer?.erase(points: eraseStroke, width: style.eraserRadius * 2)
+                needsDisplay = true
+            case .rectangle, .ellipse:
+                // A rubber-band region, like the shape tools: staged in `draft`
+                // and only committed (and undo-pushed) on release.
+                phase = .drawing(origin: point)
+                draft = makeDraft(from: point, to: point)
+                needsDisplay = true
+            }
         default:
             phase = .drawing(origin: point)
             draft = makeDraft(from: point, to: point)
@@ -515,6 +620,7 @@ final class SelectionOverlayView: NSView {
     private func beginNewSelection(at point: CGPoint) {
         commitTextEditorIfNeeded()
         pushUndoState(.selection)
+        delegate?.overlayDidBeginSelection(self)
         selection = CGRect(corner: point, corner: point)
         phase = .creating(origin: point)
         updateChromeVisibility()
@@ -545,7 +651,7 @@ final class SelectionOverlayView: NSView {
             selection = handle.resize(current, to: point).clamped(to: bounds)
 
         case .drawing(let origin):
-            if tool == .eraser {
+            if tool == .eraser, style.eraserShape == .brush {
                 let previous = eraseStroke.last ?? point
                 eraseStroke.append(point)
                 // Punch just the new segment: re-punching the whole path every
@@ -584,7 +690,7 @@ final class SelectionOverlayView: NSView {
 
         case .drawing(let origin):
             phase = .ready
-            if tool == .eraser {
+            if tool == .eraser, style.eraserShape == .brush {
                 // The layer already shows the stroke; recording it keeps undo and
                 // export in step without a second full repaint.
                 annotations.append(Annotation(
@@ -595,6 +701,7 @@ final class SelectionOverlayView: NSView {
             } else if let annotation = makeDraft(from: origin, to: point), isMeaningful(annotation) {
                 pushUndoState()
                 annotations.append(annotation)
+                if case .counter = annotation.shape { counterNext += 1 }
                 rebuildLayer()
             }
             draft = nil
@@ -615,8 +722,6 @@ final class SelectionOverlayView: NSView {
         updateCursor()
         needsDisplay = true
     }
-
-    // MARK: - Erasing
 
     // MARK: - Drafts
 
@@ -640,13 +745,18 @@ final class SelectionOverlayView: NSView {
         return CGRect(corner: origin, corner: CGPoint(x: origin.x + dx, y: origin.y + dy))
     }
 
-    /// Style for the shape currently being drawn, with ⌃ applied.
+    /// Style for the shape currently being drawn, with ⌃ applied. ⌃ always
+    /// TOGGLES away from whatever the popover already has set as the default,
+    /// rather than forcing a fixed alternate — so it stays a genuine "the other
+    /// option" regardless of which one is currently chosen.
     private var draftStyle: ToolStyle {
         var result = style
         guard activeModifiers.contains(.control) else { return result }
         switch tool {
         case .rectangle, .ellipse:
-            result.filled = true
+            result.filled.toggle()
+        case .arrow:
+            result.arrowDoubleHeaded.toggle()
         case .obfuscate:
             result.obfuscation.style = result.obfuscation.style.alternate
         default:
@@ -685,7 +795,9 @@ final class SelectionOverlayView: NSView {
                 }
             }
             return Annotation(
-                shape: tool == .line ? .line(from: from, to: to) : .arrow(from: from, to: to),
+                shape: tool == .line
+                    ? .line(from: from, to: to)
+                    : .arrow(from: from, to: to, doubleHeaded: style.arrowDoubleHeaded),
                 style: style
             )
 
@@ -718,7 +830,27 @@ final class SelectionOverlayView: NSView {
                 return Annotation(shape: .obfuscateBrush(points: points), style: style)
             }
 
-        case .move, .counter, .text, .eraser:
+        case .eraser:
+            // Brush erasing punches straight into the layer as it moves (see
+            // `mouseDragged`/`mouseDown`) rather than staging through `draft`,
+            // so it never reaches this branch.
+            switch style.eraserShape {
+            case .rectangle:
+                return Annotation(shape: .eraseRect(rubberBandRect(origin: origin, current: point)), style: style)
+            case .ellipse:
+                return Annotation(shape: .eraseEllipse(rubberBandRect(origin: origin, current: point)), style: style)
+            case .brush:
+                return nil
+            }
+
+        case .counter:
+            let arrowTo = origin.distance(to: point) > 3 ? point : nil
+            return Annotation(
+                shape: .counter(center: origin, number: counterNext, arrowTo: arrowTo),
+                style: style
+            )
+
+        case .move, .text:
             return nil
         }
     }
@@ -738,10 +870,11 @@ final class SelectionOverlayView: NSView {
         switch annotation.shape {
         case .pen(let points), .marker(let points), .obfuscateBrush(let points):
             return points.count > 1
-        case .line(let a, let b), .arrow(let a, let b):
+        case .line(let a, let b), .arrow(let a, let b, _):
             return a.distance(to: b) > 3
         case .rectangle(let rect), .ellipse(let rect),
-             .obfuscateRect(let rect), .obfuscateEllipse(let rect):
+             .obfuscateRect(let rect), .obfuscateEllipse(let rect),
+             .eraseRect(let rect), .eraseEllipse(let rect):
             return rect.width > 3 && rect.height > 3
         case .counter, .text:
             return true
@@ -761,56 +894,166 @@ final class SelectionOverlayView: NSView {
     // MARK: - Text editing
 
     private func beginTextEditing(at point: CGPoint) {
+        beginTextEditing(
+            origin: point,
+            initialText: "",
+            annotationID: nil,
+            editorStyle: style
+        )
+    }
+
+    private func beginTextEditing(existing annotation: Annotation) {
+        guard case .text(let origin, let string) = annotation.shape else { return }
+        beginTextEditing(
+            origin: origin,
+            initialText: string,
+            annotationID: annotation.id,
+            editorStyle: annotation.style
+        )
+    }
+
+    private func beginTextEditing(
+        origin: CGPoint,
+        initialText: String,
+        annotationID: UUID?,
+        editorStyle: ToolStyle
+    ) {
         commitTextEditorIfNeeded()
 
-        let font = NSFont.systemFont(ofSize: style.fontSize, weight: .semibold)
-        let height = ceil(font.ascender - font.descender + font.leading) + 6
+        let font = NSFont.systemFont(ofSize: editorStyle.fontSize, weight: .semibold)
+        let height = ceil(font.ascender - font.descender + font.leading) + 4
         let editor = AnnotationTextView(frame: CGRect(
-            x: point.x, y: point.y - height, width: 220, height: height
+            x: origin.x,
+            y: origin.y - height,
+            width: max(160, Annotation.textSize(initialText, style: editorStyle).width + 4),
+            height: height
         ))
         editor.font = font
-        editor.textColor = style.color
-        editor.insertionPointColor = style.color
+        // Glyphs are invisible — the styled preview (color, backdrop, shadow)
+        // is drawn separately below, through `draft`, using the exact same
+        // `AnnotationRenderer` call that bakes the final annotation. That makes
+        // what is on screen while typing pixel-identical to what gets
+        // committed, with no separate "editor look" that can drift out of sync.
+        // Only the caret stays visible, in the tool's current color.
+        editor.textColor = .clear
+        editor.insertionPointColor = editorStyle.color
         editor.isRichText = false
         editor.drawsBackground = false
         editor.isHorizontallyResizable = true
         editor.isVerticallyResizable = true
-        editor.textContainerInset = NSSize(width: 2, height: 2)
+        editor.textContainerInset = .zero
+        editor.textContainer?.lineFragmentPadding = 0
         editor.textContainer?.widthTracksTextView = false
         editor.textContainer?.containerSize = CGSize(
             width: CGFloat.greatestFiniteMagnitude,
             height: CGFloat.greatestFiniteMagnitude
         )
+        editor.string = initialText
         editor.onCommit = { [weak self] in self?.commitTextEditorIfNeeded() }
         editor.onCancel = { [weak self] in self?.discardTextEditor() }
+        editor.onTextChanged = { [weak self] in self?.updateLiveTextDraft() }
 
-        textEditorOrigin = point
+        textEditorOrigin = origin
+        // A new label follows the current tool style while it is being typed;
+        // an existing label keeps its own style so editing it does not silently
+        // recolor it just because the tool defaults changed.
+        textEditorStyle = annotationID == nil ? nil : editorStyle
+        editingTextID = annotationID
+        if annotationID != nil { rebuildLayer() }
         textEditor = editor
         addSubview(editor)
+
+        let handle = TextMoveHandle()
+        handle.onDrag = { [weak self] delta in self?.moveTextEditor(by: delta) }
+        addSubview(handle)
+        textMoveHandle = handle
+        positionTextMoveHandle()
+
         window?.makeFirstResponder(editor)
+        updateLiveTextDraft()
+    }
+
+    /// Keeps the on-screen preview in step with every keystroke, reusing the
+    /// same `draft` slot the shape tools stage their in-progress drag in.
+    private func updateLiveTextDraft() {
+        guard let editor = textEditor else { return }
+        draft = Annotation(
+            shape: .text(origin: textEditorOrigin, string: editor.string),
+            style: textEditorStyle ?? style
+        )
+        positionTextMoveHandle()
         needsDisplay = true
+    }
+
+    /// Drag callback from the move handle: shifts the anchor point, the editor
+    /// itself, and the live preview together, in the overlay's own coordinate
+    /// space (see `TextMoveHandle` for why the delta needs no conversion).
+    private func moveTextEditor(by delta: CGPoint) {
+        guard let editor = textEditor else { return }
+        textEditorOrigin.x += delta.x
+        textEditorOrigin.y += delta.y
+        editor.frame.origin.x += delta.x
+        editor.frame.origin.y += delta.y
+        updateLiveTextDraft()
+    }
+
+    private func positionTextMoveHandle() {
+        guard let editor = textEditor, let handle = textMoveHandle else { return }
+        let size = handle.frame.size
+        let target = CGRect(
+            x: editor.frame.minX - size.width / 2,
+            y: editor.frame.maxY - size.height / 2,
+            width: size.width, height: size.height
+        )
+        handle.frame = target.nudgedInside(bounds.insetBy(dx: 2, dy: 2))
     }
 
     private func commitTextEditorIfNeeded() {
         guard let editor = textEditor else { return }
         let text = editor.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        let origin = textEditorOrigin
+        let editorStyle = textEditorStyle ?? style
+        let editingID = editingTextID
         textEditor = nil
         editor.removeFromSuperview()
+        textMoveHandle?.removeFromSuperview()
+        textMoveHandle = nil
+        textEditorStyle = nil
+        editingTextID = nil
+        draft = nil
         window?.makeFirstResponder(self)
 
-        guard !text.isEmpty else { needsDisplay = true; return }
+        guard !text.isEmpty || editingID != nil else { needsDisplay = true; return }
         pushUndoState()
-        annotations.append(Annotation(
-            shape: .text(origin: textEditorOrigin, string: text),
-            style: style
-        ))
+        if let editingID, let index = annotations.firstIndex(where: { $0.id == editingID }) {
+            if text.isEmpty {
+                annotations.remove(at: index)
+            } else {
+                annotations[index] = Annotation(
+                    shape: .text(origin: origin, string: text),
+                    style: editorStyle
+                )
+            }
+        } else if !text.isEmpty {
+            annotations.append(Annotation(
+                shape: .text(origin: origin, string: text),
+                style: editorStyle
+            ))
+        }
         rebuildLayer()
         needsDisplay = true
     }
 
     private func discardTextEditor() {
+        let wasEditingExisting = editingTextID != nil
         textEditor?.removeFromSuperview()
         textEditor = nil
+        textMoveHandle?.removeFromSuperview()
+        textMoveHandle = nil
+        textEditorStyle = nil
+        editingTextID = nil
+        draft = nil
+        if wasEditingExisting { rebuildLayer() }
         window?.makeFirstResponder(self)
         needsDisplay = true
     }
@@ -832,6 +1075,7 @@ final class SelectionOverlayView: NSView {
             case kVK_ANSI_Z: modifiers.contains(.shift) ? redo() : undo(); return
             case kVK_ANSI_A:
                 pushUndoState(.selection)
+                delegate?.overlayDidBeginSelection(self)
                 selection = bounds
                 phase = .ready
                 finishSelectionChange()
@@ -849,6 +1093,14 @@ final class SelectionOverlayView: NSView {
                 needsDisplay = true
                 return
             }
+            // Esc backs out one step at a time: away from whatever tool is
+            // drawing first, and only closes the session once there is nothing
+            // left to back out of (already on the plain selection tool, or no
+            // selection at all).
+            if selection != nil, tool != .move {
+                select(tool: .move)
+                return
+            }
             cancel()
             return
         case kVK_Return, kVK_ANSI_KeypadEnter:
@@ -859,6 +1111,10 @@ final class SelectionOverlayView: NSView {
             return
         case kVK_Delete, kVK_ForwardDelete:
             deleteLastAnnotation()
+            return
+        case kVK_Tab:
+            guard selection != nil else { break }
+            toggleStylePopover()
             return
         default:
             break
@@ -900,6 +1156,37 @@ final class SelectionOverlayView: NSView {
         recomputeCounter()
         rebuildLayer()
         needsDisplay = true
+    }
+
+    private func annotationIndex(at point: CGPoint) -> Int? {
+        annotations.indices.reversed().first { index in
+            let annotation = annotations[index]
+            return !annotation.isErase && annotation.boundingBox.contains(point)
+        }
+    }
+
+    private func editableTextAnnotation(at point: CGPoint) -> Annotation? {
+        for index in annotations.indices.reversed() {
+            let annotation = annotations[index]
+            guard case .text = annotation.shape,
+                  annotation.boundingBox.contains(point),
+                  !textWasPartiallyErased(at: index)
+            else { continue }
+            return annotation
+        }
+        return nil
+    }
+
+    /// Erasing is raster-destructive, but the original vector annotations remain
+    /// for undo/export. Any later erase annotation intersecting the text's bounds
+    /// therefore makes the text intentionally non-editable. The conservative
+    /// bounds check avoids offering an editor for text that is only partly left.
+    private func textWasPartiallyErased(at index: Int) -> Bool {
+        let textBounds = annotations[index].boundingBox
+        guard index + 1 < annotations.count else { return false }
+        return annotations[(index + 1)...].contains { annotation in
+            annotation.isErase && annotation.boundingBox.intersects(textBounds)
+        }
     }
 
     private func copyPickedColor() {
@@ -992,11 +1279,24 @@ final class SelectionOverlayView: NSView {
 
     // MARK: - Chrome layout
 
+    /// Creating, resizing or repositioning the selection is a fast-moving drag
+    /// the panels would otherwise have to chase every frame — hiding them for
+    /// its duration reads a lot less janky than a toolbar that races the
+    /// pointer around the screen.
+    private var isAdjustingSelectionBounds: Bool {
+        switch phase {
+        case .creating, .moving, .resizing: return true
+        case .idle, .ready, .drawing: return false
+        }
+    }
+
     private func updateChromeVisibility() {
-        let visible = selection != nil
+        let hasSelection = selection != nil
+        let visible = hasSelection && !isAdjustingSelectionBounds
         toolStrip.isHidden = !visible
         actionBar.isHidden = !visible
-        if !visible {
+        stylePopover?.isHidden = !visible
+        if !hasSelection {
             stylePopover?.detachSystemColorPanel()
             stylePopover?.removeFromSuperview()
             stylePopover = nil
@@ -1033,7 +1333,7 @@ final class SelectionOverlayView: NSView {
 
         if let popover = stylePopover {
             // Re-measure every time: the popover changes height when the tool
-            // changes and width when a "recent colours" row appears, and a stale
+            // changes and width when a "recent colors" row appears, and a stale
             // frame is what makes a panel look torn.
             popover.invalidateIntrinsicContentSize()
             popover.layoutSubtreeIfNeeded()
@@ -1053,6 +1353,16 @@ final class SelectionOverlayView: NSView {
 
     private func updateCursor() {
         guard let window, window.isKeyWindow else { return }
+
+        if let handle = textMoveHandle, !handle.isHidden, handle.frame.contains(cursorPoint) {
+            NSCursor.openHand.set()
+            return
+        }
+
+        if isPointerOverChrome {
+            NSCursor.arrow.set()
+            return
+        }
 
         if eyedropperActive || tool == .eraser {
             NSCursor.crosshair.set()
@@ -1077,6 +1387,16 @@ final class SelectionOverlayView: NSView {
         NSCursor.crosshair.set()
     }
 
+    /// Whether the cursor sits over one of the floating panels rather than the
+    /// capture surface — those should show the ordinary pointer, not a
+    /// crosshair or the eraser ring, like any other clickable UI.
+    private var isPointerOverChrome: Bool {
+        if !toolStrip.isHidden, toolStrip.frame.contains(cursorPoint) { return true }
+        if !actionBar.isHidden, actionBar.frame.contains(cursorPoint) { return true }
+        if let popover = stylePopover, popover.frame.contains(cursorPoint) { return true }
+        return false
+    }
+
     private func handle(at point: CGPoint, in rect: CGRect) -> SelectionHandle? {
         guard rect.width > 0, rect.height > 0 else { return nil }
         return SelectionHandle.allCases.first { handle in
@@ -1087,6 +1407,8 @@ final class SelectionOverlayView: NSView {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
+        magnifierView.isHidden = !shouldShowMagnifier
+        if !magnifierView.isHidden { magnifierView.needsDisplay = true }
         guard let context = NSGraphicsContext.current else { return }
         let cgContext = context.cgContext
 
@@ -1094,11 +1416,34 @@ final class SelectionOverlayView: NSView {
         cgContext.draw(snapshot.image, in: bounds)
 
         if let selection {
+            // A live obfuscation draft is drawn onto the screenshot before the
+            // existing annotation layer. That keeps the preview consistent with
+            // the committed layer, where obfuscation is composited underneath
+            // annotation pixels rather than replacing them.
+            if let draft, draft.isObfuscation {
+                AnnotationRenderer.draw(
+                    [draft],
+                    obfuscation: obfuscation,
+                    clipTo: selection,
+                    obfuscationBlendMode: .normal
+                )
+            }
             drawAnnotationLayer(clippedTo: selection)
-            if let draft {
-                // The stroke in progress goes straight on top: nothing can have
-                // erased it yet, so it does not need to go through the layer.
-                AnnotationRenderer.draw([draft], obfuscation: obfuscation, clipTo: selection)
+            if let draft, !draft.isObfuscation {
+                if draft.isErase {
+                    // A rect/ellipse erase drag is never rendered destructively
+                    // while in progress: `destinationOut` straight onto this
+                    // context would punch through the live screenshot itself,
+                    // not just the annotation layer. A dashed outline previews
+                    // the region instead; the actual erase only happens on
+                    // release, via `rebuildLayer()`.
+                    drawErasePreviewOutline(draft)
+                } else {
+                    // The stroke in progress goes straight on top: nothing can
+                    // have erased it yet, so it does not need to go through the
+                    // layer.
+                    AnnotationRenderer.draw([draft], obfuscation: obfuscation, clipTo: selection)
+                }
             }
             drawDimming(excluding: selection)
             drawSelectionChrome(selection)
@@ -1108,12 +1453,24 @@ final class SelectionOverlayView: NSView {
             drawHint()
         }
 
-        if pointerInside, tool == .eraser, selection != nil, textEditor == nil {
+        if pointerInside, tool == .eraser, style.eraserMode == .pixels,
+           style.eraserShape == .brush,
+           selection != nil, textEditor == nil, !isPointerOverChrome {
             drawEraserRing()
         }
-        if shouldShowMagnifier {
-            drawMagnifier(at: cursorPoint)
+    }
+
+    private func drawErasePreviewOutline(_ annotation: Annotation) {
+        let path: NSBezierPath
+        switch annotation.shape {
+        case .eraseRect(let rect): path = NSBezierPath(rect: rect)
+        case .eraseEllipse(let rect): path = NSBezierPath(ovalIn: rect)
+        default: return
         }
+        path.lineWidth = 1.5
+        path.setLineDash([4, 3], count: 2, phase: 0)
+        NSColor.white.setStroke()
+        path.stroke()
     }
 
     private func drawAnnotationLayer(clippedTo rect: CGRect) {
@@ -1128,7 +1485,7 @@ final class SelectionOverlayView: NSView {
     }
 
     private var shouldShowMagnifier: Bool {
-        guard pointerInside else { return false }
+        guard pointerInside, !isPointerOverChrome else { return false }
         if eyedropperActive { return true }
         guard Settings.shared.showMagnifier else { return false }
         // Picking a whole window needs no pixel precision, and the loupe would
@@ -1282,21 +1639,47 @@ final class SelectionOverlayView: NSView {
         let pixelsAcross = 15
         let blockSize: CGFloat = 10
         let side = CGFloat(pixelsAcross) * blockSize
-        let labelHeight: CGFloat = 32
+        let labelHeight: CGFloat = 42
         let offset: CGFloat = 22
+
+        // Coordinates, hex and RGB each get their own line. RGB is padded to a
+        // fixed digit width (see `fixedWidthRgbString`) so the box doesn't keep
+        // resizing as the cursor crosses pixels with different digit counts —
+        // hex is already fixed-width on its own (`#RRGGBB`), and coordinates
+        // vary little enough in practice not to matter.
+        let color = sampleColor(at: point) ?? .black
+        let coordText = "\(Int(point.x)), \(Int(bounds.height - point.y))"
+        let hexText = color.hexString
+        let rgbText = color.fixedWidthRgbString
+        let readoutFont = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
+        let readoutAttributes: [NSAttributedString.Key: Any] = [
+            .font: readoutFont,
+            .foregroundColor: NSColor.white.withAlphaComponent(0.9)
+        ]
+        let textWidth = [coordText, hexText, rgbText]
+            .map { ($0 as NSString).size(withAttributes: readoutAttributes).width }
+            .max() ?? 0
+        let swatchSize: CGFloat = 12
+        let swatchLeading: CGFloat = 6
+        let swatchTrailing: CGFloat = 6
+        let trailingPadding: CGFloat = 8
+        let neededWidth = swatchLeading + swatchSize + swatchTrailing + textWidth + trailingPadding
+        let width = max(side, neededWidth)
 
         var frame = CGRect(
             x: point.x + offset,
             y: point.y - offset - side - labelHeight,
-            width: side,
+            width: width,
             height: side + labelHeight
         )
-        if frame.maxX > bounds.maxX - 4 { frame.origin.x = point.x - offset - side }
+        if frame.maxX > bounds.maxX - 4 { frame.origin.x = point.x - offset - width }
         if frame.minY < 4 { frame.origin.y = point.y + offset }
         frame = frame.nudgedInside(bounds.insetBy(dx: 4, dy: 4))
 
+        // The pixel grid itself stays a fixed square, centred within whatever
+        // extra width the readout line demanded.
         let imageRect = CGRect(
-            x: frame.minX, y: frame.minY + labelHeight,
+            x: frame.minX + (frame.width - side) / 2, y: frame.minY + labelHeight,
             width: side, height: side
         )
 
@@ -1372,21 +1755,21 @@ final class SelectionOverlayView: NSView {
         context.compositingOperation = .sourceOver
         context.restoreGraphicsState()
 
-        // Readout: coordinates and the sampled colour.
-        let color = sampleColor(at: point) ?? .black
+        // Readout: coordinates, hex and RGB, using the width already measured
+        // above so this never has to clip against the container edge.
         let readout = NSAttributedString(
-            string: "\(Int(point.x)), \(Int(bounds.height - point.y))\n\(color.hexString)  ·  \(color.rgbString)",
-            attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 9, weight: .medium),
-                .foregroundColor: NSColor.white.withAlphaComponent(0.9)
-            ]
+            string: "\(coordText)\n\(hexText)\n\(rgbText)",
+            attributes: readoutAttributes
         )
-        let swatch = CGRect(x: frame.minX + 6, y: frame.minY + 9, width: 12, height: 12)
+        let swatch = CGRect(
+            x: frame.minX + swatchLeading, y: frame.minY + (labelHeight - swatchSize) / 2,
+            width: swatchSize, height: swatchSize
+        )
         color.setFill()
         NSBezierPath(roundedRect: swatch, xRadius: 3, yRadius: 3).fill()
         NSColor.white.withAlphaComponent(0.4).setStroke()
         NSBezierPath(roundedRect: swatch, xRadius: 3, yRadius: 3).stroke()
-        readout.draw(at: CGPoint(x: swatch.maxX + 6, y: frame.minY + 4))
+        readout.draw(at: CGPoint(x: swatch.maxX + swatchTrailing, y: frame.minY + 4))
 
         NSColor.white.withAlphaComponent(0.2).setStroke()
         container.lineWidth = 1
@@ -1396,10 +1779,30 @@ final class SelectionOverlayView: NSView {
     }
 }
 
-/// Text view used for the in-place text tool.
+/// Full-size transparent canvas for the loupe. Returning nil from `hitTest`
+/// lets clicks pass through to the tool panels or capture surface underneath.
+private final class MagnifierOverlayView: NSView {
+    var drawContent: (() -> Void)?
+
+    override var isOpaque: Bool { false }
+
+    override func draw(_ dirtyRect: NSRect) {
+        drawContent?()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
+/// Text view used for the in-place text tool. Its own glyphs are invisible —
+/// see `SelectionOverlayView.beginTextEditing` — so it exists purely to own the
+/// caret, IME candidate window and keyboard input; only its FRAME (for caret
+/// travel) and its STRING (read out on every change) matter to the overlay.
 final class AnnotationTextView: NSTextView {
     var onCommit: (() -> Void)?
     var onCancel: (() -> Void)?
+    /// Fired after the string OR the frame changes, so the live styled preview
+    /// and the move handle can follow.
+    var onTextChanged: (() -> Void)?
 
     override func cancelOperation(_ sender: Any?) {
         onCancel?()
@@ -1419,10 +1822,78 @@ final class AnnotationTextView: NSTextView {
         guard let layoutManager, let textContainer else { return }
         layoutManager.ensureLayout(for: textContainer)
         let used = layoutManager.usedRect(for: textContainer)
-        let width = max(used.width + 12, 40)
-        let height = max(used.height + 6, frame.height)
+        // A little slack past the last glyph so the caret never renders flush
+        // against the view's own edge; harmless now that insets are zero and
+        // the glyphs themselves are invisible.
+        let width = max(used.width + 4, 24)
+        let height = max(used.height, frame.height)
         // Grow downwards from the anchor point the user clicked.
         let top = frame.maxY
         frame = CGRect(x: frame.minX, y: top - height, width: width, height: height)
+        onTextChanged?()
+    }
+}
+
+/// Small drag handle shown beside the text tool's live editor, letting the
+/// user reposition what they are typing without discarding it.
+final class TextMoveHandle: NSView {
+    /// Delta since the last callback, in THIS view's own local coordinate
+    /// space — which, since the handle applies no scale or rotation, is
+    /// numerically identical to a delta in its superview's space.
+    var onDrag: ((CGPoint) -> Void)?
+
+    private let side: CGFloat = 20
+    /// Tracked in WINDOW coordinates rather than local ones: the callback moves
+    /// this very view each time it fires, and re-deriving a local point from a
+    /// window-space event after the view has already shifted would silently
+    /// double-count the motion. Window coordinates do not change under the
+    /// handle moving, so consecutive raw positions can just be subtracted.
+    private var lastWindowLocation: NSPoint?
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: side, height: side))
+        wantsLayer = true
+        layer?.cornerRadius = side / 2
+        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.72).cgColor
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.white.withAlphaComponent(0.35).cgColor
+        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowOpacity = 0.4
+        layer?.shadowRadius = 3
+        layer?.shadowOffset = CGSize(width: 0, height: -1)
+
+        let imageView = NSImageView(frame: bounds.insetBy(dx: 4, dy: 4))
+        imageView.autoresizingMask = [.width, .height]
+        let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        imageView.image = NSImage
+            .freshSystemSymbol("arrow.up.and.down.and.arrow.left.and.right", accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
+        imageView.contentTintColor = .white
+        imageView.imageScaling = .scaleProportionallyDown
+        addSubview(imageView)
+
+        toolTip = L10n.t("text.moveHandle")
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not supported") }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .openHand)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        lastWindowLocation = event.locationInWindow
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let lastWindowLocation else { return }
+        let current = event.locationInWindow
+        self.lastWindowLocation = current
+        onDrag?(CGPoint(x: current.x - lastWindowLocation.x, y: current.y - lastWindowLocation.y))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        lastWindowLocation = nil
     }
 }

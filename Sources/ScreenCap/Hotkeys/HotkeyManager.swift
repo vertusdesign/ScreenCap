@@ -25,7 +25,10 @@ enum HotkeyAction: String, CaseIterable, Codable {
         case .captureArea: return Hotkey(keyCode: UInt16(kVK_F2), modifierFlags: .command)
         case .repeatLastArea: return Hotkey(keyCode: UInt16(kVK_F3), modifierFlags: .command)
         case .captureWindow: return Hotkey(keyCode: UInt16(kVK_F4), modifierFlags: .command)
-        case .captureFullScreen: return Hotkey(keyCode: UInt16(kVK_F5), modifierFlags: .command)
+        // Plain ⌘F5 collides with the system VoiceOver shortcut and never
+        // reaches the app; ⌘⌥F4 sits next to "capture window" (⌘F4) but with a
+        // different modifier, so the two never conflict.
+        case .captureFullScreen: return Hotkey(keyCode: UInt16(kVK_F4), modifierFlags: [.command, .option])
         }
     }
 }
@@ -74,6 +77,27 @@ final class HotkeyManager {
             UnregisterEventHotKey(registration.ref)
         }
         registrations.removeAll()
+    }
+
+    private var isSuspended = false
+
+    /// Stops answering every global shortcut while a `HotkeyRecorderView` is
+    /// capturing a new combination. Carbon hotkeys fire from the window server
+    /// independently of which app or field has keyboard focus, so without this,
+    /// pressing the very combo already bound to an action — the obvious thing to
+    /// do while re-recording it — would fire that action at the same time.
+    func suspend() {
+        guard !isSuspended else { return }
+        isSuspended = true
+        unregisterAll()
+    }
+
+    /// Restores whatever is currently in `Settings`, whether recording ended in
+    /// a committed change, a clear, or a cancel that left the old binding intact.
+    func resume() {
+        guard isSuspended else { return }
+        isSuspended = false
+        apply(Settings.shared.hotkeys)
     }
 
     private func register(_ hotkey: Hotkey, for action: HotkeyAction) {

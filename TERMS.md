@@ -18,8 +18,8 @@ redistribute.
 
 The software is provided "as is". There is no warranty of any kind — not of
 merchantability, not of fitness for a particular purpose, not of uninterrupted or
-error-free operation. See [DISCLAIMER.md](DISCLAIMER.md) for what this means in practice for
-an alpha release.
+error-free operation. See [DISCLAIMER.md](DISCLAIMER.md) for the practical boundaries of the
+stable release.
 
 ## 3. No liability
 

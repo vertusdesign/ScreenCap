@@ -36,7 +36,7 @@
 "action.cancel" = "Cancel";
 "action.undo" = "Undo";
 "action.redo" = "Redo";
-"action.style" = "Colour and options";
+"action.style" = "Color and options";
 "action.cut" = "Cut";
 "action.paste" = "Paste";
 "action.selectAll" = "Select All";
@@ -45,23 +45,32 @@
 "hint.shift.saveAs" = "⇧-click to choose a folder";
 
 "style.recent" = "Recent";
-"style.hex" = "Hex colour";
-"style.eyedropper" = "Pick colour from screen";
+"style.hex" = "Hex color";
+"style.eyedropper" = "Pick color from screen";
 "style.eyedropper.hint" = "Click again to cancel";
-"style.systemPalette" = "System colour palette";
+"style.systemPalette" = "System color palette";
 "style.thickness" = "Thickness";
 "style.fontSize" = "Font size";
-"style.backdropColor" = "Backdrop colour";
+"style.size" = "Size";
+"style.arrowThickness" = "Arrow thickness";
+"style.backdropColor" = "Backdrop color";
 "style.brushSize" = "Brush size";
 "style.intensity" = "Intensity";
 "style.eraserSize" = "Eraser size";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Outline";
+"style.shapeFilled" = "Filled";
+"style.arrowSingle" = "Single head";
+"style.arrowDouble" = "Double head";
+"text.moveHandle" = "Drag to move";
 
 "overlay.hint.area" = "Drag to select an area · Esc to cancel";
 "overlay.hint.window" = "Point at a window and click · Esc to cancel";
 
 "toast.copied" = "Copied to clipboard";
 "toast.saved" = "Saved";
-"toast.color.copied" = "Colour %@ copied";
+"toast.color.copied" = "Color %@ copied";
 "toast.noLastArea" = "No saved area yet";
 "toast.noLastArea.detail" = "Select one once and it will be remembered";
 
@@ -83,22 +92,27 @@
 "prefs.shortcut.reset" = "Restore default shortcuts";
 "prefs.shortcut.conflict" = "The marked shortcuts are already taken by another app and will not fire. Pick different ones, or quit the other app.";
 "prefs.shortcut.conflict.help" = "Taken by another app and not working";
+"prefs.shortcut.clear" = "Clear shortcut";
 "prefs.saveFolder" = "Save folder";
 "prefs.choose" = "Choose…";
-"prefs.filenameTemplate" = "Filename template";
-"prefs.filenameTokens" = "Available: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTemplate" = "File name template";
+"prefs.filenameTokens" = "Available — click to insert:";
 "prefs.askWhereToSave" = "Ask where to save every time";
 "prefs.copyOnSave" = "Copy to clipboard when saving";
 "prefs.downscaleRetina" = "Save at logical size (no Retina ×2)";
 "prefs.shutterSound" = "Shutter sound";
-"prefs.showMagnifier" = "Show loupe with colour picker";
+"prefs.showMagnifier" = "Show loupe with color picker";
 "prefs.showSizeBadge" = "Show selection size";
 "prefs.dimming" = "Background dimming";
-"prefs.tools.explainer" = "Drawing options live in the overlay, right next to the drawing: colour, thickness, redaction and text style are all in the panel behind the colour swatch.";
+"prefs.imageFormat" = "Image format";
+"prefs.resetCapture" = "Reset capture settings to defaults";
+"prefs.tools.explainer" = "Drawing options live in the overlay, right next to the drawing: color, thickness, redaction and text style are all in the panel behind the color swatch.";
 "prefs.tools.reset" = "Reset tools to defaults";
 "prefs.overlayShortcuts" = "Overlay shortcuts";
 "prefs.shortcuts.actions" = "⌘C copy · ⌘S save · ⇧⌘S save as · ⌘P print · ⌘Z / ⇧⌘Z undo and redo · ⌘A whole screen · ↩ copy and close · Esc cancel";
 "prefs.shortcuts.modifiers" = "While drawing: ⇧ square or 45° · ⌥ draw from the centre · ⌃ alternate tool (filled shape, other redaction). Modifiers combine.";
+
+"save.format" = "Format:";
 
 "permission.title" = "Screen Recording permission needed";
 "permission.body" = "Open System Settings → Privacy & Security → Screen Recording and enable %@.\n\nThe app has to be restarted afterwards.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Capture failed";
 "error.createFolder" = "Could not create the save folder";
 "error.encodePNG" = "Could not encode the PNG";
+"error.encodeJPEG" = "Could not encode the JPEG";
 "error.saveFile" = "Could not save the file";
 
 "filename.fallback" = "Screenshot";
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Screenshots with instant annotation for macOS.";
-"about.alpha" = "Alpha version — some rough edges remain.";
+"about.thankDeveloper" = "Say Thank You to Developer";
 "about.link.source" = "Source code";
 "about.link.releases" = "Releases";
 "about.link.privacy" = "Privacy";

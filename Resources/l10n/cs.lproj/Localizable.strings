@@ -51,10 +51,19 @@
 "style.systemPalette" = "Systémová paleta";
 "style.thickness" = "Tloušťka";
 "style.fontSize" = "Velikost";
+"style.size" = "Velikost";
+"style.arrowThickness" = "Tloušťka šipky";
 "style.backdropColor" = "Barva podkladu";
 "style.brushSize" = "Velikost štětce";
 "style.intensity" = "Intenzita";
 "style.eraserSize" = "Velikost gumy";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Obrys";
+"style.shapeFilled" = "Vyplněné";
+"style.arrowSingle" = "Jedna hlavice";
+"style.arrowDouble" = "Dvě hlavice";
+"text.moveHandle" = "Přetažením přesunete";
 
 "overlay.hint.area" = "Tažením vyberte oblast · Esc zruší";
 "overlay.hint.window" = "Najeďte na okno a klepněte · Esc zruší";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Obnovit výchozí zkratky";
 "prefs.shortcut.conflict" = "Označené zkratky už používá jiná aplikace a nespustí se. Zvolte jiné, nebo tu aplikaci ukončete.";
 "prefs.shortcut.conflict.help" = "Obsazeno jinou aplikací, nefunguje";
+"prefs.shortcut.clear" = "Vymazat zkratku";
 "prefs.saveFolder" = "Složka pro ukládání";
 "prefs.choose" = "Vybrat…";
 "prefs.filenameTemplate" = "Šablona názvu";
-"prefs.filenameTokens" = "K dispozici: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "K dispozici — kliknutím vložíte:";
 "prefs.askWhereToSave" = "Pokaždé se zeptat, kam uložit";
 "prefs.copyOnSave" = "Při uložení kopírovat do schránky";
 "prefs.downscaleRetina" = "Ukládat v logické velikosti (bez Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Zobrazovat lupu s kapátkem";
 "prefs.showSizeBadge" = "Zobrazovat velikost výběru";
 "prefs.dimming" = "Ztmavení pozadí";
+"prefs.imageFormat" = "Formát obrázku";
+"prefs.resetCapture" = "Obnovit výchozí nastavení snímání";
 "prefs.tools.explainer" = "Volby kreslení jsou přímo v překryvu vedle kresby: barva, tloušťka, začernění i styl textu jsou v panelu za kolečkem barvy.";
 "prefs.tools.reset" = "Obnovit výchozí nástroje";
 "prefs.overlayShortcuts" = "Zkratky v překryvu";
 "prefs.shortcuts.actions" = "⌘C kopírovat · ⌘S uložit · ⇧⌘S uložit jako · ⌘P tisk · ⌘Z / ⇧⌘Z zpět a znovu · ⌘A celá obrazovka · ↩ kopírovat a zavřít · Esc zrušit";
 "prefs.shortcuts.modifiers" = "Při kreslení: ⇧ čtverec nebo 45° · ⌥ kreslit od středu · ⌃ varianta nástroje (vyplněný tvar, jiné začernění). Modifikátory lze kombinovat.";
+
+"save.format" = "Formát:";
 
 "permission.title" = "Je potřeba oprávnění k nahrávání obrazovky";
 "permission.body" = "Otevřete Nastavení systému → Soukromí a zabezpečení → Nahrávání obrazovky a zapněte %@.\n\nPoté je nutné aplikaci restartovat.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Snímek se nezdařil";
 "error.createFolder" = "Nepodařilo se vytvořit složku pro ukládání";
 "error.encodePNG" = "Nepodařilo se zakódovat PNG";
+"error.encodeJPEG" = "JPEG se nepodařilo zakódovat";
 "error.saveFile" = "Nepodařilo se uložit soubor";
 
 "filename.fallback" = "Snímek obrazovky";
 
 "about.version" = "Verze %@ (build %@)";
 "about.tagline" = "Snímky obrazovky s okamžitými poznámkami pro macOS.";
-"about.alpha" = "Alfa verze — některé nedodělky přetrvávají.";
+"about.thankDeveloper" = "Poděkovat vývojáři";
 "about.link.source" = "Zdrojový kód";
 "about.link.releases" = "Verze";
 "about.link.privacy" = "Soukromí";

@@ -28,7 +28,7 @@ final class ToolStrip: OverlayPanel {
     )
 
     private var showsAlternate = false
-    private var obfuscationStyle: ObfuscationStyle = .pixelate
+    private var currentStyle: ToolStyle = .current()
 
     override init() {
         super.init()
@@ -61,7 +61,7 @@ final class ToolStrip: OverlayPanel {
             button.action = #selector(toolTapped(_:))
             button.tag = index
             buttons[tool] = button
-            stack.addArrangedSubview(button)
+            stack.addArrangedSubview(OverlaySquareSlot(control: button))
         }
 
         let separator = NSView.overlaySeparator(vertical: false)
@@ -70,15 +70,15 @@ final class ToolStrip: OverlayPanel {
 
         swatch.target = self
         swatch.action = #selector(styleTapped)
-        swatch.toolTip = L10n.t("action.style")
-        stack.addArrangedSubview(swatch)
+        swatch.toolTip = L10n.t("action.style") + "  ·  Tab"
+        stack.addArrangedSubview(OverlaySquareSlot(control: swatch))
 
         undoButton.target = self
         undoButton.action = #selector(undoTapped)
         redoButton.target = self
         redoButton.action = #selector(redoTapped)
-        stack.addArrangedSubview(undoButton)
-        stack.addArrangedSubview(redoButton)
+        stack.addArrangedSubview(OverlaySquareSlot(control: undoButton))
+        stack.addArrangedSubview(OverlaySquareSlot(control: redoButton))
     }
 
     private var selectedTool: ToolKind = .move
@@ -89,7 +89,7 @@ final class ToolStrip: OverlayPanel {
         refreshSymbols()
     }
 
-    /// Colour currently applied to the tools, so a tool switch can preserve it.
+    /// Color currently applied to the tools, so a tool switch can preserve it.
     private(set) var currentColor: NSColor?
 
     func setColor(_ color: NSColor) {
@@ -97,11 +97,14 @@ final class ToolStrip: OverlayPanel {
         currentColor = color
     }
 
-    /// Shows the ⌃-alternate icon for whichever tools have one.
-    func setAlternate(_ alternate: Bool, obfuscationStyle: ObfuscationStyle) {
-        guard alternate != showsAlternate || obfuscationStyle != self.obfuscationStyle else { return }
+    /// Shows the ⌃-alternate icon for whichever tools have one. `style` also
+    /// carries the CURRENT persisted defaults (shape fill, arrow heads,
+    /// redaction style), which is what lets the base icon reflect the popover's
+    /// own choice rather than a hard-coded look.
+    func setAlternate(_ alternate: Bool, style: ToolStyle) {
+        guard alternate != showsAlternate || style != currentStyle else { return }
         showsAlternate = alternate
-        self.obfuscationStyle = obfuscationStyle
+        currentStyle = style
         refreshSymbols()
     }
 
@@ -110,7 +113,7 @@ final class ToolStrip: OverlayPanel {
             // Only the selected tool morphs: swapping every icon at once would be
             // noise, since ⌃ applies to whatever is actually being drawn.
             let alternate = showsAlternate && kind == selectedTool && kind.hasAlternate
-            button.setSymbol(kind.symbolName(alternate: alternate, obfuscationStyle: obfuscationStyle))
+            button.setSymbol(kind.symbolName(alternate: alternate, style: currentStyle))
             if kind == .obfuscate || kind.hasAlternate {
                 button.setTooltip(
                     kind.title,
@@ -153,8 +156,11 @@ final class ActionBar: OverlayPanel {
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.alignment = .centerY
-        stack.spacing = 2
-        stack.edgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
+        stack.spacing = OverlayStyle.buttonSpacing
+        stack.edgeInsets = NSEdgeInsets(
+            top: OverlayStyle.panelPadding, left: OverlayStyle.panelPadding,
+            bottom: OverlayStyle.panelPadding, right: OverlayStyle.panelPadding
+        )
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -167,8 +173,7 @@ final class ActionBar: OverlayPanel {
         let cancel = OverlayButton(
             symbolName: "xmark",
             tooltip: L10n.t("action.cancel"),
-            shortcut: "Esc",
-            size: 26
+            shortcut: "Esc"
         )
         cancel.target = self
         cancel.action = #selector(cancelTapped)
@@ -176,8 +181,7 @@ final class ActionBar: OverlayPanel {
         let print = OverlayButton(
             symbolName: "printer",
             tooltip: L10n.t("action.print"),
-            shortcut: "⌘P",
-            size: 26
+            shortcut: "⌘P"
         )
         print.target = self
         print.action = #selector(printTapped)
@@ -187,8 +191,7 @@ final class ActionBar: OverlayPanel {
             symbolName: "square.and.arrow.down",
             tooltip: L10n.t("action.save"),
             shortcut: "⌘S",
-            hint: L10n.t("hint.shift.saveAs"),
-            size: 26
+            hint: L10n.t("hint.shift.saveAs")
         )
         save.target = self
         save.action = #selector(saveTapped)
@@ -197,16 +200,15 @@ final class ActionBar: OverlayPanel {
             symbolName: "doc.on.doc",
             tooltip: L10n.t("action.copy"),
             shortcut: "⌘C",
-            size: 26,
             accented: true
         )
         copy.target = self
         copy.action = #selector(copyTapped)
 
-        stack.addArrangedSubview(cancel)
-        stack.addArrangedSubview(print)
-        stack.addArrangedSubview(save)
-        stack.addArrangedSubview(copy)
+        stack.addArrangedSubview(OverlaySquareSlot(control: cancel))
+        stack.addArrangedSubview(OverlaySquareSlot(control: print))
+        stack.addArrangedSubview(OverlaySquareSlot(control: save))
+        stack.addArrangedSubview(OverlaySquareSlot(control: copy))
     }
 
     @objc private func copyTapped() { onCopy?() }

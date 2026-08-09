@@ -34,24 +34,33 @@ enum ToolKind: String, CaseIterable, Codable {
         }
     }
 
-    /// Icon shown while ⌃ is held, so the alternate behaviour is visible before
-    /// the user commits to a drag.
-    func symbolName(alternate: Bool, obfuscationStyle: ObfuscationStyle = .pixelate) -> String {
-        guard alternate else {
-            if self == .obfuscate { return obfuscationStyle.symbolName }
-            return symbolName
-        }
+    /// Icon reflecting the CURRENT persisted choice for tools that have one
+    /// (shape fill, arrow heads, redaction style), with `alternate` showing what
+    /// ⌃ would switch it to instead — so holding ⌃ always previews a swap away
+    /// from whatever is already selected, not a hard-coded "filled" or
+    /// "pixelate" regardless of the popover's own setting.
+    func symbolName(alternate: Bool, style: ToolStyle) -> String {
         switch self {
-        case .rectangle: return "rectangle.fill"
-        case .ellipse: return "oval.fill"
-        case .obfuscate: return obfuscationStyle.alternate.symbolName
-        default: return symbolName
+        case .obfuscate:
+            let effective = alternate ? style.obfuscation.style.alternate : style.obfuscation.style
+            return effective.symbolName
+        case .rectangle:
+            let filled = alternate ? !style.filled : style.filled
+            return filled ? "rectangle.fill" : "rectangle"
+        case .ellipse:
+            let filled = alternate ? !style.filled : style.filled
+            return filled ? "oval.fill" : "oval"
+        case .arrow:
+            let double = alternate ? !style.arrowDoubleHeaded : style.arrowDoubleHeaded
+            return double ? "arrow.left.and.right" : "arrow.up.right"
+        default:
+            return symbolName
         }
     }
 
     /// Whether ⌃ changes what this tool draws.
     var hasAlternate: Bool {
-        self == .rectangle || self == .ellipse || self == .obfuscate
+        self == .rectangle || self == .ellipse || self == .obfuscate || self == .arrow
     }
 
     /// Single-key shortcut shown in the tool's tooltip.
@@ -126,10 +135,13 @@ enum ObfuscationStyle: String, CaseIterable, Codable {
     }
 }
 
+/// Shared by redaction and the eraser: both act on a rectangle, an ellipse, or a
+/// free brush stroke, and both default to the brush — declared first so it also
+/// leads every segmented-control selector built from `allCases`.
 enum ObfuscationShape: String, CaseIterable, Codable {
+    case brush
     case rectangle
     case ellipse
-    case brush
 
     var title: String { L10n.t("obfuscation.shape.\(rawValue)") }
 
@@ -138,6 +150,23 @@ enum ObfuscationShape: String, CaseIterable, Codable {
         case .rectangle: return "rectangle"
         case .ellipse: return "oval"
         case .brush: return "paintbrush.pointed"
+        }
+    }
+}
+
+/// How the Eraser tool acts on a click. Pixel erasing keeps the existing
+/// brush/rectangle/ellipse behaviour; object deletion removes one complete
+/// annotation instead of punching a hole in the rendered layer.
+enum EraserMode: String, CaseIterable, Codable {
+    case pixels
+    case objects
+
+    var title: String { L10n.t("style.eraserMode.\(rawValue)") }
+
+    var symbolName: String {
+        switch self {
+        case .pixels: return "eraser"
+        case .objects: return "trash"
         }
     }
 }
@@ -167,14 +196,14 @@ enum TextBackdrop: String, CaseIterable, Codable {
 
     var symbolName: String {
         switch self {
-        case .none: return "textformat"
-        case .solid: return "textformat.size.larger"
+        case .none: return "textformat.size.larger"
+        case .solid: return "a.square.fill"
         case .translucent: return "square.on.square.intersection.dashed"
         case .shadow: return "shadow"
         }
     }
 
-    /// Whether the backdrop has a colour the user can choose.
+    /// Whether the backdrop has a color the user can choose.
     var usesBackdropColor: Bool { self != .none }
 }
 
@@ -184,25 +213,39 @@ enum TextBackdrop: String, CaseIterable, Codable {
 struct ToolStyle: Equatable {
     var color: NSColor
     var lineWidth: CGFloat
-    /// Filled rather than outlined. Driven by ⌃ at draw time, not by a setting.
+    /// Persisted default for rectangle/ellipse: filled vs outlined. ⌃ toggles
+    /// this temporarily for the shape being drawn, same as `obfuscation.style`.
     var filled: Bool
+    /// Persisted default for the arrow: one head vs two. ⌃ toggles it too.
+    var arrowDoubleHeaded: Bool
     var fontSize: CGFloat
     var textBackdrop: TextBackdrop
     var backdropColor: NSColor
     var obfuscation: ObfuscationSettings
     var eraserRadius: CGFloat
+    var eraserShape: ObfuscationShape
+    var eraserMode: EraserMode
+    /// Size of the numbered circle, kept separate from drawing stroke width.
+    var counterSize: CGFloat
+    /// Stroke width of the arrow attached to a numbered circle.
+    var counterArrowWidth: CGFloat
 
     static func current() -> ToolStyle {
         let settings = Settings.shared
         return ToolStyle(
             color: settings.toolColor,
             lineWidth: settings.strokeWidth,
-            filled: false,
+            filled: settings.shapeFilled,
+            arrowDoubleHeaded: settings.arrowDoubleHeaded,
             fontSize: settings.fontSize,
             textBackdrop: settings.textBackdrop,
             backdropColor: settings.textBackdropColor,
             obfuscation: settings.obfuscation,
-            eraserRadius: settings.eraserRadius
+            eraserRadius: settings.eraserRadius,
+            eraserShape: settings.eraserShape,
+            eraserMode: settings.eraserMode,
+            counterSize: settings.counterSize,
+            counterArrowWidth: settings.counterArrowWidth
         )
     }
 }
@@ -215,16 +258,19 @@ enum AnnotationShape {
     case pen(points: [CGPoint])
     case marker(points: [CGPoint])
     case line(from: CGPoint, to: CGPoint)
-    case arrow(from: CGPoint, to: CGPoint)
+    case arrow(from: CGPoint, to: CGPoint, doubleHeaded: Bool)
     case rectangle(CGRect)
     case ellipse(CGRect)
     case obfuscateRect(CGRect)
     case obfuscateEllipse(CGRect)
     case obfuscateBrush(points: [CGPoint])
-    case counter(center: CGPoint, number: Int)
+    /// A numbered circle, optionally followed by an arrow drawn from its centre.
+    case counter(center: CGPoint, number: Int, arrowTo: CGPoint?)
     case text(origin: CGPoint, string: String)
     /// A stroke that rubs out whatever was drawn before it.
     case erase(points: [CGPoint], width: CGFloat)
+    case eraseRect(CGRect)
+    case eraseEllipse(CGRect)
 }
 
 struct Annotation: Identifiable {
@@ -240,8 +286,10 @@ struct Annotation: Identifiable {
     }
 
     var isErase: Bool {
-        if case .erase = shape { return true }
-        return false
+        switch shape {
+        case .erase, .eraseRect, .eraseEllipse: return true
+        default: return false
+        }
     }
 
     /// Bounding box including stroke width.
@@ -258,17 +306,25 @@ struct Annotation: Identifiable {
             return Self.box(of: points).insetBy(dx: -style.obfuscation.brushSize, dy: -style.obfuscation.brushSize)
         case .erase(let points, let width):
             return Self.box(of: points).insetBy(dx: -width, dy: -width)
-        case .line(let a, let b), .arrow(let a, let b):
+        case .line(let a, let b), .arrow(let a, let b, _):
             return CGRect(corner: a, corner: b)
         case .rectangle(let rect), .ellipse(let rect),
-             .obfuscateRect(let rect), .obfuscateEllipse(let rect):
+             .obfuscateRect(let rect), .obfuscateEllipse(let rect),
+             .eraseRect(let rect), .eraseEllipse(let rect):
             return rect
-        case .counter(let center, _):
+        case .counter(let center, _, let arrowTo):
             let radius = Self.counterRadius(for: style)
-            return CGRect(
+            var bounds = CGRect(
                 x: center.x - radius, y: center.y - radius,
                 width: radius * 2, height: radius * 2
             )
+            if let arrowTo {
+                bounds = bounds.union(
+                    CGRect(corner: center, corner: arrowTo)
+                        .insetBy(dx: -style.counterArrowWidth * 2, dy: -style.counterArrowWidth * 2)
+                )
+            }
+            return bounds
         case .text(let origin, let string):
             let size = Self.textSize(string, style: style)
             return CGRect(x: origin.x, y: origin.y - size.height, width: size.width, height: size.height)
@@ -276,7 +332,7 @@ struct Annotation: Identifiable {
     }
 
     static func counterRadius(for style: ToolStyle) -> CGFloat {
-        max(12, style.lineWidth * 4)
+        max(12, style.counterSize * 4)
     }
 
     static func font(for style: ToolStyle) -> NSFont {

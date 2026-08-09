@@ -51,10 +51,19 @@
 "style.systemPalette" = "システムのカラーパレット";
 "style.thickness" = "太さ";
 "style.fontSize" = "サイズ";
+"style.size" = "サイズ";
+"style.arrowThickness" = "矢印の太さ";
 "style.backdropColor" = "背景のカラー";
 "style.brushSize" = "ブラシのサイズ";
 "style.intensity" = "強さ";
 "style.eraserSize" = "消しゴムのサイズ";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "輪郭";
+"style.shapeFilled" = "塗りつぶし";
+"style.arrowSingle" = "片矢印";
+"style.arrowDouble" = "両矢印";
+"text.moveHandle" = "ドラッグして移動";
 
 "overlay.hint.area" = "ドラッグして範囲を選択 · Esc でキャンセル";
 "overlay.hint.window" = "ウインドウを指してクリック · Esc でキャンセル";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "デフォルトのショートカットに戻す";
 "prefs.shortcut.conflict" = "印の付いたショートカットは他のアプリが使用中で動作しません。別の組み合わせにするか、そのアプリを終了してください。";
 "prefs.shortcut.conflict.help" = "他のアプリが使用中で動作しません";
+"prefs.shortcut.clear" = "ショートカットを消去";
 "prefs.saveFolder" = "保存先フォルダ";
 "prefs.choose" = "選択…";
 "prefs.filenameTemplate" = "ファイル名のテンプレート";
-"prefs.filenameTokens" = "使用可能: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "利用可能 — クリックして挿入:";
 "prefs.askWhereToSave" = "毎回保存先を確認する";
 "prefs.copyOnSave" = "保存時にクリップボードへコピー";
 "prefs.downscaleRetina" = "論理サイズで保存（Retina ×2 なし）";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "カラーピッカー付きのルーペを表示";
 "prefs.showSizeBadge" = "選択範囲のサイズを表示";
 "prefs.dimming" = "背景を暗くする";
+"prefs.imageFormat" = "画像形式";
+"prefs.resetCapture" = "キャプチャ設定を初期値に戻す";
 "prefs.tools.explainer" = "描画のオプションは絵のすぐ隣、オーバーレイの中にあります。カラー、太さ、目隠し、テキストのスタイルはすべてカラー丸の裏のパネルです。";
 "prefs.tools.reset" = "ツールを初期状態に戻す";
 "prefs.overlayShortcuts" = "オーバーレイのショートカット";
 "prefs.shortcuts.actions" = "⌘C コピー · ⌘S 保存 · ⇧⌘S 別名で保存 · ⌘P プリント · ⌘Z / ⇧⌘Z 取り消しとやり直し · ⌘A 画面全体 · ↩ コピーして閉じる · Esc キャンセル";
 "prefs.shortcuts.modifiers" = "描画中: ⇧ 正方形または 45° · ⌥ 中心から描く · ⌃ ツールの代替動作（塗りつぶし、別の目隠し）。修飾キーは組み合わせられます。";
+
+"save.format" = "形式:";
 
 "permission.title" = "画面収録の許可が必要です";
 "permission.body" = "システム設定 → プライバシーとセキュリティ → 画面収録 を開き、%@ をオンにしてください。\n\nその後アプリを再起動する必要があります。";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "取り込みに失敗しました";
 "error.createFolder" = "保存先フォルダを作成できませんでした";
 "error.encodePNG" = "PNG にエンコードできませんでした";
+"error.encodeJPEG" = "JPEGにエンコードできませんでした";
 "error.saveFile" = "ファイルを保存できませんでした";
 
 "filename.fallback" = "スクリーンショット";
 
 "about.version" = "バージョン %@（ビルド %@）";
 "about.tagline" = "macOS 用、すぐに書き込めるスクリーンショット。";
-"about.alpha" = "アルファ版です。粗い部分がまだ残っています。";
+"about.thankDeveloper" = "開発者にありがとうを伝える";
 "about.link.source" = "ソースコード";
 "about.link.releases" = "リリース";
 "about.link.privacy" = "プライバシー";

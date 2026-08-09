@@ -36,7 +36,7 @@ struct DisplaySnapshot {
         return image.cropping(to: bounded)
     }
 
-    /// sRGB colour of the pixel under a point given in Cocoa global coordinates.
+    /// sRGB color of the pixel under a point given in Cocoa global coordinates.
     func color(atGlobalPoint point: CGPoint) -> NSColor? {
         guard let cropped = crop(toGlobalRect: CGRect(x: point.x, y: point.y, width: 1, height: 1)),
               let data = cropped.dataProvider?.data,

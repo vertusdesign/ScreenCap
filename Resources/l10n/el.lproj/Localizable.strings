@@ -51,10 +51,19 @@
 "style.systemPalette" = "Παλέτα συστήματος";
 "style.thickness" = "Πάχος";
 "style.fontSize" = "Μέγεθος";
+"style.size" = "Μέγεθος";
+"style.arrowThickness" = "Πάχος βέλους";
 "style.backdropColor" = "Χρώμα φόντου";
 "style.brushSize" = "Μέγεθος πινέλου";
 "style.intensity" = "Ένταση";
 "style.eraserSize" = "Μέγεθος γόμας";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Περίγραμμα";
+"style.shapeFilled" = "Γεμιστό";
+"style.arrowSingle" = "Μονό βέλος";
+"style.arrowDouble" = "Διπλό βέλος";
+"text.moveHandle" = "Σύρετε για μετακίνηση";
 
 "overlay.hint.area" = "Σύρετε για να επιλέξετε περιοχή · Esc για ακύρωση";
 "overlay.hint.window" = "Δείξτε ένα παράθυρο και κάντε κλικ · Esc για ακύρωση";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Επαναφορά προεπιλεγμένων συντομεύσεων";
 "prefs.shortcut.conflict" = "Οι σημειωμένες συντομεύσεις χρησιμοποιούνται ήδη από άλλη εφαρμογή και δεν θα λειτουργήσουν. Επιλέξτε άλλες ή κλείστε εκείνη την εφαρμογή.";
 "prefs.shortcut.conflict.help" = "Χρησιμοποιείται από άλλη εφαρμογή και δεν λειτουργεί";
+"prefs.shortcut.clear" = "Απαλοιφή συντόμευσης";
 "prefs.saveFolder" = "Φάκελος αποθήκευσης";
 "prefs.choose" = "Επιλογή…";
 "prefs.filenameTemplate" = "Πρότυπο ονόματος";
-"prefs.filenameTokens" = "Διαθέσιμα: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Διαθέσιμα — κάντε κλικ για εισαγωγή:";
 "prefs.askWhereToSave" = "Ερώτηση κάθε φορά για τη θέση αποθήκευσης";
 "prefs.copyOnSave" = "Αντιγραφή στο πρόχειρο κατά την αποθήκευση";
 "prefs.downscaleRetina" = "Αποθήκευση σε λογικό μέγεθος (χωρίς Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Εμφάνιση μεγεθυντικού με σταγονόμετρο";
 "prefs.showSizeBadge" = "Εμφάνιση μεγέθους επιλογής";
 "prefs.dimming" = "Σκοτείνιασμα φόντου";
+"prefs.imageFormat" = "Μορφή εικόνας";
+"prefs.resetCapture" = "Επαναφορά ρυθμίσεων λήψης στις προεπιλογές";
 "prefs.tools.explainer" = "Οι επιλογές σχεδίασης βρίσκονται μέσα στην επικάλυψη, δίπλα στο σχέδιο: χρώμα, πάχος, απόκρυψη και στυλ κειμένου είναι στον πίνακα πίσω από τον κύκλο χρώματος.";
 "prefs.tools.reset" = "Επαναφορά εργαλείων";
 "prefs.overlayShortcuts" = "Συντομεύσεις στην επικάλυψη";
 "prefs.shortcuts.actions" = "⌘C αντιγραφή · ⌘S αποθήκευση · ⇧⌘S αποθήκευση ως · ⌘P εκτύπωση · ⌘Z / ⇧⌘Z αναίρεση και επανάληψη · ⌘A όλη η οθόνη · ↩ αντιγραφή και κλείσιμο · Esc ακύρωση";
 "prefs.shortcuts.modifiers" = "Κατά τη σχεδίαση: ⇧ τετράγωνο ή 45° · ⌥ σχεδίαση από το κέντρο · ⌃ εναλλακτική του εργαλείου (γεμάτο σχήμα, άλλη απόκρυψη). Τα πλήκτρα συνδυάζονται.";
+
+"save.format" = "Μορφή:";
 
 "permission.title" = "Απαιτείται άδεια εγγραφής οθόνης";
 "permission.body" = "Ανοίξτε Ρυθμίσεις συστήματος → Απόρρητο και ασφάλεια → Εγγραφή οθόνης και ενεργοποιήστε το %@.\n\nΈπειτα η εφαρμογή πρέπει να επανεκκινηθεί.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Η λήψη απέτυχε";
 "error.createFolder" = "Δεν ήταν δυνατή η δημιουργία του φακέλου";
 "error.encodePNG" = "Δεν ήταν δυνατή η κωδικοποίηση του PNG";
+"error.encodeJPEG" = "Δεν ήταν δυνατή η κωδικοποίηση του JPEG";
 "error.saveFile" = "Δεν ήταν δυνατή η αποθήκευση του αρχείου";
 
 "filename.fallback" = "Στιγμιότυπο";
 
 "about.version" = "Έκδοση %@ (build %@)";
 "about.tagline" = "Στιγμιότυπα οθόνης με άμεσο σχολιασμό για macOS.";
-"about.alpha" = "Έκδοση άλφα — κάποιες ατέλειες παραμένουν.";
+"about.thankDeveloper" = "Πείτε ευχαριστώ στον προγραμματιστή";
 "about.link.source" = "Πηγαίος κώδικας";
 "about.link.releases" = "Εκδόσεις";
 "about.link.privacy" = "Απόρρητο";

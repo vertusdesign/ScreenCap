@@ -51,10 +51,19 @@
 "style.systemPalette" = "Palette du système";
 "style.thickness" = "Épaisseur";
 "style.fontSize" = "Taille";
+"style.size" = "Taille";
+"style.arrowThickness" = "Épaisseur de la flèche";
 "style.backdropColor" = "Couleur du fond";
 "style.brushSize" = "Taille du pinceau";
 "style.intensity" = "Intensité";
 "style.eraserSize" = "Taille de la gomme";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Contour";
+"style.shapeFilled" = "Rempli";
+"style.arrowSingle" = "Une pointe";
+"style.arrowDouble" = "Deux pointes";
+"text.moveHandle" = "Glisser pour déplacer";
 
 "overlay.hint.area" = "Faites glisser pour sélectionner · Échap pour annuler";
 "overlay.hint.window" = "Pointez une fenêtre et cliquez · Échap pour annuler";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Rétablir les raccourcis par défaut";
 "prefs.shortcut.conflict" = "Les raccourcis signalés sont déjà pris par une autre app et ne se déclencheront pas. Choisissez-en d’autres ou quittez cette app.";
 "prefs.shortcut.conflict.help" = "Pris par une autre app et sans effet";
+"prefs.shortcut.clear" = "Effacer le raccourci";
 "prefs.saveFolder" = "Dossier d’enregistrement";
 "prefs.choose" = "Choisir…";
 "prefs.filenameTemplate" = "Modèle de nom";
-"prefs.filenameTokens" = "Disponibles : {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Disponibles — cliquez pour insérer :";
 "prefs.askWhereToSave" = "Demander où enregistrer à chaque fois";
 "prefs.copyOnSave" = "Copier dans le presse-papiers à l’enregistrement";
 "prefs.downscaleRetina" = "Enregistrer à la taille logique (sans Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Afficher la loupe avec pipette";
 "prefs.showSizeBadge" = "Afficher la taille de la sélection";
 "prefs.dimming" = "Assombrissement du fond";
+"prefs.imageFormat" = "Format d’image";
+"prefs.resetCapture" = "Rétablir les réglages de capture par défaut";
 "prefs.tools.explainer" = "Les options de dessin sont dans la surcouche, juste à côté du dessin : couleur, épaisseur, masquage et style de texte sont dans le panneau derrière la pastille de couleur.";
 "prefs.tools.reset" = "Réinitialiser les outils";
 "prefs.overlayShortcuts" = "Raccourcis de la surcouche";
 "prefs.shortcuts.actions" = "⌘C copier · ⌘S enregistrer · ⇧⌘S enregistrer sous · ⌘P imprimer · ⌘Z / ⇧⌘Z annuler et rétablir · ⌘A tout l’écran · ↩ copier et fermer · Échap annuler";
 "prefs.shortcuts.modifiers" = "Pendant le dessin : ⇧ carré ou 45° · ⌥ dessiner depuis le centre · ⌃ variante de l’outil (forme pleine, autre masquage). Les modificateurs se combinent.";
+
+"save.format" = "Format :";
 
 "permission.title" = "Autorisation d’enregistrement de l’écran requise";
 "permission.body" = "Ouvrez Réglages Système → Confidentialité et sécurité → Enregistrement de l’écran et activez %@.\n\nL’app doit ensuite être relancée.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Échec de la capture";
 "error.createFolder" = "Impossible de créer le dossier d’enregistrement";
 "error.encodePNG" = "Impossible d’encoder le PNG";
+"error.encodeJPEG" = "Impossible d’encoder le JPEG";
 "error.saveFile" = "Impossible d’enregistrer le fichier";
 
 "filename.fallback" = "Capture";
 
 "about.version" = "Version %@ (build %@)";
 "about.tagline" = "Captures d’écran annotées instantanément, pour macOS.";
-"about.alpha" = "Version alpha — quelques aspérités subsistent.";
+"about.thankDeveloper" = "Dire merci au développeur";
 "about.link.source" = "Code source";
 "about.link.releases" = "Versions";
 "about.link.privacy" = "Confidentialité";

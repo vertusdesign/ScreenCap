@@ -32,30 +32,52 @@ enum SelfTest {
         }
 
         let obfuscation = ObfuscationSource(source: base, pointSize: pointSize, pixelScale: scale)
-        func makeStyle(color: NSColor, filled: Bool, shape: ObfuscationShape = .rectangle) -> ToolStyle {
+        func makeStyle(
+            color: NSColor, filled: Bool, shape: ObfuscationShape = .rectangle,
+            arrowDoubleHeaded: Bool = false, eraserShape: ObfuscationShape = .brush,
+            eraserMode: EraserMode = .pixels
+        ) -> ToolStyle {
             ToolStyle(
                 color: color,
                 lineWidth: 4,
                 filled: filled,
+                arrowDoubleHeaded: arrowDoubleHeaded,
                 fontSize: 28,
                 textBackdrop: .shadow,
                 backdropColor: .black,
                 obfuscation: ObfuscationSettings(
                     style: .pixelate, shape: shape, brushSize: 40, intensity: 11
                 ),
-                eraserRadius: 24
+                eraserRadius: 24,
+                eraserShape: eraserShape,
+                eraserMode: eraserMode,
+                counterSize: 3,
+                counterArrowWidth: 4
             )
         }
         let style = makeStyle(color: .systemRed, filled: false)
         let filled = makeStyle(color: NSColor(srgbRed: 0.2, green: 0.6, blue: 1, alpha: 0.85), filled: true)
+        let obfuscationProbe = makeStyle(
+            color: NSColor(srgbRed: 0.1, green: 0.9, blue: 0.2, alpha: 1),
+            filled: true
+        )
         var blurStyle = style
         blurStyle.obfuscation.style = .blur
 
         let annotations: [Annotation] = [
             Annotation(shape: .rectangle(CGRect(x: 40, y: 260, width: 140, height: 90)), style: style),
             Annotation(shape: .ellipse(CGRect(x: 200, y: 260, width: 140, height: 90)), style: filled),
-            Annotation(shape: .arrow(from: CGPoint(x: 360, y: 270), to: CGPoint(x: 520, y: 350)), style: style),
+            Annotation(
+                shape: .arrow(from: CGPoint(x: 360, y: 270), to: CGPoint(x: 520, y: 350), doubleHeaded: false),
+                style: style
+            ),
+            Annotation(
+                shape: .arrow(from: CGPoint(x: 360, y: 320), to: CGPoint(x: 560, y: 320), doubleHeaded: true),
+                style: makeStyle(color: .systemPurple, filled: false, arrowDoubleHeaded: true)
+            ),
             Annotation(shape: .line(from: CGPoint(x: 40, y: 230), to: CGPoint(x: 560, y: 230)), style: style),
+            Annotation(shape: .eraseRect(CGRect(x: 420, y: 260, width: 60, height: 40)), style: style),
+            Annotation(shape: .eraseEllipse(CGRect(x: 500, y: 260, width: 60, height: 40)), style: style),
             Annotation(
                 shape: .pen(points: (0...40).map { CGPoint(x: 40 + Double($0) * 8, y: 170 + sin(Double($0) / 3) * 24) }),
                 style: style
@@ -70,8 +92,21 @@ enum SelfTest {
                 shape: .obfuscateBrush(points: (0...12).map { CGPoint(x: 340 + Double($0) * 8, y: 70) }),
                 style: blurStyle
             ),
-            Annotation(shape: .counter(center: CGPoint(x: 470, y: 70), number: 1), style: style),
-            Annotation(shape: .counter(center: CGPoint(x: 530, y: 70), number: 2), style: filled),
+            // Regression probe: the later obfuscation must sit behind this
+            // already-drawn object instead of replacing it with the screenshot.
+            Annotation(
+                shape: .rectangle(CGRect(x: 70, y: 55, width: 50, height: 30)),
+                style: obfuscationProbe
+            ),
+            Annotation(
+                shape: .obfuscateRect(CGRect(x: 40, y: 40, width: 130, height: 60)),
+                style: style
+            ),
+            Annotation(shape: .counter(center: CGPoint(x: 470, y: 70), number: 1, arrowTo: nil), style: style),
+            Annotation(
+                shape: .counter(center: CGPoint(x: 530, y: 70), number: 2, arrowTo: CGPoint(x: 570, y: 110)),
+                style: filled
+            ),
             Annotation(shape: .text(origin: CGPoint(x: 40, y: 390), string: "Проверка текста"), style: style)
         ]
 
@@ -87,6 +122,16 @@ enum SelfTest {
             return finish(failures)
         }
         print("  ✓ рендеринг аннотаций (\(rendered.cgImage.width)×\(rendered.cgImage.height) px)")
+
+        if let probe = pixelColor(in: rendered.cgImage, at: CGPoint(x: 95, y: 70), scale: scale),
+           let rgb = probe.usingColorSpace(.sRGB),
+           rgb.greenComponent > rgb.redComponent * 1.4,
+           rgb.greenComponent > rgb.blueComponent * 1.4 {
+            print("  ✓ обфускация сохраняет аннотацию под собой")
+        } else {
+            failures.append("обфускация затирает аннотацию")
+            print("  ✗ обфускация затирает аннотацию")
+        }
 
         // 2. PNG encoding and disk write.
         let url = outputDirectory.appendingPathComponent("selftest-annotations.png")
@@ -204,7 +249,7 @@ enum SelfTest {
         let previous = NSGraphicsContext.current
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
 
-        // Colourful checkerboard so blur and pixelate have something to chew on.
+        // Colorful checkerboard so blur and pixelate have something to chew on.
         let tile: CGFloat = 25
         var row = 0
         var y: CGFloat = 0
@@ -246,14 +291,25 @@ enum SelfTest {
         let previous = NSGraphicsContext.current
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
         context.draw(base, in: CGRect(origin: .zero, size: pointSize))
-        AnnotationRenderer.draw(
-            annotations,
-            obfuscation: obfuscation,
-            clipTo: CGRect(origin: .zero, size: pointSize)
-        )
+        guard let layer = AnnotationLayer(pointSize: pointSize, scale: scale) else {
+            NSGraphicsContext.current = previous
+            return nil
+        }
+        layer.rebuild(annotations: annotations, obfuscation: obfuscation)
+        if let image = layer.image {
+            context.draw(image, in: CGRect(origin: .zero, size: pointSize))
+        }
         NSGraphicsContext.current = previous
 
         guard let image = context.makeImage() else { return nil }
         return CapturedImage(cgImage: image, pointSize: pointSize)
+    }
+
+    private static func pixelColor(in image: CGImage, at point: CGPoint, scale: CGFloat) -> NSColor? {
+        let bitmap = NSBitmapImageRep(cgImage: image)
+        let x = Int((point.x * scale).rounded(.down))
+        let y = bitmap.pixelsHigh - 1 - Int((point.y * scale).rounded(.down))
+        guard x >= 0, y >= 0, x < bitmap.pixelsWide, y < bitmap.pixelsHigh else { return nil }
+        return bitmap.colorAt(x: x, y: y)
     }
 }

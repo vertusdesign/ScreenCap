@@ -6,10 +6,10 @@ ScreenCap is provided **as is**, without warranty of any kind. The full legal te
 the [MIT Licence](LICENSE). Nobody is obliged to fix anything, support anything, or keep
 anything working.
 
-## This is alpha software
+## Stable release, with documented boundaries
 
-Version 0.9.0 is labelled alpha deliberately. The capture, drawing and export paths work and
-have been tested by hand. Around them there are known rough edges, listed in the
+Version 1.0.0 is the first stable release. The capture, drawing and export paths work and
+have been tested by hand. The remaining intentional boundaries are listed in the
 [README](README.md#known-limitations).
 
 Do not use it where a failure would cost you something.

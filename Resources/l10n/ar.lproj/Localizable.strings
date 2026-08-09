@@ -51,10 +51,19 @@
 "style.systemPalette" = "لوحة ألوان النظام";
 "style.thickness" = "السماكة";
 "style.fontSize" = "الحجم";
+"style.size" = "الحجم";
+"style.arrowThickness" = "سماكة السهم";
 "style.backdropColor" = "لون الخلفية";
 "style.brushSize" = "حجم الفرشاة";
 "style.intensity" = "الشدة";
 "style.eraserSize" = "حجم الممحاة";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "تخطيطي";
+"style.shapeFilled" = "مملوء";
+"style.arrowSingle" = "رأس واحد";
+"style.arrowDouble" = "رأسان";
+"text.moveHandle" = "اسحب للتحريك";
 
 "overlay.hint.area" = "اسحب لتحديد منطقة · Esc للإلغاء";
 "overlay.hint.window" = "أشر إلى نافذة وانقر · Esc للإلغاء";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "استعادة الاختصارات الافتراضية";
 "prefs.shortcut.conflict" = "الاختصارات المعلّمة مستخدمة من تطبيق آخر ولن تعمل. اختر غيرها أو أغلق ذلك التطبيق.";
 "prefs.shortcut.conflict.help" = "مستخدم من تطبيق آخر ولا يعمل";
+"prefs.shortcut.clear" = "مسح الاختصار";
 "prefs.saveFolder" = "مجلد الحفظ";
 "prefs.choose" = "اختيار…";
 "prefs.filenameTemplate" = "قالب اسم الملف";
-"prefs.filenameTokens" = "المتاح: {date} و{time} و{timestamp} و{width} و{height}";
+"prefs.filenameTokens" = "متاح — انقر للإدراج:";
 "prefs.askWhereToSave" = "اسأل في كل مرة عن مكان الحفظ";
 "prefs.copyOnSave" = "نسخ إلى الحافظة عند الحفظ";
 "prefs.downscaleRetina" = "الحفظ بالحجم المنطقي (بدون Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "إظهار المكبّر مع أداة اللون";
 "prefs.showSizeBadge" = "إظهار حجم التحديد";
 "prefs.dimming" = "تعتيم الخلفية";
+"prefs.imageFormat" = "صيغة الصورة";
+"prefs.resetCapture" = "إعادة تعيين إعدادات الالتقاط إلى الافتراضي";
 "prefs.tools.explainer" = "خيارات الرسم موجودة داخل الطبقة نفسها بجوار الرسم: اللون والسماكة والإخفاء ونمط النص كلها في اللوحة خلف دائرة اللون.";
 "prefs.tools.reset" = "إعادة ضبط الأدوات";
 "prefs.overlayShortcuts" = "اختصارات الطبقة";
 "prefs.shortcuts.actions" = "⌘C نسخ · ⌘S حفظ · ⇧⌘S حفظ باسم · ⌘P طباعة · ⌘Z / ⇧⌘Z تراجع وإعادة · ⌘A الشاشة كاملة · ↩ نسخ وإغلاق · Esc إلغاء";
 "prefs.shortcuts.modifiers" = "أثناء الرسم: ⇧ مربع أو ٤٥° · ⌥ الرسم من المركز · ⌃ بديل الأداة (شكل ممتلئ، إخفاء آخر). يمكن الجمع بين المفاتيح.";
+
+"save.format" = "الصيغة:";
 
 "permission.title" = "مطلوب إذن تسجيل الشاشة";
 "permission.body" = "افتح إعدادات النظام ← الخصوصية والأمان ← تسجيل الشاشة وفعّل %@.\n\nبعد ذلك يجب إعادة تشغيل التطبيق.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "فشل الالتقاط";
 "error.createFolder" = "تعذّر إنشاء مجلد الحفظ";
 "error.encodePNG" = "تعذّر ترميز ملف PNG";
+"error.encodeJPEG" = "تعذر ترميز JPEG";
 "error.saveFile" = "تعذّر حفظ الملف";
 
 "filename.fallback" = "لقطة شاشة";
 
 "about.version" = "الإصدار %@ (بنية %@)";
 "about.tagline" = "لقطات شاشة مع تعليق فوري لنظام macOS.";
-"about.alpha" = "إصدار ألفا — لا تزال هناك بعض الجوانب غير المكتملة.";
+"about.thankDeveloper" = "قل شكرًا للمطور";
 "about.link.source" = "الكود المصدري";
 "about.link.releases" = "الإصدارات";
 "about.link.privacy" = "الخصوصية";

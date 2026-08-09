@@ -24,8 +24,8 @@ jobs:
           swift build
           SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
 
-      # A tag of v0.9.0-alpha means VERSION=0.9.0 (CFBundleShortVersionString has
-      # to stay numeric) and CHANNEL=alpha, which is what the About window shows.
+      # Stable tags such as v1.0.0 keep VERSION numeric and CHANNEL empty. A prerelease
+      # suffix such as -beta still maps to CHANNEL for future preview builds.
       - name: Derive version
         id: version
         run: |

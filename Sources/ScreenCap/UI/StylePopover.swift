@@ -1,14 +1,22 @@
 import AppKit
 
-/// Small colour cell in the palette grid.
+enum StyleColorTarget: Equatable {
+    case stroke
+    case backdrop
+}
+
+/// Small color cell in the palette grid.
 private final class ColorCell: NSButton {
     let color: NSColor
+    let colorTarget: StyleColorTarget
     var isSelectedColor = false { didSet { needsDisplay = true } }
 
-    init(color: NSColor, side: CGFloat = 20) {
+    init(color: NSColor, target: StyleColorTarget, side: CGFloat = 20) {
         self.color = color
+        self.colorTarget = target
         super.init(frame: .zero)
         isBordered = false
+        focusRingType = .none
         wantsLayer = true
         title = ""
         toolTip = color.hexString
@@ -34,7 +42,7 @@ private final class ColorCell: NSButton {
     }
 }
 
-/// Colour, thickness and per-tool options, shown from the tool strip.
+/// Color, thickness and per-tool options, shown from the tool strip.
 ///
 /// The panel has a fixed content width: rows appear and disappear as the tool
 /// changes, and letting the width float meant every such change reflowed the whole
@@ -46,9 +54,24 @@ final class StylePopover: OverlayPanel {
     var onStyleChange: ((ToolStyle) -> Void)?
     /// Fired when rows appear or disappear and the frame must be recomputed.
     var onContentChanged: (() -> Void)?
-    var onEyedropperToggled: ((Bool) -> Void)?
+    var onEyedropperToggled: ((Bool, StyleColorTarget) -> Void)?
 
-    private static let contentWidth: CGFloat = 208
+    /// 9 palette columns at `paletteCellSide` with `paletteSpacing` gaps, plus the
+    /// root stack's own 10pt edge insets on each side — sized to fit exactly, so
+    /// the palette grid gets the same margins as every other row instead of
+    /// overflowing and squashing its edge cells.
+    private static let paletteCellSide: CGFloat = 18
+    private static let paletteSpacing: CGFloat = 4
+    private static let captionWidth: CGFloat = 82
+    private static let sliderWidth: CGFloat = 96
+    private static let valueWidth: CGFloat = 22
+    private static let rowSpacing: CGFloat = 6
+    private static let paletteWidth: CGFloat =
+        9 * paletteCellSide + 8 * paletteSpacing
+    private static let sliderRowWidth: CGFloat =
+        captionWidth + rowSpacing + sliderWidth + rowSpacing + valueWidth
+    private static let contentWidth: CGFloat =
+        max(paletteWidth, sliderRowWidth) + 20
 
     private static let palette: [NSColor] = [
         "#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#00C7BE", "#30B0C7", "#007AFF", "#5856D6", "#AF52DE",
@@ -60,28 +83,47 @@ final class StylePopover: OverlayPanel {
 
     private var paletteCells: [ColorCell] = []
     private var recentCells: [ColorCell] = []
+    private var backdropPaletteCells: [ColorCell] = []
+    private var backdropRecentCells: [ColorCell] = []
 
     private let hexField = NSTextField(string: "")
+    private let backdropHexField = NSTextField(string: "")
     private let eyedropperButton: OverlayButton
+    private let backdropEyedropperButton: OverlayButton
+    private let backdropSystemPicker: OverlayButton
     private let recentRow = NSStackView()
     private let recentSection = NSStackView()
+    private let backdropRecentRow = NSStackView()
+    private let backdropRecentSection = NSStackView()
+    private let backdropColorSection = NSStackView()
 
     private let widthRow = NSStackView()
     private let widthSlider = NSSlider()
     private let widthValue = NSTextField(labelWithString: "")
+    private var widthCaption: NSTextField?
+
+    private let counterArrowWidthRow = NSStackView()
+    private let counterArrowWidthSlider = NSSlider()
+    private let counterArrowWidthValue = NSTextField(labelWithString: "")
 
     private let fontRow = NSStackView()
     private let fontSlider = NSSlider()
     private let fontValue = NSTextField(labelWithString: "")
 
     private let backdropRow = NSStackView()
-    private let backdropSegments = NSSegmentedControl()
-    private let backdropSwatch = ColorSwatchButton(size: 22)
+    private let backdropSegments = TooltipSegmentedControl()
+
+    /// Rectangle/ellipse: outline vs filled. The persisted twin of ⌃.
+    private let shapeStyleRow = NSStackView()
+    private let shapeStyleSegments = TooltipSegmentedControl()
+    /// Arrow: one head vs two. Also the persisted twin of ⌃.
+    private let arrowStyleRow = NSStackView()
+    private let arrowStyleSegments = TooltipSegmentedControl()
 
     private let obfuscationStyleRow = NSStackView()
-    private let obfuscationStyleSegments = NSSegmentedControl()
+    private let obfuscationStyleSegments = TooltipSegmentedControl()
     private let obfuscationShapeRow = NSStackView()
-    private let obfuscationShapeSegments = NSSegmentedControl()
+    private let obfuscationShapeSegments = TooltipSegmentedControl()
     private let brushRow = NSStackView()
     private let brushSlider = NSSlider()
     private let brushValue = NSTextField(labelWithString: "")
@@ -89,6 +131,12 @@ final class StylePopover: OverlayPanel {
     private let intensitySlider = NSSlider()
     private let intensityValue = NSTextField(labelWithString: "")
 
+    private let eraserModeRow = NSStackView()
+    private let eraserModeSegments = TooltipSegmentedControl()
+    /// Eraser gets the same brush/rectangle/ellipse choice as redaction when it
+    /// is in pixel mode.
+    private let eraserShapeRow = NSStackView()
+    private let eraserShapeSegments = TooltipSegmentedControl()
     private let eraserRow = NSStackView()
     private let eraserSlider = NSSlider()
     private let eraserValue = NSTextField(labelWithString: "")
@@ -97,9 +145,7 @@ final class StylePopover: OverlayPanel {
 
     private var eyedropperActive = false
     private var ownsColorPanel = false
-    private var colorPanelTarget: ColorTarget = .stroke
-
-    private enum ColorTarget { case stroke, backdrop }
+    private var colorPanelTarget: StyleColorTarget = .stroke
 
     init(tool: ToolKind, style: ToolStyle) {
         self.tool = tool
@@ -108,6 +154,17 @@ final class StylePopover: OverlayPanel {
             symbolName: "eyedropper",
             tooltip: L10n.t("style.eyedropper"),
             hint: L10n.t("style.eyedropper.hint"),
+            size: 24
+        )
+        backdropEyedropperButton = OverlayButton(
+            symbolName: "eyedropper",
+            tooltip: L10n.t("style.eyedropper"),
+            hint: L10n.t("style.eyedropper.hint"),
+            size: 24
+        )
+        backdropSystemPicker = OverlayButton(
+            symbolName: "paintpalette",
+            tooltip: L10n.t("style.systemPalette"),
             size: 24
         )
         super.init()
@@ -134,9 +191,9 @@ final class StylePopover: OverlayPanel {
             root.widthAnchor.constraint(equalToConstant: Self.contentWidth)
         ])
 
-        root.addArrangedSubview(buildPalette())
-        root.addArrangedSubview(buildRecents())
-        root.addArrangedSubview(buildHexRow())
+        root.addArrangedSubview(buildPalette(target: .stroke))
+        root.addArrangedSubview(buildRecents(target: .stroke))
+        root.addArrangedSubview(buildHexRow(target: .stroke))
         root.addArrangedSubview(optionsSeparator)
         optionsSeparator.widthAnchor.constraint(
             equalToConstant: Self.contentWidth - 20
@@ -148,39 +205,58 @@ final class StylePopover: OverlayPanel {
             action: #selector(widthChanged)
         )
         buildSlider(
+            row: counterArrowWidthRow, slider: counterArrowWidthSlider,
+            value: counterArrowWidthValue, title: L10n.t("style.arrowThickness"),
+            range: 1...24, action: #selector(counterArrowWidthChanged)
+        )
+        buildSlider(
             row: fontRow, slider: fontSlider, value: fontValue,
             title: L10n.t("style.fontSize"), range: 10...96,
             action: #selector(fontSizeChanged)
         )
         buildBackdropRow()
+        buildBackdropColorSection()
+        buildShapeStyleRow()
+        buildArrowStyleRow()
         buildObfuscationRows()
+        buildEraserModeRow()
+        buildEraserShapeRow()
         buildSlider(
             row: eraserRow, slider: eraserSlider, value: eraserValue,
             title: L10n.t("style.eraserSize"), range: 8...80,
             action: #selector(eraserSizeChanged)
         )
 
-        for row in [widthRow, fontRow, backdropRow, obfuscationStyleRow,
-                    obfuscationShapeRow, brushRow, intensityRow, eraserRow] {
+        // Selector rows (shape style, arrow heads, text backdrop) before the
+        // slider rows they share a tool with — thickness/font size sliders
+        // read as tuning an already-chosen mode, not the other way round.
+        for row in [shapeStyleRow, arrowStyleRow, backdropRow, backdropColorSection,
+                    widthRow, counterArrowWidthRow, fontRow,
+                    obfuscationStyleRow, obfuscationShapeRow, brushRow, intensityRow,
+                    eraserModeRow, eraserShapeRow, eraserRow] {
             root.addArrangedSubview(row)
         }
     }
 
-    private func buildPalette() -> NSView {
+    private func buildPalette(target: StyleColorTarget) -> NSView {
         let grid = NSStackView()
         grid.orientation = .vertical
-        grid.spacing = 4
+        grid.spacing = Self.paletteSpacing
         for rowIndex in 0..<2 {
             let row = NSStackView()
             row.orientation = .horizontal
-            row.spacing = 4
+            row.spacing = Self.paletteSpacing
             for columnIndex in 0..<9 {
                 let index = rowIndex * 9 + columnIndex
                 guard index < Self.palette.count else { break }
-                let cell = ColorCell(color: Self.palette[index])
+                let cell = ColorCell(color: Self.palette[index], target: target, side: Self.paletteCellSide)
                 cell.target = self
                 cell.action = #selector(paletteCellTapped(_:))
-                paletteCells.append(cell)
+                if target == .stroke {
+                    paletteCells.append(cell)
+                } else {
+                    backdropPaletteCells.append(cell)
+                }
                 row.addArrangedSubview(cell)
             }
             grid.addArrangedSubview(row)
@@ -188,48 +264,60 @@ final class StylePopover: OverlayPanel {
         return grid
     }
 
-    private func buildRecents() -> NSView {
-        recentSection.orientation = .horizontal
-        recentSection.spacing = 6
-        recentSection.alignment = .centerY
-        recentRow.orientation = .horizontal
-        recentRow.spacing = 4
-        recentSection.addArrangedSubview(label(L10n.t("style.recent")))
-        recentSection.addArrangedSubview(recentRow)
-        return recentSection
+    private func buildRecents(target: StyleColorTarget) -> NSView {
+        let section = target == .stroke ? recentSection : backdropRecentSection
+        let row = target == .stroke ? recentRow : backdropRecentRow
+        section.orientation = .vertical
+        section.alignment = .leading
+        section.spacing = 0
+        row.orientation = .horizontal
+        row.spacing = Self.paletteSpacing
+        section.addArrangedSubview(row)
+        return section
     }
 
-    private func buildHexRow() -> NSView {
+    private func buildHexRow(target: StyleColorTarget) -> NSView {
         let row = NSStackView()
         row.orientation = .horizontal
-        row.spacing = 6
+        row.spacing = Self.rowSpacing
         row.alignment = .centerY
 
-        hexField.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        hexField.isBezeled = true
-        hexField.bezelStyle = .roundedBezel
-        hexField.alignment = .center
-        hexField.target = self
-        hexField.action = #selector(hexCommitted)
-        hexField.toolTip = L10n.t("style.hex")
-        hexField.translatesAutoresizingMaskIntoConstraints = false
-        hexField.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        let field = target == .stroke ? hexField : backdropHexField
+        let eyedropper = target == .stroke ? eyedropperButton : backdropEyedropperButton
+        let systemPicker = target == .stroke
+            ? OverlayButton(symbolName: "paintpalette", tooltip: L10n.t("style.systemPalette"), size: 24)
+            : backdropSystemPicker
 
-        eyedropperButton.target = self
-        eyedropperButton.action = #selector(eyedropperTapped)
+        field.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        field.isBezeled = true
+        field.bezelStyle = .roundedBezel
+        field.alignment = .center
+        field.target = self
+        field.action = #selector(hexCommitted(_:))
+        field.toolTip = L10n.t("style.hex")
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.widthAnchor.constraint(equalToConstant: 96).isActive = true
 
-        let systemPicker = OverlayButton(
-            symbolName: "paintpalette",
-            tooltip: L10n.t("style.systemPalette"),
-            size: 24
-        )
+        eyedropper.target = self
+        eyedropper.action = #selector(eyedropperTapped(_:))
+
         systemPicker.target = self
-        systemPicker.action = #selector(systemPickerTapped)
+        systemPicker.action = #selector(systemPickerTapped(_:))
 
-        row.addArrangedSubview(hexField)
-        row.addArrangedSubview(eyedropperButton)
+        row.addArrangedSubview(field)
+        row.addArrangedSubview(eyedropper)
         row.addArrangedSubview(systemPicker)
         return row
+    }
+
+    private func buildBackdropColorSection() {
+        backdropColorSection.orientation = .vertical
+        backdropColorSection.alignment = .leading
+        backdropColorSection.spacing = 8
+        backdropColorSection.addArrangedSubview(label(L10n.t("style.backdropColor")))
+        backdropColorSection.addArrangedSubview(buildPalette(target: .backdrop))
+        backdropColorSection.addArrangedSubview(buildRecents(target: .backdrop))
+        backdropColorSection.addArrangedSubview(buildHexRow(target: .backdrop))
     }
 
     private func buildSlider(
@@ -248,16 +336,22 @@ final class StylePopover: OverlayPanel {
         slider.target = self
         slider.action = action
         slider.isContinuous = true
+        slider.focusRingType = .none
         slider.translatesAutoresizingMaskIntoConstraints = false
-        slider.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        slider.widthAnchor.constraint(equalToConstant: Self.sliderWidth).isActive = true
         styleLabel(value)
         value.alignment = .right
         value.translatesAutoresizingMaskIntoConstraints = false
-        value.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        value.widthAnchor.constraint(equalToConstant: Self.valueWidth).isActive = true
 
         let caption = label(title)
+        if row === widthRow { widthCaption = caption }
         caption.translatesAutoresizingMaskIntoConstraints = false
-        caption.widthAnchor.constraint(equalToConstant: 58).isActive = true
+        // The counter has a second slider labelled “Arrow thickness”; the old
+        // 58pt column was enough for “Thickness” but visibly truncated the new
+        // setting.  82pt still fits the fixed content width beside the slider
+        // and keeps the label readable in every tool state.
+        caption.widthAnchor.constraint(equalToConstant: Self.captionWidth).isActive = true
         caption.lineBreakMode = .byTruncatingTail
 
         row.addArrangedSubview(caption)
@@ -272,23 +366,114 @@ final class StylePopover: OverlayPanel {
 
         backdropSegments.segmentCount = TextBackdrop.allCases.count
         backdropSegments.trackingMode = .selectOne
+        backdropSegments.focusRingType = .none
+        // Explicit height: `NSSegmentedControl`'s own intrinsic height varies by
+        // macOS version and doesn't reliably match the 24pt icon buttons sharing
+        // its row, which is what read as "rows of uneven height, some clipped
+        // against the panel's rounded corner."
+        backdropSegments.translatesAutoresizingMaskIntoConstraints = false
+        backdropSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
         for (index, backdrop) in TextBackdrop.allCases.enumerated() {
             backdropSegments.setImage(
-                NSImage(systemSymbolName: backdrop.symbolName, accessibilityDescription: backdrop.title),
+                NSImage.freshSystemSymbol(backdrop.symbolName, accessibilityDescription: backdrop.title),
                 forSegment: index
             )
             backdropSegments.setWidth(31, forSegment: index)
             backdropSegments.setToolTip(backdrop.title, forSegment: index)
         }
+        backdropSegments.setSegmentTooltips(TextBackdrop.allCases.map { $0.title })
         backdropSegments.target = self
         backdropSegments.action = #selector(backdropChanged)
 
-        backdropSwatch.target = self
-        backdropSwatch.action = #selector(backdropColorTapped)
-        backdropSwatch.toolTip = L10n.t("style.backdropColor")
-
         backdropRow.addArrangedSubview(backdropSegments)
-        backdropRow.addArrangedSubview(backdropSwatch)
+    }
+
+    private func buildShapeStyleRow() {
+        shapeStyleRow.orientation = .horizontal
+        shapeStyleRow.spacing = 6
+        shapeStyleRow.alignment = .centerY
+        shapeStyleSegments.segmentCount = 2
+        shapeStyleSegments.focusRingType = .none
+        shapeStyleSegments.translatesAutoresizingMaskIntoConstraints = false
+        shapeStyleSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        shapeStyleSegments.setLabel(L10n.t("style.shapeOutline"), forSegment: 0)
+        shapeStyleSegments.setLabel(L10n.t("style.shapeFilled"), forSegment: 1)
+        shapeStyleSegments.setWidth(93, forSegment: 0)
+        shapeStyleSegments.setWidth(93, forSegment: 1)
+        for index in 0..<2 {
+            shapeStyleSegments.setToolTip(L10n.t("hint.control.alternate"), forSegment: index)
+        }
+        shapeStyleSegments.setSegmentTooltips([L10n.t("hint.control.alternate"), L10n.t("hint.control.alternate")])
+        shapeStyleSegments.target = self
+        shapeStyleSegments.action = #selector(shapeStyleChanged)
+        shapeStyleRow.addArrangedSubview(shapeStyleSegments)
+    }
+
+    private func buildArrowStyleRow() {
+        arrowStyleRow.orientation = .horizontal
+        arrowStyleRow.spacing = 6
+        arrowStyleRow.alignment = .centerY
+        arrowStyleSegments.segmentCount = 2
+        arrowStyleSegments.focusRingType = .none
+        arrowStyleSegments.translatesAutoresizingMaskIntoConstraints = false
+        arrowStyleSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        arrowStyleSegments.setImage(
+            NSImage.freshSystemSymbol("arrow.up.right", accessibilityDescription: L10n.t("style.arrowSingle")),
+            forSegment: 0
+        )
+        arrowStyleSegments.setImage(
+            NSImage.freshSystemSymbol("arrow.left.and.right", accessibilityDescription: L10n.t("style.arrowDouble")),
+            forSegment: 1
+        )
+        arrowStyleSegments.setWidth(93, forSegment: 0)
+        arrowStyleSegments.setWidth(93, forSegment: 1)
+        arrowStyleSegments.setToolTip(L10n.t("style.arrowSingle"), forSegment: 0)
+        arrowStyleSegments.setToolTip(L10n.t("style.arrowDouble"), forSegment: 1)
+        arrowStyleSegments.setSegmentTooltips([L10n.t("style.arrowSingle"), L10n.t("style.arrowDouble")])
+        arrowStyleSegments.target = self
+        arrowStyleSegments.action = #selector(arrowStyleChanged)
+        arrowStyleRow.addArrangedSubview(arrowStyleSegments)
+    }
+
+    private func buildEraserShapeRow() {
+        eraserShapeRow.orientation = .horizontal
+        eraserShapeRow.spacing = 6
+        eraserShapeRow.alignment = .centerY
+        eraserShapeSegments.segmentCount = ObfuscationShape.allCases.count
+        eraserShapeSegments.focusRingType = .none
+        eraserShapeSegments.translatesAutoresizingMaskIntoConstraints = false
+        eraserShapeSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        for (index, item) in ObfuscationShape.allCases.enumerated() {
+            eraserShapeSegments.setImage(
+                NSImage.freshSystemSymbol(item.symbolName, accessibilityDescription: item.title),
+                forSegment: index
+            )
+            eraserShapeSegments.setWidth(62, forSegment: index)
+            eraserShapeSegments.setToolTip(item.title, forSegment: index)
+        }
+        eraserShapeSegments.setSegmentTooltips(ObfuscationShape.allCases.map { $0.title })
+        eraserShapeSegments.target = self
+        eraserShapeSegments.action = #selector(eraserShapeChanged)
+        eraserShapeRow.addArrangedSubview(eraserShapeSegments)
+    }
+
+    private func buildEraserModeRow() {
+        eraserModeRow.orientation = .horizontal
+        eraserModeRow.spacing = 6
+        eraserModeRow.alignment = .centerY
+        eraserModeSegments.segmentCount = EraserMode.allCases.count
+        eraserModeSegments.focusRingType = .none
+        eraserModeSegments.translatesAutoresizingMaskIntoConstraints = false
+        eraserModeSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        for (index, item) in EraserMode.allCases.enumerated() {
+            eraserModeSegments.setLabel(item.title, forSegment: index)
+            eraserModeSegments.setWidth(93, forSegment: index)
+            eraserModeSegments.setToolTip(item.title, forSegment: index)
+        }
+        eraserModeSegments.setSegmentTooltips(EraserMode.allCases.map(\.title))
+        eraserModeSegments.target = self
+        eraserModeSegments.action = #selector(eraserModeChanged)
+        eraserModeRow.addArrangedSubview(eraserModeSegments)
     }
 
     private func buildObfuscationRows() {
@@ -296,11 +481,15 @@ final class StylePopover: OverlayPanel {
         obfuscationStyleRow.spacing = 6
         obfuscationStyleRow.alignment = .centerY
         obfuscationStyleSegments.segmentCount = ObfuscationStyle.allCases.count
+        obfuscationStyleSegments.focusRingType = .none
+        obfuscationStyleSegments.translatesAutoresizingMaskIntoConstraints = false
+        obfuscationStyleSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
         for (index, item) in ObfuscationStyle.allCases.enumerated() {
             obfuscationStyleSegments.setLabel(item.title, forSegment: index)
             obfuscationStyleSegments.setWidth(93, forSegment: index)
             obfuscationStyleSegments.setToolTip(L10n.t("hint.control.alternate"), forSegment: index)
         }
+        obfuscationStyleSegments.setSegmentTooltips(ObfuscationStyle.allCases.map { _ in L10n.t("hint.control.alternate") })
         obfuscationStyleSegments.target = self
         obfuscationStyleSegments.action = #selector(obfuscationStyleChanged)
         obfuscationStyleRow.addArrangedSubview(obfuscationStyleSegments)
@@ -309,14 +498,18 @@ final class StylePopover: OverlayPanel {
         obfuscationShapeRow.spacing = 6
         obfuscationShapeRow.alignment = .centerY
         obfuscationShapeSegments.segmentCount = ObfuscationShape.allCases.count
+        obfuscationShapeSegments.focusRingType = .none
+        obfuscationShapeSegments.translatesAutoresizingMaskIntoConstraints = false
+        obfuscationShapeSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
         for (index, item) in ObfuscationShape.allCases.enumerated() {
             obfuscationShapeSegments.setImage(
-                NSImage(systemSymbolName: item.symbolName, accessibilityDescription: item.title),
+                NSImage.freshSystemSymbol(item.symbolName, accessibilityDescription: item.title),
                 forSegment: index
             )
             obfuscationShapeSegments.setWidth(62, forSegment: index)
             obfuscationShapeSegments.setToolTip(item.title, forSegment: index)
         }
+        obfuscationShapeSegments.setSegmentTooltips(ObfuscationShape.allCases.map { $0.title })
         obfuscationShapeSegments.target = self
         obfuscationShapeSegments.action = #selector(obfuscationShapeChanged)
         obfuscationShapeRow.addArrangedSubview(obfuscationShapeSegments)
@@ -353,14 +546,20 @@ final class StylePopover: OverlayPanel {
         self.style = style
 
         hexField.stringValue = style.color.hexString
-        widthSlider.doubleValue = Double(style.lineWidth)
-        widthValue.stringValue = "\(Int(style.lineWidth))"
+        backdropHexField.stringValue = style.backdropColor.hexString
+        let width = tool == .counter ? style.counterSize : style.lineWidth
+        widthSlider.doubleValue = Double(width)
+        widthValue.stringValue = "\(Int(width))"
+        widthCaption?.stringValue = L10n.t(tool == .counter ? "style.size" : "style.thickness")
+        counterArrowWidthSlider.doubleValue = Double(style.counterArrowWidth)
+        counterArrowWidthValue.stringValue = "\(Int(style.counterArrowWidth))"
         fontSlider.doubleValue = Double(style.fontSize)
         fontValue.stringValue = "\(Int(style.fontSize))"
         eraserSlider.doubleValue = Double(style.eraserRadius)
         eraserValue.stringValue = "\(Int(style.eraserRadius))"
         backdropSegments.selectedSegment = TextBackdrop.allCases.firstIndex(of: style.textBackdrop) ?? 0
-        backdropSwatch.color = style.backdropColor
+        shapeStyleSegments.selectedSegment = style.filled ? 1 : 0
+        arrowStyleSegments.selectedSegment = style.arrowDoubleHeaded ? 1 : 0
         obfuscationStyleSegments.selectedSegment =
             ObfuscationStyle.allCases.firstIndex(of: style.obfuscation.style) ?? 0
         obfuscationShapeSegments.selectedSegment =
@@ -369,6 +568,8 @@ final class StylePopover: OverlayPanel {
         brushValue.stringValue = "\(Int(style.obfuscation.brushSize))"
         intensitySlider.doubleValue = Double(style.obfuscation.intensity)
         intensityValue.stringValue = "\(Int(style.obfuscation.intensity))"
+        eraserModeSegments.selectedSegment = EraserMode.allCases.firstIndex(of: style.eraserMode) ?? 0
+        eraserShapeSegments.selectedSegment = ObfuscationShape.allCases.firstIndex(of: style.eraserShape) ?? 0
 
         applyRowVisibility()
         refreshSelection()
@@ -377,41 +578,74 @@ final class StylePopover: OverlayPanel {
     }
 
     private func applyRowVisibility() {
-        widthRow.isHidden = !tool.supportsLineWidth
+        widthRow.isHidden = !tool.supportsLineWidth && tool != .counter
+        counterArrowWidthRow.isHidden = tool != .counter
         fontRow.isHidden = tool != .text
         backdropRow.isHidden = tool != .text
+        backdropColorSection.isHidden = tool != .text || !style.textBackdrop.usesBackdropColor
+        shapeStyleRow.isHidden = tool != .rectangle && tool != .ellipse
+        arrowStyleRow.isHidden = tool != .arrow
         obfuscationStyleRow.isHidden = tool != .obfuscate
         obfuscationShapeRow.isHidden = tool != .obfuscate
         intensityRow.isHidden = tool != .obfuscate
         brushRow.isHidden = !(tool == .obfuscate && style.obfuscation.shape == .brush)
-        eraserRow.isHidden = tool != .eraser
+        eraserModeRow.isHidden = tool != .eraser
+        eraserShapeRow.isHidden = tool != .eraser || style.eraserMode == .objects
+        // The radius slider only means something for the round brush; a
+        // rect/ellipse erase region is sized by dragging, not by a setting.
+        eraserRow.isHidden = !(tool == .eraser && style.eraserMode == .pixels && style.eraserShape == .brush)
 
-        let anyOption = [widthRow, fontRow, backdropRow, obfuscationStyleRow,
-                         obfuscationShapeRow, brushRow, intensityRow, eraserRow]
+        let anyOption = [widthRow, fontRow, backdropRow, shapeStyleRow, arrowStyleRow,
+                         backdropColorSection, counterArrowWidthRow, obfuscationStyleRow,
+                         obfuscationShapeRow, brushRow, intensityRow, eraserModeRow,
+                         eraserShapeRow, eraserRow]
             .contains { !$0.isHidden }
         optionsSeparator.isHidden = !anyOption
-        backdropSwatch.isHidden = !style.textBackdrop.usesBackdropColor
     }
 
     private func refreshSelection() {
         for cell in paletteCells + recentCells {
             cell.isSelectedColor = cell.color.hexString == style.color.hexString
         }
+        for cell in backdropPaletteCells + backdropRecentCells {
+            cell.isSelectedColor = cell.color.hexString == style.backdropColor.hexString
+        }
     }
 
     private func reloadRecentColors() {
-        recentCells.forEach { $0.removeFromSuperview() }
-        recentCells.removeAll()
+        reloadRecentColors(target: .stroke)
+        reloadRecentColors(target: .backdrop)
+        refreshSelection()
+    }
 
-        let recents = Settings.shared.recentColors
-        recentSection.isHidden = recents.isEmpty
-        for color in recents.prefix(7) {
-            let cell = ColorCell(color: color, side: 18)
+    private func reloadRecentColors(target: StyleColorTarget) {
+        let cells = target == .stroke ? recentCells : backdropRecentCells
+        let row = target == .stroke ? recentRow : backdropRecentRow
+        let section = target == .stroke ? recentSection : backdropRecentSection
+        cells.forEach { $0.removeFromSuperview() }
+        if target == .stroke {
+            recentCells.removeAll()
+        } else {
+            backdropRecentCells.removeAll()
+        }
+
+        let recents = target == .stroke
+            ? Settings.shared.recentStrokeColors
+            : Settings.shared.recentBackdropColors
+        section.isHidden = recents.isEmpty
+        for color in recents.prefix(Settings.maximumRecentColors) {
+            let cell = ColorCell(color: color, target: target, side: Self.paletteCellSide)
             cell.target = self
             cell.action = #selector(paletteCellTapped(_:))
-            cell.isSelectedColor = color.hexString == style.color.hexString
-            recentCells.append(cell)
-            recentRow.addArrangedSubview(cell)
+            cell.isSelectedColor = target == .stroke
+                ? color.hexString == style.color.hexString
+                : color.hexString == style.backdropColor.hexString
+            if target == .stroke {
+                recentCells.append(cell)
+            } else {
+                backdropRecentCells.append(cell)
+            }
+            row.addArrangedSubview(cell)
         }
     }
 
@@ -419,80 +653,126 @@ final class StylePopover: OverlayPanel {
         onStyleChange?(style)
     }
 
-    private func applyColor(_ color: NSColor, to target: ColorTarget) {
+    private func applyColor(_ color: NSColor, to target: StyleColorTarget) {
+        // Every color here is drawn at full strength — backdrop translucency is
+        // its own `textBackdrop` mode, not a per-color alpha — so a color with
+        // alpha < 1 (the system panel's Opacity slider, or a pasted 8-digit hex)
+        // has no legitimate use and only produces a stroke or backdrop that's
+        // partially or fully invisible, with no way back except retyping a hex
+        // value from scratch. Force it opaque at the one place every source of a
+        // color funnels through.
+        let color = color.withAlphaComponent(1)
+        // A color selected from either selector is a recent color. The settings
+        // object keeps newest-first order and moves an existing color to the
+        // front instead of creating duplicates.
+        switch target {
+        case .stroke: Settings.shared.noteStrokeColorUsed(color)
+        case .backdrop: Settings.shared.noteBackdropColorUsed(color)
+        }
+
         switch target {
         case .stroke:
             style.color = color
             hexField.stringValue = color.hexString
-            refreshSelection()
-            emit()
-            // A brand-new colour lands in the recents row and makes the panel
-            // taller, so the frame has to be recomputed.
-            let hadRecents = !recentSection.isHidden
-            reloadRecentColors()
-            if hadRecents != !recentSection.isHidden || recentCells.count != Settings.shared.recentColors.count {
-                onContentChanged?()
-            } else {
-                onContentChanged?()
-            }
         case .backdrop:
             style.backdropColor = color
-            backdropSwatch.color = color
-            emit()
+            backdropHexField.stringValue = color.hexString
         }
+        refreshSelection()
+        emit()
+        reloadRecentColors()
+        onContentChanged?()
     }
 
     /// Reflects an eyedropper sample taken on the overlay.
-    func updateSampledColor(_ color: NSColor) {
-        applyColor(color, to: .stroke)
+    func updateSampledColor(_ color: NSColor, target: StyleColorTarget) {
+        applyColor(color, to: target)
     }
 
-    func setEyedropperActive(_ active: Bool) {
+    func setEyedropperActive(_ active: Bool, target: StyleColorTarget = .stroke) {
         eyedropperActive = active
-        eyedropperButton.isActive = active
+        eyedropperButton.isActive = active && target == .stroke
+        backdropEyedropperButton.isActive = active && target == .backdrop
     }
 
     // MARK: - Actions
 
     @objc private func paletteCellTapped(_ sender: ColorCell) {
-        applyColor(sender.color, to: .stroke)
+        applyColor(sender.color, to: sender.colorTarget)
     }
 
-    @objc private func hexCommitted() {
-        guard let color = NSColor(hex: hexField.stringValue) else {
-            hexField.stringValue = style.color.hexString
+    @objc private func hexCommitted(_ sender: NSTextField) {
+        let target: StyleColorTarget = sender === backdropHexField ? .backdrop : .stroke
+        guard let color = NSColor(hex: sender.stringValue) else {
+            sender.stringValue = target == .backdrop ? style.backdropColor.hexString : style.color.hexString
             return
         }
-        applyColor(color, to: .stroke)
+        applyColor(color, to: target)
     }
 
-    @objc private func eyedropperTapped() {
+    @objc private func eyedropperTapped(_ sender: OverlayButton) {
+        let target: StyleColorTarget = sender === backdropEyedropperButton ? .backdrop : .stroke
         // Second press cancels, so the crosshair is never a one-way trip.
-        setEyedropperActive(!eyedropperActive)
-        onEyedropperToggled?(eyedropperActive)
+        let active = !(eyedropperActive &&
+            ((target == .stroke && eyedropperButton.isActive) ||
+             (target == .backdrop && backdropEyedropperButton.isActive)))
+        setEyedropperActive(active, target: target)
+        onEyedropperToggled?(active, target)
     }
 
-    @objc private func backdropColorTapped() {
-        openSystemColorPanel(for: .backdrop, initial: style.backdropColor)
+    @objc private func systemPickerTapped(_ sender: OverlayButton) {
+        openSystemColorPanel(
+            for: sender === backdropSystemPicker ? .backdrop : .stroke,
+            initial: sender === backdropSystemPicker ? style.backdropColor : style.color
+        )
     }
 
-    @objc private func systemPickerTapped() {
-        openSystemColorPanel(for: .stroke, initial: style.color)
-    }
-
-    private func openSystemColorPanel(for target: ColorTarget, initial: NSColor) {
+    private func openSystemColorPanel(for target: StyleColorTarget, initial: NSColor) {
         colorPanelTarget = target
         let panel = NSColorPanel.shared
         panel.setTarget(self)
         panel.setAction(#selector(systemColorChanged(_:)))
+        // Stroke and backdrop colors are always drawn opaque (see `applyColor`),
+        // so the Opacity slider has nothing valid to do here — and left in, it is
+        // how the backdrop color ended up silently transparent before.
+        panel.showsAlpha = false
         panel.color = initial
         panel.isContinuous = true
         // The overlay sits at shielding level, so the panel has to be lifted above
         // it or the user would click a button and see nothing appear.
         panel.level = .init(rawValue: Int(CGShieldingWindowLevel()) + 2)
         panel.hidesOnDeactivate = false
+        // Order front FIRST: a panel that has never been shown in this process
+        // reports a stale/zero `frame.size` until AppKit actually lays it out,
+        // and positioning against that size would leave it placed as an
+        // effectively invisible zero-size window. Reposition it only once its
+        // real, on-screen size is known.
         panel.makeKeyAndOrderFront(nil)
+        positionColorPanel(panel)
         ownsColorPanel = true
+    }
+
+    /// `NSColorPanel.shared` is a single system-wide window that remembers
+    /// wherever it was last left — on another display, or one that is no
+    /// longer connected, that reads as "the color picker doesn't open near
+    /// what I'm doing." Pin it beside this popover, on the popover's own
+    /// screen, every time.
+    private func positionColorPanel(_ panel: NSColorPanel) {
+        guard let window else { return }
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        let screen = NSScreen.screens.first { $0.frame.contains(CGPoint(x: screenFrame.midX, y: screenFrame.midY)) }
+            ?? window.screen ?? NSScreen.main
+        guard let screen else { return }
+
+        let panelSize = panel.frame.size
+        guard panelSize.width > 1, panelSize.height > 1 else { return }
+        var origin = CGPoint(x: screenFrame.maxX + 12, y: screenFrame.maxY - panelSize.height)
+        if origin.x + panelSize.width > screen.frame.maxX {
+            origin.x = screenFrame.minX - 12 - panelSize.width
+        }
+        origin.x = min(max(origin.x, screen.frame.minX + 4), screen.frame.maxX - panelSize.width - 4)
+        origin.y = min(max(origin.y, screen.frame.minY + 4), screen.frame.maxY - panelSize.height - 4)
+        panel.setFrameOrigin(origin)
     }
 
     @objc private func systemColorChanged(_ sender: NSColorPanel) {
@@ -500,8 +780,19 @@ final class StylePopover: OverlayPanel {
     }
 
     @objc private func widthChanged() {
-        style.lineWidth = CGFloat(widthSlider.doubleValue.rounded())
-        widthValue.stringValue = "\(Int(style.lineWidth))"
+        let value = CGFloat(widthSlider.doubleValue.rounded())
+        if tool == .counter {
+            style.counterSize = value
+        } else {
+            style.lineWidth = value
+        }
+        widthValue.stringValue = "\(Int(value))"
+        emit()
+    }
+
+    @objc private func counterArrowWidthChanged() {
+        style.counterArrowWidth = CGFloat(counterArrowWidthSlider.doubleValue.rounded())
+        counterArrowWidthValue.stringValue = "\(Int(style.counterArrowWidth))"
         emit()
     }
 
@@ -521,9 +812,19 @@ final class StylePopover: OverlayPanel {
         let index = backdropSegments.selectedSegment
         guard index >= 0, index < TextBackdrop.allCases.count else { return }
         style.textBackdrop = TextBackdrop.allCases[index]
-        backdropSwatch.isHidden = !style.textBackdrop.usesBackdropColor
+        backdropColorSection.isHidden = !style.textBackdrop.usesBackdropColor
         emit()
         onContentChanged?()
+    }
+
+    @objc private func shapeStyleChanged() {
+        style.filled = shapeStyleSegments.selectedSegment == 1
+        emit()
+    }
+
+    @objc private func arrowStyleChanged() {
+        style.arrowDoubleHeaded = arrowStyleSegments.selectedSegment == 1
+        emit()
     }
 
     @objc private func obfuscationStyleChanged() {
@@ -538,6 +839,24 @@ final class StylePopover: OverlayPanel {
         guard index >= 0, index < ObfuscationShape.allCases.count else { return }
         style.obfuscation.shape = ObfuscationShape.allCases[index]
         brushRow.isHidden = style.obfuscation.shape != .brush
+        emit()
+        onContentChanged?()
+    }
+
+    @objc private func eraserShapeChanged() {
+        let index = eraserShapeSegments.selectedSegment
+        guard index >= 0, index < ObfuscationShape.allCases.count else { return }
+        style.eraserShape = ObfuscationShape.allCases[index]
+        eraserRow.isHidden = style.eraserShape != .brush
+        emit()
+        onContentChanged?()
+    }
+
+    @objc private func eraserModeChanged() {
+        let index = eraserModeSegments.selectedSegment
+        guard index >= 0, index < EraserMode.allCases.count else { return }
+        style.eraserMode = EraserMode.allCases[index]
+        applyRowVisibility()
         emit()
         onContentChanged?()
     }

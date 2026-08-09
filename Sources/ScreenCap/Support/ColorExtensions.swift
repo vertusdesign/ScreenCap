@@ -15,7 +15,7 @@ extension NSColor {
         self.init(srgbRed: r, green: g, blue: b, alpha: a)
     }
 
-    /// `#RRGGBB`, or `#RRGGBBAA` when the colour is translucent.
+    /// `#RRGGBB`, or `#RRGGBBAA` when the color is translucent.
     var hexString: String {
         let color = usingColorSpace(.sRGB) ?? self
         let r = Int((color.redComponent * 255).rounded())
@@ -27,7 +27,7 @@ extension NSColor {
             : String(format: "#%02X%02X%02X%02X", r, g, b, a)
     }
 
-    /// `rgb(12, 34, 56)` — shown next to the hex readout in the magnifier.
+    /// `12, 34, 56` — shown next to the hex readout in the magnifier.
     var rgbString: String {
         let color = usingColorSpace(.sRGB) ?? self
         return String(
@@ -38,7 +38,23 @@ extension NSColor {
         )
     }
 
-    /// Picks black or white for text drawn on top of this colour.
+    /// Same as `rgbString`, but each channel is padded to a fixed 3-digit
+    /// width. A monospaced label built from `rgbString` still changes width
+    /// as the cursor moves — "5, 5, 5" is narrower than "255, 255, 255" — which
+    /// in a box sized to fit its own text reads as constant jitter. Used
+    /// wherever that stability matters more than the leading spaces looking
+    /// slightly odd, like the magnifier's readout box.
+    var fixedWidthRgbString: String {
+        let color = usingColorSpace(.sRGB) ?? self
+        return String(
+            format: "%3d, %3d, %3d",
+            Int((color.redComponent * 255).rounded()),
+            Int((color.greenComponent * 255).rounded()),
+            Int((color.blueComponent * 255).rounded())
+        )
+    }
+
+    /// Picks black or white for text drawn on top of this color.
     var readableForeground: NSColor {
         let color = usingColorSpace(.sRGB) ?? self
         let luminance = 0.2126 * color.redComponent

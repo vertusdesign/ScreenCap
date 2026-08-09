@@ -4,8 +4,8 @@ Freeze the screen, select an area, mark it up in place, then copy or save. A men
 screenshot tool for macOS, built because [Lightshot](https://app.prntscr.com/) — the one
 that did this well — is no longer maintained.
 
-**Status: alpha (0.9.0).** Everything described below works and has been tested by hand.
-Some rough edges remain — see [Known limitations](#known-limitations).
+**Version 1.0.0 — stable release.** Everything described below works and has been tested by
+hand. See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 > ### ⚠️ macOS will block the first launch — this is expected
 >
@@ -28,7 +28,7 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
 - Draw on top: pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbering, text
 - Redaction does pixelation or blur, in a rectangle, an ellipse or a free brush stroke
 - An eraser that rubs out part of a stroke rather than deleting whole objects
-- Pixel loupe with an eyedropper, and a colour panel with palette, recents, hex and a screen picker
+- Pixel loupe with an eyedropper, and a color panel with palette, recents, hex and a screen picker
 - Copy to the clipboard, save as PNG, or print
 - 24 interface languages
 - No Dock icon, no background polling, no network access of any kind
@@ -75,7 +75,7 @@ nothing else; it never streams, never records, and nothing leaves your machine. 
 | Capture area | ⌘F2 |
 | Repeat last area | ⌘F3 |
 | Capture window under cursor | ⌘F4 |
-| Capture full screen | ⌘F5 |
+| Capture full screen | ⌘⌥F4 |
 
 All four are configurable in Settings, and any of them can be cleared.
 
@@ -151,8 +151,18 @@ collapses into a single undo step.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.
-- The app is alpha and has been tested by hand rather than by an automated UI suite. The
-  rendering and export paths are covered by `--selftest`.
+- The app has been tested by hand rather than by an automated UI suite. The rendering and
+  export paths are covered by `--selftest`.
+
+## Future work after 1.0
+
+The following features are intentionally out of scope for the first stable release and
+should be considered only after 1.0:
+
+- **Selection across multiple displays.** A single selection should be able to span
+  displays, with the overlay and export composing the relevant parts of each screen.
+- **Annotation of existing images.** Open an image file and use the same annotation,
+  redaction and export tools without taking a new screenshot first.
 
 ## Automation
 

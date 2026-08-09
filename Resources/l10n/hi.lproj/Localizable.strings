@@ -51,10 +51,19 @@
 "style.systemPalette" = "सिस्टम रंग पैलेट";
 "style.thickness" = "मोटाई";
 "style.fontSize" = "आकार";
+"style.size" = "आकार";
+"style.arrowThickness" = "तीर की मोटाई";
 "style.backdropColor" = "पृष्ठभूमि का रंग";
 "style.brushSize" = "ब्रश का आकार";
 "style.intensity" = "तीव्रता";
 "style.eraserSize" = "रबर का आकार";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "रूपरेखा";
+"style.shapeFilled" = "भरा हुआ";
+"style.arrowSingle" = "एक सिरा";
+"style.arrowDouble" = "दो सिरे";
+"text.moveHandle" = "ले जाने के लिए खींचें";
 
 "overlay.hint.area" = "क्षेत्र चुनने के लिए खींचें · Esc रद्द करता है";
 "overlay.hint.window" = "किसी विंडो पर ले जाएँ और क्लिक करें · Esc रद्द करता है";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "डिफ़ॉल्ट शॉर्टकट लौटाएँ";
 "prefs.shortcut.conflict" = "चिह्नित शॉर्टकट पहले से किसी और ऐप के पास हैं और काम नहीं करेंगे। दूसरे चुनें या वह ऐप बंद करें।";
 "prefs.shortcut.conflict.help" = "किसी और ऐप के पास है, काम नहीं कर रहा";
+"prefs.shortcut.clear" = "शॉर्टकट हटाएं";
 "prefs.saveFolder" = "सहेजने का फ़ोल्डर";
 "prefs.choose" = "चुनें…";
 "prefs.filenameTemplate" = "फ़ाइल नाम टेम्पलेट";
-"prefs.filenameTokens" = "उपलब्ध: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "उपलब्ध — जोड़ने के लिए क्लिक करें:";
 "prefs.askWhereToSave" = "हर बार पूछें कि कहाँ सहेजना है";
 "prefs.copyOnSave" = "सहेजते समय क्लिपबोर्ड पर भी कॉपी करें";
 "prefs.downscaleRetina" = "लॉजिकल आकार में सहेजें (Retina ×2 के बिना)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "रंग चुनने वाले आवर्धक को दिखाएँ";
 "prefs.showSizeBadge" = "चयन का आकार दिखाएँ";
 "prefs.dimming" = "पृष्ठभूमि धुँधली करना";
+"prefs.imageFormat" = "छवि प्रारूप";
+"prefs.resetCapture" = "कैप्चर सेटिंग्स को डिफ़ॉल्ट पर रीसेट करें";
 "prefs.tools.explainer" = "ड्रॉइंग के विकल्प ओवरले में ही, चित्र के पास हैं: रंग, मोटाई, छिपाना और टेक्स्ट शैली सब रंग वाले गोले के पीछे के पैनल में हैं।";
 "prefs.tools.reset" = "उपकरण डिफ़ॉल्ट पर लाएँ";
 "prefs.overlayShortcuts" = "ओवरले के शॉर्टकट";
 "prefs.shortcuts.actions" = "⌘C कॉपी · ⌘S सहेजें · ⇧⌘S इस रूप में सहेजें · ⌘P प्रिंट · ⌘Z / ⇧⌘Z पूर्ववत और फिर से · ⌘A पूरी स्क्रीन · ↩ कॉपी करके बंद करें · Esc रद्द";
 "prefs.shortcuts.modifiers" = "चित्र बनाते समय: ⇧ वर्ग या 45° · ⌥ केंद्र से बनाएँ · ⌃ उपकरण का विकल्प (भरी हुई आकृति, दूसरा छिपाव)। कुंजियाँ साथ में चल सकती हैं।";
+
+"save.format" = "प्रारूप:";
 
 "permission.title" = "स्क्रीन रिकॉर्डिंग की अनुमति चाहिए";
 "permission.body" = "सिस्टम सेटिंग्स → गोपनीयता और सुरक्षा → स्क्रीन रिकॉर्डिंग खोलें और %@ चालू करें।\n\nउसके बाद ऐप को फिर से शुरू करना होगा।";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "कैप्चर विफल";
 "error.createFolder" = "सहेजने का फ़ोल्डर नहीं बना";
 "error.encodePNG" = "PNG एन्कोड नहीं हो सका";
+"error.encodeJPEG" = "JPEG एन्कोड नहीं किया जा सका";
 "error.saveFile" = "फ़ाइल सहेजी नहीं जा सकी";
 
 "filename.fallback" = "स्क्रीनशॉट";
 
 "about.version" = "संस्करण %@ (बिल्ड %@)";
 "about.tagline" = "macOS के लिए तुरंत टिप्पणी वाले स्क्रीनशॉट।";
-"about.alpha" = "अल्फा संस्करण — कुछ कमियाँ अभी बाकी हैं।";
+"about.thankDeveloper" = "डेवलपर को धन्यवाद कहें";
 "about.link.source" = "सोर्स कोड";
 "about.link.releases" = "रिलीज़";
 "about.link.privacy" = "गोपनीयता";

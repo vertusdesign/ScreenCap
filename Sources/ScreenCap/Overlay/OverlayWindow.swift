@@ -18,6 +18,11 @@ final class OverlayWindow: NSWindow {
         acceptsMouseMovedEvents = true
         isMovable = false
         isReleasedWhenClosed = false
+        // Without this, the first window shown right after `NSApp.activate`
+        // wakes an accessory (no-Dock-icon) app from the background gets a
+        // brief system zoom-in transition — visible as the whole capture
+        // surface "popping" into place instead of appearing instantly.
+        animationBehavior = .none
         setFrame(screenFrame, display: false)
     }
 

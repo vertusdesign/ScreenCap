@@ -25,11 +25,19 @@ final class HotkeyRecorderView: NSView {
 
     deinit {
         if let monitor { NSEvent.removeMonitor(monitor) }
+        if isRecording { HotkeyManager.shared.resume() }
     }
 
     private func updateMonitor() {
         if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
-        guard isRecording else { return }
+        guard isRecording else {
+            HotkeyManager.shared.resume()
+            return
+        }
+        // While THIS field is capturing, the combo it currently shows must not
+        // ALSO fire its old action — Carbon hotkeys are registered at the window
+        // server and fire regardless of which view has keyboard focus.
+        HotkeyManager.shared.suspend()
 
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self, isRecording else { return event }

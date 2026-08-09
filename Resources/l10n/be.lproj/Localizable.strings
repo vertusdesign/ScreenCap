@@ -51,10 +51,19 @@
 "style.systemPalette" = "Сістэмная палітра";
 "style.thickness" = "Таўшчыня";
 "style.fontSize" = "Памер";
+"style.size" = "Памер";
+"style.arrowThickness" = "Таўшчыня стрэлкі";
 "style.backdropColor" = "Колер падкладкі";
 "style.brushSize" = "Памер пэндзля";
 "style.intensity" = "Інтэнсіўнасць";
 "style.eraserSize" = "Памер гумкі";
+"style.eraserMode.pixels" = "Erase pixels";
+"style.eraserMode.objects" = "Delete";
+"style.shapeOutline" = "Контур";
+"style.shapeFilled" = "Заліты";
+"style.arrowSingle" = "Адна галоўка";
+"style.arrowDouble" = "Дзве галоўкі";
+"text.moveHandle" = "Перацягніце, каб перамясціць";
 
 "overlay.hint.area" = "Вылучыце вобласць · Esc — скасаваць";
 "overlay.hint.window" = "Навядзіце на акно і пстрыкніце · Esc — скасаваць";
@@ -83,10 +92,11 @@
 "prefs.shortcut.reset" = "Вярнуць прадвызначаныя спалучэнні";
 "prefs.shortcut.conflict" = "Пазначаныя спалучэнні ўжо занятыя іншай праграмай і не спрацуюць. Задайце іншыя або закрыйце тую праграму.";
 "prefs.shortcut.conflict.help" = "Занята іншай праграмай і не працуе";
+"prefs.shortcut.clear" = "Ачысціць спалучэнне клавіш";
 "prefs.saveFolder" = "Папка для захавання";
 "prefs.choose" = "Выбраць…";
 "prefs.filenameTemplate" = "Шаблон імя";
-"prefs.filenameTokens" = "Даступныя: {date}, {time}, {timestamp}, {width}, {height}";
+"prefs.filenameTokens" = "Даступна — націсніце, каб уставіць:";
 "prefs.askWhereToSave" = "Кожны раз пытацца, куды захоўваць";
 "prefs.copyOnSave" = "Капіяваць у буфер пры захаванні";
 "prefs.downscaleRetina" = "Захоўваць у лагічным памеры (без Retina ×2)";
@@ -94,11 +104,15 @@
 "prefs.showMagnifier" = "Паказваць лупу з піпеткай";
 "prefs.showSizeBadge" = "Паказваць памер вылучэння";
 "prefs.dimming" = "Зацямненне фону";
+"prefs.imageFormat" = "Фармат выявы";
+"prefs.resetCapture" = "Скінуць налады захопу да прадвызначаных";
 "prefs.tools.explainer" = "Параметры малявання — проста ў аверлеі, побач з малюнкам: колер, таўшчыня, замазванне і стыль тэксту сабраныя ў панэлі за кружком колеру.";
 "prefs.tools.reset" = "Скінуць інструменты да прадвызначаных";
 "prefs.overlayShortcuts" = "Гарачыя клавішы ў аверлеі";
 "prefs.shortcuts.actions" = "⌘C скапіяваць · ⌘S захаваць · ⇧⌘S захаваць як · ⌘P друк · ⌘Z / ⇧⌘Z адрабіць і паўтарыць · ⌘A увесь экран · ↩ скапіяваць і закрыць · Esc скасаваць";
 "prefs.shortcuts.modifiers" = "Падчас малявання: ⇧ квадрат або 45° · ⌥ маляваць ад цэнтра · ⌃ альтэрнатыва інструмента (фігура з заліўкай, іншы тып замазвання). Мадыфікатары спалучаюцца.";
+
+"save.format" = "Фармат:";
 
 "permission.title" = "Патрэбны дазвол на запіс экрана";
 "permission.body" = "Адкрыйце «Сістэмныя налады» → «Прыватнасць і бяспека» → «Запіс экрана» і ўключыце %@.\n\nПасля гэтага праграму трэба перазапусціць.";
@@ -114,13 +128,14 @@
 "error.captureTitle" = "Не ўдалося зрабіць здымак";
 "error.createFolder" = "Не ўдалося стварыць папку для захавання";
 "error.encodePNG" = "Не ўдалося закадзіраваць PNG";
+"error.encodeJPEG" = "Не ўдалося закадаваць JPEG";
 "error.saveFile" = "Не ўдалося захаваць файл";
 
 "filename.fallback" = "Здымак";
 
 "about.version" = "Версія %@ (зборка %@)";
 "about.tagline" = "Здымкі экрана з імгненнымі пазнакамі для macOS.";
-"about.alpha" = "Альфа-версія — некаторыя шурпатасці яшчэ засталіся.";
+"about.thankDeveloper" = "Сказаць дзякуй распрацоўніку";
 "about.link.source" = "Зыходны код";
 "about.link.releases" = "Рэлізы";
 "about.link.privacy" = "Прыватнасць";

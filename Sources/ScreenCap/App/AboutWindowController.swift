@@ -61,14 +61,6 @@ private struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 12)
 
-            if AppInfo.isPrerelease {
-                Text(L10n.t("about.alpha"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 6)
-            }
-
             Divider()
                 .padding(.vertical, 16)
 
@@ -83,6 +75,15 @@ private struct AboutView: View {
             .font(.system(size: 12))
             .padding(.horizontal, 8)
             .fixedSize(horizontal: false, vertical: true)
+
+            Link(destination: AppInfo.supportURL) {
+                Text(L10n.t("about.thankDeveloper"))
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+            .padding(.top, 16)
 
             Text(L10n.t("about.copyright"))
                 .font(.system(size: 11))
