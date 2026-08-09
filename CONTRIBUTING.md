@@ -67,10 +67,10 @@ swift build 2>&1 | tee /tmp/screencap-build.log
 .build/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 
-For a release-shaped local check, also run `make dmg VERSION=1.0.0 CHANNEL= BUILD=1` and
+For a release-shaped local check, also run `make dmg VERSION=1.1.0 CHANNEL= BUILD=1` and
 verify the result with `lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap`, the version
 keys in `dist/ScreenCap.app/Contents/Info.plist`, and
-`(cd dist && shasum -a 256 -c ScreenCap-1.0.0.dmg.sha256)`. The CI workflow is the canonical
+`(cd dist && shasum -a 256 -c ScreenCap-1.1.0.dmg.sha256)`. The CI workflow is the canonical
 copy of these checks.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local

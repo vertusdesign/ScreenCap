@@ -51,12 +51,28 @@ enum SelectionHandle: CaseIterable {
     }
 
     var cursor: NSCursor {
+        if #available(macOS 15.0, *) {
+            return modernFrameResizeCursor
+        }
+
         switch self {
         case .top, .bottom: return .resizeUpDown
         case .left, .right: return .resizeLeftRight
-        // AppKit exposes no public diagonal resize cursor; the horizontal one
-        // still reads as "this grip resizes".
-        case .topLeft, .topRight, .bottomLeft, .bottomRight: return .resizeLeftRight
+        case .topLeft, .topRight, .bottomRight, .bottomLeft: return .resizeLeftRight
+        }
+    }
+
+    @available(macOS 15.0, *)
+    private var modernFrameResizeCursor: NSCursor {
+        switch self {
+        case .top: return NSCursor.__frameResize(from: .top, in: .all)
+        case .topLeft: return NSCursor.__frameResize(from: .topLeft, in: .all)
+        case .left: return NSCursor.__frameResize(from: .left, in: .all)
+        case .bottomLeft: return NSCursor.__frameResize(from: .bottomLeft, in: .all)
+        case .bottom: return NSCursor.__frameResize(from: .bottom, in: .all)
+        case .bottomRight: return NSCursor.__frameResize(from: .bottomRight, in: .all)
+        case .right: return NSCursor.__frameResize(from: .right, in: .all)
+        case .topRight: return NSCursor.__frameResize(from: .topRight, in: .all)
         }
     }
 

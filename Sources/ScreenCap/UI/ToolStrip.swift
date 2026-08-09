@@ -11,6 +11,8 @@ final class ToolStrip: OverlayPanel {
 
     var onToolSelected: ((ToolKind) -> Void)?
     var onStyleTapped: (() -> Void)?
+    var onStyleLongPressed: (() -> Void)?
+    var onStyleDoubleTapped: (() -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
 
@@ -60,6 +62,14 @@ final class ToolStrip: OverlayPanel {
             button.target = self
             button.action = #selector(toolTapped(_:))
             button.tag = index
+            button.onLongPress = { [weak self] in
+                guard let self, self.selectedTool == tool else { return }
+                self.onStyleLongPressed?()
+            }
+            button.onDoubleClick = { [weak self] in
+                guard let self, self.selectedTool == tool else { return }
+                self.onStyleDoubleTapped?()
+            }
             buttons[tool] = button
             stack.addArrangedSubview(OverlaySquareSlot(control: button))
         }

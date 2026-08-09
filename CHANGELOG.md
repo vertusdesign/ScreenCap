@@ -3,6 +3,23 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-08-09
+
+Polished stable release focused on the capture overlay, permission recovery and distribution
+documentation.
+
+### Highlights
+
+- **Permission recovery** now separates macOS's native first-request dialog from the app's
+  retry explanation, prevents duplicate prompts, and opens the exact Screen Recording pane
+  from the status menu or fallback dialog.
+- **Overlay controls** use system-style resize cursors, a clearer settings marker, and
+  consistent tool-panel interactions including long-press and double-click toggling.
+- **Redaction and editing** keep repeated blur/pixelate passes as visible layers while
+  preserving annotations underneath, with improved brush previews and eraser geometry.
+- **Distribution documentation** now includes a reusable Screen Recording permission
+  specification for future macOS apps and for Windows/Linux platform adapters.
+
 ## [1.0.0] — 2026-08-09
 
 First stable release. The capture flow, annotation tools, redaction, export, localization,

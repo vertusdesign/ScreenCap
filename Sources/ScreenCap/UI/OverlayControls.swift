@@ -75,6 +75,12 @@ class OverlayPanel: NSVisualEffectView {
 
 /// Square icon button used throughout the overlay chrome.
 final class OverlayButton: NSButton {
+    /// Called after the pointer has stayed on the button for 1.25 seconds.
+    /// The regular click action still fires on mouse-up, so a long press can
+    /// reveal the style panel without changing the meaning of a tool click.
+    var onLongPress: (() -> Void)?
+    var onDoubleClick: (() -> Void)?
+
     var isActive = false {
         didSet { if isActive != oldValue { needsDisplay = true; updateTint() } }
     }
@@ -86,6 +92,8 @@ final class OverlayButton: NSButton {
     private let accented: Bool
     private let fixedSize: CGFloat
     private lazy var hoverTooltip = HoverTooltip(for: self)
+    private var longPressTimer: Timer?
+    private var didFireLongPress = false
 
     init(
         symbolName: String,
@@ -194,11 +202,31 @@ final class OverlayButton: NSButton {
     override func mouseExited(with event: NSEvent) {
         isHovered = false
         hoverTooltip.hide()
+        longPressTimer?.invalidate()
+        longPressTimer = nil
     }
 
     override func mouseDown(with event: NSEvent) {
         hoverTooltip.hide()
+        if event.clickCount == 2 {
+            onDoubleClick?()
+        }
+        didFireLongPress = false
+        longPressTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.25, repeats: false) { [weak self] _ in
+            guard let self, self.isHovered, !self.didFireLongPress else { return }
+            self.didFireLongPress = true
+            self.onLongPress?()
+        }
+        longPressTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
         super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        longPressTimer?.invalidate()
+        longPressTimer = nil
+        super.mouseUp(with: event)
     }
 
     // Each capture session creates a fresh OverlayWindow per display, so a
@@ -318,6 +346,33 @@ final class ColorSwatchButton: NSButton {
         let ring = NSBezierPath(ovalIn: inset)
         ring.lineWidth = 1.5
         ring.stroke()
+
+        // A small white gear in the lower-right corner signals that this is also
+        // the tool settings button, not only a colour swatch. Keep the shadow
+        // deliberately subtle: a dark backing circle made the marker look dirty.
+        let gearSize: CGFloat = 12
+        let gearRect = CGRect(
+            x: bounds.maxX - gearSize - 3,
+            y: bounds.maxY - gearSize - 3,
+            width: gearSize,
+            height: gearSize
+        )
+        let gearConfiguration = NSImage.SymbolConfiguration(pointSize: gearSize, weight: .semibold)
+        let whiteGearConfiguration = NSImage.SymbolConfiguration(paletteColors: [.white])
+        if let gear = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(gearConfiguration)?
+            .withSymbolConfiguration(whiteGearConfiguration) {
+            gear.isTemplate = false
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor.black.withAlphaComponent(0.32)
+            shadow.shadowBlurRadius = 1
+            shadow.shadowOffset = .zero
+            NSGraphicsContext.saveGraphicsState()
+            shadow.set()
+            NSColor.white.set()
+            gear.draw(in: gearRect, from: .zero, operation: .sourceOver, fraction: 1)
+            NSGraphicsContext.restoreGraphicsState()
+        }
     }
 }
 

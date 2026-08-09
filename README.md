@@ -4,7 +4,7 @@ Freeze the screen, select an area, mark it up in place, then copy or save. A men
 screenshot tool for macOS, built because [Lightshot](https://app.prntscr.com/) — the one
 that did this well — is no longer maintained.
 
-**Version 1.0.0 — stable release.** Everything described below works and has been tested by
+**Version 1.1.0 — stable release.** Everything described below works and has been tested by
 hand. See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
@@ -59,14 +59,18 @@ xattr -d com.apple.quarantine /Applications/ScreenCap.app
 
 ### Permission
 
-The first time you take a screenshot macOS asks for one permission:
+On the first launch, if access is missing, macOS asks for one permission:
 
 | Permission | Why it is needed |
 |---|---|
 | **Screen Recording** | To read the pixels of the screen you are capturing |
 
-After granting it, **restart the app** — macOS does not apply a new permission to a process
-that is already running.
+After granting it, **restart the app** if macOS does not apply the change to the already
+running process. If the native prompt has already been answered and access is still missing,
+ScreenCap shows its own explanation with a button to open the exact Screen Recording settings
+page. The same retry flow is available from the first menu item in the status menu. The
+reusable, platform-adapter-friendly algorithm is specified in
+[specs/screen-recording-permissions.md](specs/screen-recording-permissions.md).
 
 macOS calls this permission "Screen Recording" for anything that reads the screen,
 including a single still frame. ScreenCap takes one frame when you press the shortcut and
@@ -159,10 +163,10 @@ collapses into a single undo step.
 - The app has been tested by hand rather than by an automated UI suite. The rendering and
   export paths are covered by `--selftest`.
 
-## Future work after 1.0
+## Future work after 1.1
 
-The following features are intentionally out of scope for the first stable release and
-should be considered only after 1.0:
+The following features remain intentionally out of scope for the current stable release and
+should be considered only after 1.1:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
@@ -219,7 +223,7 @@ make dmg         # DMG + SHA-256 file in dist/
 specific stable release, pass them explicitly, for example:
 
 ```bash
-make dmg VERSION=1.0.0 CHANNEL= BUILD=1
+make dmg VERSION=1.1.0 CHANNEL= BUILD=1
 ```
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful
@@ -273,6 +277,7 @@ shortcut round-trips, and captures the screen if permission allows. It is what C
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Product contract, runtime layers, state, coordinates, rendering and testing invariants |
 | [PORTING.md](PORTING.md) | Windows/Linux platform interfaces, capability matrix and acceptance scenarios |
+| [specs/screen-recording-permissions.md](specs/screen-recording-permissions.md) | Reusable macOS Screen Recording permission algorithm and test matrix |
 
 ## Relationship to Lightshot
 

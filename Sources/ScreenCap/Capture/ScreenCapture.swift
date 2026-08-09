@@ -82,12 +82,58 @@ enum ScreenCaptureError: LocalizedError {
 enum ScreenCapture {
     // MARK: - Permission
 
-    static var hasPermission: Bool { CGPreflightScreenCaptureAccess() }
+    /// A successful ScreenCaptureKit query is more authoritative than the
+    /// process-lifetime CGPreflight cache. This also avoids showing a stale
+    /// warning after a permission has just been granted in System Settings.
+    private static var confirmedPermission = false
+
+    static var hasPermission: Bool {
+        if confirmedPermission { return true }
+        let granted = CGPreflightScreenCaptureAccess()
+        if granted { confirmedPermission = true }
+        return granted
+    }
 
     /// Triggers the system prompt. Returns immediately; macOS only shows the
     /// prompt once per app signature, afterwards it silently returns false.
     @discardableResult
-    static func requestPermission() -> Bool { CGRequestScreenCaptureAccess() }
+    static func requestPermission(completion: ((Bool) -> Void)? = nil) -> Bool {
+        let requested = CGRequestScreenCaptureAccess()
+        guard completion != nil else { return requested }
+
+        // Ask ScreenCaptureKit as well. It is the live authority when the user
+        // has just changed the checkbox in System Settings and CGPreflight has
+        // not caught up yet.
+        Task { @MainActor in
+            do {
+                _ = try await SCShareableContent.excludingDesktopWindows(
+                    false,
+                    onScreenWindowsOnly: true
+                )
+                confirmedPermission = true
+                completion?(true)
+            } catch {
+                completion?(false)
+            }
+        }
+        return requested
+    }
+
+    /// Opens the exact Screen Recording pane. System Settings drops the anchor
+    /// on a cold launch, so repeat the same deep link once after it is warm.
+    static func openSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
+        let settingsBundleID = "com.apple.systempreferences"
+        let wasRunning = !NSRunningApplication
+            .runningApplications(withBundleIdentifier: settingsBundleID)
+            .isEmpty
+
+        NSWorkspace.shared.open(url)
+        guard !wasRunning else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            NSWorkspace.shared.open(url)
+        }
+    }
 
     // MARK: - Capture
 
@@ -158,10 +204,12 @@ enum ScreenCapture {
 
     private static func shareableContent() async throws -> SCShareableContent {
         do {
-            return try await SCShareableContent.excludingDesktopWindows(
+            let content = try await SCShareableContent.excludingDesktopWindows(
                 false,
                 onScreenWindowsOnly: true
             )
+            confirmedPermission = true
+            return content
         } catch {
             throw hasPermission
                 ? ScreenCaptureError.captureFailed(error.localizedDescription)

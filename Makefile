@@ -1,6 +1,6 @@
 APP_NAME    := ScreenCap
 BUNDLE_ID   := com.vertusdesign.ScreenCap
-VERSION     ?= 1.0.0
+VERSION     ?= 1.1.0
 # "alpha", "beta", or empty for a stable build.
 CHANNEL     ?=
 BUILD       ?= 1

@@ -15,6 +15,13 @@ final class CaptureController {
 
     var hasLastArea: Bool { lastGlobalRect != nil }
 
+    /// Re-issues macOS's native Screen Recording request from the status menu
+    /// or at launch; a fallback alert appears only if access remains missing.
+    @MainActor
+    func requestScreenRecordingPermission(showFallback: Bool = true) {
+        requestPermission(showFallback: showFallback)
+    }
+
     // MARK: - Entry points
 
     func perform(_ action: HotkeyAction) {
@@ -146,9 +153,10 @@ final class CaptureController {
         NSScreen.screens.contains { $0.frame.intersects(rect) }
     }
 
+    @MainActor
     private func handle(_ error: Error) {
         if case ScreenCaptureError.permissionDenied = error {
-            requestPermission()
+            requestPermission(showFallback: true)
             return
         }
         // A toast rather than a modal: capture is triggered by a hotkey that is
@@ -156,28 +164,35 @@ final class CaptureController {
         Feedback.flash(message: L10n.t("error.captureTitle"), subtitle: error.localizedDescription)
     }
 
-    /// Whether anything has been said about permissions during this launch.
-    /// macOS puts up its own dialog, and piling our alert on top of it — once per
-    /// capture attempt — is how you end up with a screen full of prompts.
-    private var hasPromptedForPermission = false
+    private var permissionRequestInFlight = false
+    private var permissionFallbackShowing = false
 
-    /// Called when a capture actually came back denied, which is the moment the
-    /// user is trying to do something and needs a way forward.
-    private func requestPermission() {
-        // Off the main thread: this call blocks until the system dialog is
-        // dismissed, and blocking the main thread freezes the whole app.
+    /// Called when a capture actually came back denied, or when the user chooses
+    /// the warning item in the status menu.
+    @MainActor
+    private func requestPermission(showFallback: Bool) {
+        // First give macOS a chance to show its own request. The fallback alert
+        // is presented only after that call and a live ScreenCaptureKit check
+        // have completed, so it can never cover the native prompt.
+        guard !permissionRequestInFlight else { return }
+        permissionRequestInFlight = true
+
         DispatchQueue.global(qos: .userInitiated).async {
-            ScreenCapture.requestPermission()
+            _ = ScreenCapture.requestPermission { granted in
+                DispatchQueue.main.async {
+                    CaptureController.shared.permissionRequestInFlight = false
+                    guard showFallback, !granted, !ScreenCapture.hasPermission else { return }
+                    CaptureController.shared.showPermissionFallback()
+                }
+            }
         }
+    }
 
-        guard !hasPromptedForPermission else {
-            Feedback.flash(
-                message: L10n.t("permission.toast"),
-                subtitle: L10n.t("permission.toast.detail")
-            )
-            return
-        }
-        hasPromptedForPermission = true
+    @MainActor
+    private func showPermissionFallback() {
+        guard !permissionFallbackShowing else { return }
+        permissionFallbackShowing = true
+        defer { permissionFallbackShowing = false }
 
         let alert = NSAlert()
         alert.alertStyle = .informational
@@ -188,8 +203,7 @@ final class CaptureController {
 
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
-            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
-            NSWorkspace.shared.open(url)
+            ScreenCapture.openSettings()
         }
     }
 }

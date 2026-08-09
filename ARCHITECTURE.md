@@ -1,6 +1,6 @@
 # ScreenCap architecture and product specification
 
-This document is the engineering contract for ScreenCap 1.0.0. It describes what the
+This document is the engineering contract for ScreenCap 1.1.0. It describes what the
 application does, which invariants must survive refactors, and which parts are tied to
 macOS. It is intentionally more precise than the user-facing [README](README.md).
 

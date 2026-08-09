@@ -48,11 +48,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.installMainMenu()
         }
 
-        // Deliberately no permission prompt at launch. `CGRequestScreenCaptureAccess`
-        // blocks the main thread until the system dialog is answered, and that
-        // dialog can end up behind other windows or on another display — leaving
-        // the app wedged, unable to open its own windows or answer Apple Events.
-        // The first capture attempt asks instead, when the user is right there.
+        // Ask through macOS itself when access is missing. The app-owned fallback
+        // alert is shown only after this native request has completed without access.
+        if !ScreenCapture.hasPermission {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // The first launch must show only Apple's native prompt. If it
+                // has already been answered and a later event still lacks
+                // access, CaptureController presents the fallback alert.
+                CaptureController.shared.requestScreenRecordingPermission(showFallback: false)
+            }
+        }
 
         if let launchAction {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

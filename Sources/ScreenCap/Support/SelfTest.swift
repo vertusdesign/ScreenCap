@@ -133,6 +133,42 @@ enum SelfTest {
             print("  ✗ обфускация затирает аннотацию")
         }
 
+        // Regression probe: two passes remain in the vector list, but the later
+        // pass must be the visible one in their overlap.
+        var newerPassStyle = style
+        newerPassStyle.obfuscation.style = .blur
+        newerPassStyle.obfuscation.intensity = ObfuscationSettings.intensityRange.upperBound
+        let overlapRect = CGRect(x: 220, y: 150, width: 140, height: 70)
+        let olderPass = Annotation(shape: .obfuscateRect(overlapRect), style: style)
+        let newerPass = Annotation(shape: .obfuscateRect(overlapRect), style: newerPassStyle)
+        let stackedPasses = render(
+            base: base,
+            pointSize: pointSize,
+            scale: scale,
+            annotations: [olderPass, newerPass],
+            obfuscation: obfuscation
+        )
+        let newerPassOnly = render(
+            base: base,
+            pointSize: pointSize,
+            scale: scale,
+            annotations: [newerPass],
+            obfuscation: obfuscation
+        )
+        let overlapPoint = CGPoint(x: overlapRect.midX, y: overlapRect.midY)
+        if let stackedColor = stackedPasses.flatMap({ pixelColor(in: $0.cgImage, at: overlapPoint, scale: scale) }),
+           let newerColor = newerPassOnly.flatMap({ pixelColor(in: $0.cgImage, at: overlapPoint, scale: scale) }),
+           let stackedRGB = stackedColor.usingColorSpace(.sRGB),
+           let newerRGB = newerColor.usingColorSpace(.sRGB),
+           abs(stackedRGB.redComponent - newerRGB.redComponent) < 0.01,
+           abs(stackedRGB.greenComponent - newerRGB.greenComponent) < 0.01,
+           abs(stackedRGB.blueComponent - newerRGB.blueComponent) < 0.01 {
+            print("  ✓ новая обфускация перекрывает старую")
+        } else {
+            failures.append("новая обфускация не перекрывает старую")
+            print("  ✗ новая обфускация не перекрывает старую")
+        }
+
         // 2. PNG encoding and disk write.
         let url = outputDirectory.appendingPathComponent("selftest-annotations.png")
         if let data = ImageOutput.pngData(from: rendered.cgImage) {
@@ -291,13 +327,24 @@ enum SelfTest {
         let previous = NSGraphicsContext.current
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
         context.draw(base, in: CGRect(origin: .zero, size: pointSize))
-        guard let layer = AnnotationLayer(pointSize: pointSize, scale: scale) else {
+        guard let obfuscationLayer = AnnotationLayer(pointSize: pointSize, scale: scale),
+              let annotationLayer = AnnotationLayer(pointSize: pointSize, scale: scale) else {
             NSGraphicsContext.current = previous
             return nil
         }
-        layer.rebuild(annotations: annotations, obfuscation: obfuscation)
-        if let image = layer.image {
-            context.draw(image, in: CGRect(origin: .zero, size: pointSize))
+        obfuscationLayer.rebuild(
+            annotations: annotations.filter { $0.isObfuscation || $0.isErase },
+            obfuscation: obfuscation,
+            obfuscationBlendMode: .normal
+        )
+        annotationLayer.rebuild(
+            annotations: annotations.filter { !$0.isObfuscation },
+            obfuscation: nil
+        )
+        if let obfuscations = obfuscationLayer.image,
+           let annotations = annotationLayer.image {
+            context.draw(obfuscations, in: CGRect(origin: .zero, size: pointSize))
+            context.draw(annotations, in: CGRect(origin: .zero, size: pointSize))
         }
         NSGraphicsContext.current = previous
 

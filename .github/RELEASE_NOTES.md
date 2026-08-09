@@ -1,9 +1,9 @@
 Freeze the screen, select an area, mark it up in place, then copy or save. Universal binary — runs natively on Apple silicon and Intel.
 
-This is the first stable release of ScreenCap. It brings the complete capture and annotation
-workflow together with cross-display Undo/Redo, live text editing, object deletion, safe
-pixelation and blur, a polished overlay, 24 interface languages, and a universal Intel/Apple
-Silicon build. See the [changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md#100--2026-08-09) for the full list.
+This stable release polishes the capture overlay, permission recovery and universal
+distribution. It includes cross-display Undo/Redo, live text editing, object deletion, safe
+layered pixelation and blur, a polished overlay, 24 interface languages, and a universal Intel
+/ Apple Silicon build. See the [changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md#110--2026-08-09) for the full list.
 
 ### What it does
 
@@ -42,14 +42,19 @@ Download the disk image, open it, drag **ScreenCap.app** onto **Applications**.
 
 **Then allow it past Gatekeeper — see the notice above.**
 
-On the first capture, macOS asks for **Screen Recording**. It is the permission macOS requires for anything that reads the screen, including a single still frame. Grant it in System Settings → Privacy & Security, then **restart the app** — macOS does not apply a new permission to a running process.
+On the first launch, if access is missing, macOS asks for **Screen Recording**. It is the
+permission macOS requires for anything that reads the screen, including a single still frame.
+If the native prompt has already been answered and access is still missing, ScreenCap offers
+an explicit retry dialog with a direct link to the Screen Recording settings pane. See the
+[reusable permission specification](https://github.com/vertusdesign/ScreenCap/blob/main/specs/screen-recording-permissions.md)
+for the full algorithm.
 
 Nothing leaves your machine: the app contains no networking code at all. See [PRIVACY.md](https://github.com/vertusdesign/ScreenCap/blob/main/PRIVACY.md).
 
 ### Verify the download
 
 ```
-shasum -a 256 -c ScreenCap-1.0.0.dmg.sha256
+shasum -a 256 -c ScreenCap-1.1.0.dmg.sha256
 ```
 
 ### Requirements

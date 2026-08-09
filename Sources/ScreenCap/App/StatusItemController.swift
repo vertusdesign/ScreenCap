@@ -8,12 +8,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         super.init()
 
         if let button = statusItem.button {
-            let configuration = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
-            button.image = NSImage(
-                systemSymbolName: "camera.viewfinder",
-                accessibilityDescription: AppInfo.name
-            )?.withSymbolConfiguration(configuration)
-            button.image?.isTemplate = true
+            button.image = MenuBarIcon.image()
+            button.imageScaling = .scaleProportionallyDown
             button.toolTip = AppInfo.name
         }
 
@@ -27,6 +23,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         let hotkeys = Settings.shared.hotkeys
+
+        if !ScreenCapture.hasPermission {
+            let permission = NSMenuItem(
+                title: L10n.t("permission.toast"),
+                action: #selector(requestScreenRecordingPermission),
+                keyEquivalent: ""
+            )
+            permission.target = self
+            permission.image = symbol("exclamationmark.triangle.fill")
+            menu.addItem(permission)
+            menu.addItem(.separator())
+        }
 
         for action in HotkeyAction.allCases {
             let item = NSMenuItem(
@@ -168,6 +176,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         // No update server: the releases page is the source of truth, and sending
         // people there beats bundling an updater the project cannot sign.
         NSWorkspace.shared.open(AppInfo.releasesURL)
+    }
+
+    @objc private func requestScreenRecordingPermission() {
+        // Let the menu close before macOS presents its own permission dialog.
+        DispatchQueue.main.async {
+            CaptureController.shared.requestScreenRecordingPermission()
+        }
     }
 
     @objc private func quit() {

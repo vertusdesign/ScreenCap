@@ -71,10 +71,15 @@ final class SelectionOverlayView: NSView {
 
     private var lastHistoryReason: HistoryReason?
 
-    /// Everything the user drew, flattened into one transparent raster sheet over
-    /// the screenshot. Keeping it as pixels is what lets the eraser take away part
-    /// of a stroke rather than the whole annotation.
+    /// Ordinary annotations, flattened into a transparent foreground sheet over
+    /// the screenshot. Obfuscations have their own sheet so later passes can sit
+    /// above earlier passes while all ordinary annotations remain on top.
     private var annotationLayer: AnnotationLayer?
+    private var obfuscationLayer: AnnotationLayer?
+    /// Temporary sheets used to preview a rectangular/elliptical erase without
+    /// mutating the committed annotation layers until mouse-up.
+    private var erasePreviewAnnotationLayer: AnnotationLayer?
+    private var erasePreviewObfuscationLayer: AnnotationLayer?
     /// Points of the eraser stroke currently being dragged.
     private var eraseStroke: [CGPoint] = []
 
@@ -121,6 +126,18 @@ final class SelectionOverlayView: NSView {
         super.init(frame: CGRect(origin: .zero, size: snapshot.cocoaFrame.size))
         wantsLayer = true
         annotationLayer = AnnotationLayer(
+            pointSize: snapshot.cocoaFrame.size,
+            scale: snapshot.pixelScale
+        )
+        obfuscationLayer = AnnotationLayer(
+            pointSize: snapshot.cocoaFrame.size,
+            scale: snapshot.pixelScale
+        )
+        erasePreviewAnnotationLayer = AnnotationLayer(
+            pointSize: snapshot.cocoaFrame.size,
+            scale: snapshot.pixelScale
+        )
+        erasePreviewObfuscationLayer = AnnotationLayer(
             pointSize: snapshot.cocoaFrame.size,
             scale: snapshot.pixelScale
         )
@@ -196,6 +213,7 @@ final class SelectionOverlayView: NSView {
     override func mouseExited(with event: NSEvent) {
         pointerInside = false
         hoveredWindow = nil
+        NSCursor.arrow.set()
         needsDisplay = true
     }
 
@@ -209,6 +227,7 @@ final class SelectionOverlayView: NSView {
         guard pointerInside else { return }
         pointerInside = false
         hoveredWindow = nil
+        NSCursor.arrow.set()
         needsDisplay = true
     }
 
@@ -229,9 +248,9 @@ final class SelectionOverlayView: NSView {
             hoveredWindow = windowTargets.first { $0.frame.contains(cursorPoint) }
             if hoveredWindow?.windowID != previous { needsDisplay = true }
         }
-        // The loupe and the eraser ring both live under the pointer, so any move
+        // The loupe and brush-size ring both live under the pointer, so any move
         // is a redraw while either is on screen.
-        if shouldShowMagnifier || tool == .eraser || eyedropperActive {
+        if shouldShowMagnifier || brushCursorDiameter != nil || eyedropperActive {
             needsDisplay = true
         }
         updateCursor()
@@ -265,6 +284,7 @@ final class SelectionOverlayView: NSView {
         toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
         if case .drawing(let origin) = phase {
             draft = makeDraft(from: origin, to: cursorPoint)
+            rebuildErasePreviewLayers()
         }
         needsDisplay = true
     }
@@ -292,6 +312,8 @@ final class SelectionOverlayView: NSView {
 
         toolStrip.onToolSelected = { [weak self] in self?.select(tool: $0) }
         toolStrip.onStyleTapped = { [weak self] in self?.toggleStylePopover() }
+        toolStrip.onStyleLongPressed = { [weak self] in self?.toggleStylePopover() }
+        toolStrip.onStyleDoubleTapped = { [weak self] in self?.toggleStylePopover() }
         toolStrip.onUndo = { [weak self] in self?.undo() }
         toolStrip.onRedo = { [weak self] in self?.redo() }
         toolStrip.setSelected(tool)
@@ -453,7 +475,39 @@ final class SelectionOverlayView: NSView {
         let visibleAnnotations = editingTextID.map { id in
             annotations.filter { $0.id != id }
         } ?? annotations
-        annotationLayer?.rebuild(annotations: visibleAnnotations, obfuscation: obfuscation)
+
+        // The foreground sheet keeps ordinary annotations above every processed
+        // screenshot region. The background sheet contains obfuscations and
+        // erase operations, with source-over so a later pass covers an earlier
+        // one without deleting the earlier vector annotation from history.
+        annotationLayer?.rebuild(
+            annotations: visibleAnnotations.filter { !$0.isObfuscation },
+            obfuscation: nil
+        )
+        obfuscationLayer?.rebuild(
+            annotations: visibleAnnotations.filter { $0.isObfuscation || $0.isErase },
+            obfuscation: obfuscation,
+            obfuscationBlendMode: .normal
+        )
+    }
+
+    /// Applies a live rectangle/ellipse eraser to copies of both sheets. This
+    /// previews the same result as release without punching through the frozen
+    /// screenshot itself or changing undo state before mouse-up.
+    private func rebuildErasePreviewLayers() {
+        guard let draft, draft.isErase else { return }
+        let visibleAnnotations = editingTextID.map { id in
+            annotations.filter { $0.id != id }
+        } ?? annotations
+        erasePreviewAnnotationLayer?.rebuild(
+            annotations: visibleAnnotations.filter { !$0.isObfuscation } + [draft],
+            obfuscation: nil
+        )
+        erasePreviewObfuscationLayer?.rebuild(
+            annotations: visibleAnnotations.filter { $0.isObfuscation || $0.isErase } + [draft],
+            obfuscation: obfuscation,
+            obfuscationBlendMode: .normal
+        )
     }
 
     private func recomputeCounter() {
@@ -602,12 +656,14 @@ final class SelectionOverlayView: NSView {
                 phase = .drawing(origin: point)
                 eraseStroke = [point]
                 annotationLayer?.erase(points: eraseStroke, width: style.eraserRadius * 2)
+                obfuscationLayer?.erase(points: eraseStroke, width: style.eraserRadius * 2)
                 needsDisplay = true
             case .rectangle, .ellipse:
                 // A rubber-band region, like the shape tools: staged in `draft`
                 // and only committed (and undo-pushed) on release.
                 phase = .drawing(origin: point)
                 draft = makeDraft(from: point, to: point)
+                rebuildErasePreviewLayers()
                 needsDisplay = true
             }
         default:
@@ -657,8 +713,10 @@ final class SelectionOverlayView: NSView {
                 // Punch just the new segment: re-punching the whole path every
                 // frame would cost a full-display pass per mouse move.
                 annotationLayer?.erase(points: [previous, point], width: style.eraserRadius * 2)
+                obfuscationLayer?.erase(points: [previous, point], width: style.eraserRadius * 2)
             } else {
                 draft = makeDraft(from: origin, to: point)
+                rebuildErasePreviewLayers()
             }
 
         case .idle, .ready:
@@ -1262,12 +1320,23 @@ final class SelectionOverlayView: NSView {
         // Re-flatten at the export scale rather than upsampling the on-screen
         // layer, so a 1× export is genuinely rendered at 1× and a Retina export
         // keeps full detail.
-        let exportLayer = AnnotationLayer(pointSize: bounds.size, scale: scale)
-        exportLayer?.rebuild(annotations: annotations, obfuscation: obfuscation)
-        if let flattened = exportLayer?.image {
+        let exportObfuscationLayer = AnnotationLayer(pointSize: bounds.size, scale: scale)
+        exportObfuscationLayer?.rebuild(
+            annotations: annotations.filter { $0.isObfuscation || $0.isErase },
+            obfuscation: obfuscation,
+            obfuscationBlendMode: .normal
+        )
+        let exportAnnotationLayer = AnnotationLayer(pointSize: bounds.size, scale: scale)
+        exportAnnotationLayer?.rebuild(
+            annotations: annotations.filter { !$0.isObfuscation },
+            obfuscation: nil
+        )
+        if let obfuscations = exportObfuscationLayer?.image,
+           let annotations = exportAnnotationLayer?.image {
             context.saveGState()
             context.clip(to: rect)
-            context.draw(flattened, in: bounds)
+            context.draw(obfuscations, in: bounds)
+            context.draw(annotations, in: bounds)
             context.restoreGState()
         }
 
@@ -1364,7 +1433,7 @@ final class SelectionOverlayView: NSView {
             return
         }
 
-        if eyedropperActive || tool == .eraser {
+        if eyedropperActive {
             NSCursor.crosshair.set()
             return
         }
@@ -1380,6 +1449,11 @@ final class SelectionOverlayView: NSView {
             switch tool {
             case .move: NSCursor.openHand.set()
             case .text: NSCursor.iBeam.set()
+            case .pen, .marker:
+                Self.transparentBrushCursor.set()
+            case .obfuscate where brushCursorDiameter != nil,
+                 .eraser where brushCursorDiameter != nil:
+                Self.transparentBrushCursor.set()
             default: NSCursor.crosshair.set()
             }
             return
@@ -1406,6 +1480,17 @@ final class SelectionOverlayView: NSView {
 
     // MARK: - Drawing
 
+    /// The brush outline is rendered by the overlay itself. A transparent
+    /// cursor keeps that outline unobstructed by either an arrow or a crosshair.
+    private static let transparentBrushCursor: NSCursor = {
+        let image = NSImage(size: NSSize(width: 1, height: 1), flipped: false) { rect in
+            NSColor.clear.setFill()
+            rect.fill()
+            return true
+        }
+        return NSCursor(image: image, hotSpot: .zero)
+    }()
+
     override func draw(_ dirtyRect: NSRect) {
         magnifierView.isHidden = !shouldShowMagnifier
         if !magnifierView.isHidden { magnifierView.needsDisplay = true }
@@ -1416,29 +1501,26 @@ final class SelectionOverlayView: NSView {
         cgContext.draw(snapshot.image, in: bounds)
 
         if let selection {
-            // A live obfuscation draft is drawn onto the screenshot before the
-            // existing annotation layer. That keeps the preview consistent with
-            // the committed layer, where obfuscation is composited underneath
-            // annotation pixels rather than replacing them.
+            // Obfuscations are a separate background sheet. A live pass is
+            // drawn over the committed background, then the ordinary foreground
+            // sheet is drawn last so text, arrows and shapes stay readable.
             if let draft, draft.isObfuscation {
+                drawAnnotationLayer(clippedTo: selection, layer: obfuscationLayer)
                 AnnotationRenderer.draw(
                     [draft],
                     obfuscation: obfuscation,
                     clipTo: selection,
                     obfuscationBlendMode: .normal
                 )
+                drawAnnotationLayer(clippedTo: selection, layer: annotationLayer)
+            } else if draft?.isErase == true {
+                drawAnnotationLayer(clippedTo: selection, layer: erasePreviewObfuscationLayer)
+                drawAnnotationLayer(clippedTo: selection, layer: erasePreviewAnnotationLayer)
+            } else {
+                drawAnnotationLayers(clippedTo: selection)
             }
-            drawAnnotationLayer(clippedTo: selection)
             if let draft, !draft.isObfuscation {
-                if draft.isErase {
-                    // A rect/ellipse erase drag is never rendered destructively
-                    // while in progress: `destinationOut` straight onto this
-                    // context would punch through the live screenshot itself,
-                    // not just the annotation layer. A dashed outline previews
-                    // the region instead; the actual erase only happens on
-                    // release, via `rebuildLayer()`.
-                    drawErasePreviewOutline(draft)
-                } else {
+                if !draft.isErase {
                     // The stroke in progress goes straight on top: nothing can
                     // have erased it yet, so it does not need to go through the
                     // layer.
@@ -1447,34 +1529,61 @@ final class SelectionOverlayView: NSView {
             }
             drawDimming(excluding: selection)
             drawSelectionChrome(selection)
+            if let draft, shouldDrawDashedPreview(for: draft) {
+                drawDashedPreviewOutline(draft)
+            }
         } else {
             drawDimming(excluding: nil)
             drawWindowHighlight()
             drawHint()
         }
 
-        if pointerInside, tool == .eraser, style.eraserMode == .pixels,
-           style.eraserShape == .brush,
-           selection != nil, textEditor == nil, !isPointerOverChrome {
-            drawEraserRing()
+        if pointerInside, let diameter = brushCursorDiameter,
+           selection?.contains(cursorPoint) == true, textEditor == nil,
+           !isPointerOverChrome {
+            drawBrushCursor(diameter: diameter)
         }
     }
 
-    private func drawErasePreviewOutline(_ annotation: Annotation) {
+    private func shouldDrawDashedPreview(for annotation: Annotation) -> Bool {
+        switch annotation.shape {
+        case .eraseRect, .eraseEllipse:
+            return true
+        case .obfuscateRect, .obfuscateEllipse:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func drawDashedPreviewOutline(_ annotation: Annotation) {
         let path: NSBezierPath
         switch annotation.shape {
         case .eraseRect(let rect): path = NSBezierPath(rect: rect)
         case .eraseEllipse(let rect): path = NSBezierPath(ovalIn: rect)
+        case .obfuscateRect(let rect): path = NSBezierPath(rect: rect)
+        case .obfuscateEllipse(let rect): path = NSBezierPath(ovalIn: rect)
         default: return
         }
+        guard let context = NSGraphicsContext.current else { return }
+        context.saveGraphicsState()
+        // Difference with opaque white is a true colour inversion, so the dash
+        // remains visible over the screenshot, all annotation layers and blur.
+        context.cgContext.setBlendMode(.difference)
         path.lineWidth = 1.5
         path.setLineDash([4, 3], count: 2, phase: 0)
         NSColor.white.setStroke()
         path.stroke()
+        context.restoreGraphicsState()
     }
 
-    private func drawAnnotationLayer(clippedTo rect: CGRect) {
-        guard let image = annotationLayer?.image,
+    private func drawAnnotationLayers(clippedTo rect: CGRect) {
+        drawAnnotationLayer(clippedTo: rect, layer: obfuscationLayer)
+        drawAnnotationLayer(clippedTo: rect, layer: annotationLayer)
+    }
+
+    private func drawAnnotationLayer(clippedTo rect: CGRect, layer: AnnotationLayer?) {
+        guard let image = layer?.image,
               let context = NSGraphicsContext.current
         else { return }
         context.saveGraphicsState()
@@ -1497,8 +1606,23 @@ final class SelectionOverlayView: NSView {
         }
     }
 
-    private func drawEraserRing() {
-        let radius = style.eraserRadius
+    private var brushCursorDiameter: CGFloat? {
+        switch tool {
+        case .pen:
+            return style.lineWidth
+        case .marker:
+            return max(style.lineWidth * 4, 12)
+        case .obfuscate where style.obfuscation.shape == .brush:
+            return style.obfuscation.brushSize
+        case .eraser where style.eraserMode == .pixels && style.eraserShape == .brush:
+            return style.eraserRadius * 2
+        default:
+            return nil
+        }
+    }
+
+    private func drawBrushCursor(diameter: CGFloat) {
+        let radius = diameter / 2
         let ring = NSBezierPath(ovalIn: CGRect(
             x: cursorPoint.x - radius, y: cursorPoint.y - radius,
             width: radius * 2, height: radius * 2

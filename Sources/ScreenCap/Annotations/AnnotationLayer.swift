@@ -44,7 +44,11 @@ final class AnnotationLayer {
     /// Repaints the whole layer from the annotation list, in order — so an erase
     /// stroke only affects what was drawn before it, and anything drawn afterwards
     /// stays intact.
-    func rebuild(annotations: [Annotation], obfuscation: ObfuscationSource?) {
+    func rebuild(
+        annotations: [Annotation],
+        obfuscation: ObfuscationSource?,
+        obfuscationBlendMode: CGBlendMode = .destinationOver
+    ) {
         context.saveGState()
         context.setBlendMode(.copy)
         context.clear(CGRect(origin: .zero, size: pointSize))
@@ -52,7 +56,11 @@ final class AnnotationLayer {
 
         withContext {
             for annotation in annotations {
-                AnnotationRenderer.draw(annotation, obfuscation: obfuscation)
+                AnnotationRenderer.draw(
+                    annotation,
+                    obfuscation: obfuscation,
+                    obfuscationBlendMode: obfuscationBlendMode
+                )
             }
         }
         cachedImage = nil
