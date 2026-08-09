@@ -34,6 +34,14 @@ Two things that will be asked of any change to the drawing code:
 
 ## Development
 
+The repository's current implementation is macOS-only. Read
+[ARCHITECTURE.md](ARCHITECTURE.md) before changing session, geometry, rendering or output
+code, and [PORTING.md](PORTING.md) before designing a Windows/Linux implementation.
+
+Prerequisites for the macOS target are macOS 14 or newer, Swift 5.10, and the usual Apple
+developer command-line tools. There are no third-party Swift package dependencies. From a
+clean checkout:
+
 ```bash
 swift build
 SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap
@@ -54,9 +62,16 @@ Useful while debugging:
 Before opening a pull request:
 
 ```bash
-swift build 2>&1 | grep warning    # should be empty
+swift build 2>&1 | tee /tmp/screencap-build.log
+! grep -q "warning:" /tmp/screencap-build.log
 .build/debug/ScreenCap --selftest /tmp/screencap-check
 ```
+
+For a release-shaped local check, also run `make dmg VERSION=1.0.0 CHANNEL= BUILD=1` and
+verify the result with `lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap`, the version
+keys in `dist/ScreenCap.app/Contents/Info.plist`, and
+`(cd dist && shasum -a 256 -c ScreenCap-1.0.0.dmg.sha256)`. The CI workflow is the canonical
+copy of these checks.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local
 certificate — `make install` picks one up from your keychain automatically if it is there.
@@ -77,6 +92,21 @@ To add a language, add its `.lproj` folder, add the code to `AppLanguage` in
 
 Corrections from native speakers are especially welcome — the existing set was not reviewed
 by one for every language.
+
+## Release checklist
+
+1. Update the version/date in `CHANGELOG.md`, user-facing documentation and legal documents
+   when their stated version or update date changes.
+2. Run the debug build, self-test, translation completeness check and warning check from
+   `.github/workflows/ci.yml`.
+3. Build a local universal DMG and verify architecture, `CFBundleShortVersionString`, empty
+   stable channel, and checksum.
+4. Commit the complete release scope on `main`, create an annotated `v<version>` tag, and push
+   the commit and tag. `.github/workflows/release.yml` builds the release DMG on `macos-15`,
+   runs the self-test, uploads the artifact and creates the GitHub Release from
+   `.github/RELEASE_NOTES.md`.
+5. Open the published release and verify that it is not marked as a draft/prerelease and that
+   both the DMG and `.sha256` assets are present.
 
 ## Code style
 

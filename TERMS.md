@@ -1,6 +1,6 @@
 # Terms of Use
 
-**Last updated: 7 August 2026.**
+**Last updated: 9 August 2026.**
 
 ScreenCap is free and open-source software distributed under the
 [MIT Licence](LICENSE). That licence is the legally operative document; this page explains

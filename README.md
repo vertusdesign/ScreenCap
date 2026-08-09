@@ -7,6 +7,11 @@ that did this well — is no longer maintained.
 **Version 1.0.0 — stable release.** Everything described below works and has been tested by
 hand. See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
+The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
+adaptation are documented in [ARCHITECTURE.md](ARCHITECTURE.md) and
+[PORTING.md](PORTING.md); those ports must account for each platform's capture, compositor,
+permission and global-hotkey rules rather than assuming macOS APIs exist everywhere.
+
 > ### ⚠️ macOS will block the first launch — this is expected
 >
 > ScreenCap is **not notarized by Apple** (notarization requires a paid Apple Developer
@@ -177,15 +182,51 @@ Commands: `area`, `repeat`, `window`, `fullscreen`, `preferences`, `about`.
 
 ## Build from source
 
-Requires macOS 14 or newer and a Swift toolchain (Xcode Command Line Tools are enough).
+The current implementation requires macOS 14 or newer and a Swift 5.10 toolchain. Xcode
+Command Line Tools are enough for a debug build; the universal Intel/Apple Silicon build also
+needs an Xcode toolchain that can emit both architectures. `make dmg` additionally needs the
+macOS `hdiutil` and `codesign` tools. No third-party Swift package dependencies are used.
+
+### Clean checkout
 
 ```bash
 git clone https://github.com/vertusdesign/ScreenCap.git
+cd ScreenCap
+swift --version
+swift build
+SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 
+The self-test is the first required check on another machine. It does not need an interactive
+capture session; it renders the annotation/export paths and reports any screen-capture checks
+that the current permission allows. A normal UI debug run is:
+
 ```bash
-cd ScreenCap && ./Scripts/create-signing-cert.sh && make install
+SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap
 ```
+
+### App, install and distribution builds
+
+```bash
+make debug       # swift build
+make app         # release .app, native for arm64 + x86_64
+make run         # build the app and launch dist/ScreenCap.app
+make install     # build and copy to /Applications
+make dmg         # DMG + SHA-256 file in dist/
+```
+
+`make app` uses the default `VERSION`, `CHANNEL` and `BUILD` values from the Makefile. For a
+specific stable release, pass them explicitly, for example:
+
+```bash
+make dmg VERSION=1.0.0 CHANNEL= BUILD=1
+```
+
+The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful
+to another machine. Gatekeeper instructions for downloaded builds are at the top of this
+README. For local development, `./Scripts/create-signing-cert.sh && make install` creates a
+self-signed certificate so macOS can keep the Screen Recording grant across rebuilds; this is
+optional and should not be used as a release identity.
 
 `create-signing-cert.sh` is a one-time step. It puts a local, self-signed code-signing
 certificate in your login keychain, and `make install` uses it. This matters more than it
@@ -206,12 +247,9 @@ make dmg
 Disk images are signed ad-hoc on purpose — a certificate only your machine holds is worth
 nothing to anyone downloading the app. Both paths enable the hardened runtime.
 
-During development the localised strings live outside the binary, so point the app at them:
-
-```bash
-swift build
-SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap
-```
+During development the localised strings live outside the binary, so point the plain SwiftPM
+binary at them with `SCREENCAP_STRINGS=Resources/l10n`. The assembled `.app` copies the
+localizations into its resource bundle and does not need that environment variable.
 
 Useful flags: `SCREENCAP_DEBUG=1` traces to stderr, `--capture area|repeat|window|fullscreen`
 captures immediately after launch, `--window about|preferences` opens a panel.
@@ -233,6 +271,8 @@ shortcut round-trips, and captures the screen if permission allows. It is what C
 | [SECURITY.md](SECURITY.md) | Threat model and how to report a vulnerability |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to propose changes |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Product contract, runtime layers, state, coordinates, rendering and testing invariants |
+| [PORTING.md](PORTING.md) | Windows/Linux platform interfaces, capability matrix and acceptance scenarios |
 
 ## Relationship to Lightshot
 

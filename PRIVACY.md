@@ -39,9 +39,10 @@ Nothing, with two exceptions you trigger deliberately:
 
 - **Files you save.** PNGs go to the folder set in Settings, or wherever you point the save
   panel. What you then do with those files is up to you.
-- **Links you click.** The About window and "Check for Updates…" open pages on github.com
-  in your default browser. The app hands the URL to the system and stops there — it does
-  not fetch anything, so GitHub sees your browser, not this app.
+- **Links you click.** The About window opens the project pages on github.com or the developer
+  support page on patreon.com, and "Check for Updates…" opens github.com, all in your default
+  browser. The app hands the URL to the system and stops there — it does not fetch anything,
+  so those sites see your browser, not this app.
 
 "Check for Updates…" therefore checks nothing. It opens the releases page and lets you
 compare the version yourself. An in-app updater would need networking code, and this app
