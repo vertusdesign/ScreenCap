@@ -90,6 +90,7 @@ final class StylePopover: OverlayPanel {
     private let backdropHexField = NSTextField(string: "")
     private let eyedropperButton: OverlayButton
     private let backdropEyedropperButton: OverlayButton
+    private let systemPicker: OverlayButton
     private let backdropSystemPicker: OverlayButton
     private let recentRow = NSStackView()
     private let recentSection = NSStackView()
@@ -146,6 +147,8 @@ final class StylePopover: OverlayPanel {
     private var eyedropperActive = false
     private var ownsColorPanel = false
     private var colorPanelTarget: StyleColorTarget = .stroke
+    private var isSynchronizingColorPanel = false
+    private var colorPanelCloseObserver: NSObjectProtocol?
 
     init(tool: ToolKind, style: ToolStyle) {
         self.tool = tool
@@ -160,6 +163,11 @@ final class StylePopover: OverlayPanel {
             symbolName: "eyedropper",
             tooltip: L10n.t("style.eyedropper"),
             hint: L10n.t("style.eyedropper.hint"),
+            size: 24
+        )
+        systemPicker = OverlayButton(
+            symbolName: "paintpalette",
+            tooltip: L10n.t("style.systemPalette"),
             size: 24
         )
         backdropSystemPicker = OverlayButton(
@@ -284,9 +292,7 @@ final class StylePopover: OverlayPanel {
 
         let field = target == .stroke ? hexField : backdropHexField
         let eyedropper = target == .stroke ? eyedropperButton : backdropEyedropperButton
-        let systemPicker = target == .stroke
-            ? OverlayButton(symbolName: "paintpalette", tooltip: L10n.t("style.systemPalette"), size: 24)
-            : backdropSystemPicker
+        let systemPicker = target == .stroke ? self.systemPicker : backdropSystemPicker
 
         field.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         field.isBezeled = true
@@ -574,6 +580,7 @@ final class StylePopover: OverlayPanel {
         applyRowVisibility()
         refreshSelection()
         reloadRecentColors()
+        synchronizeOpenColorPanel()
         onContentChanged?()
     }
 
@@ -662,13 +669,7 @@ final class StylePopover: OverlayPanel {
         // value from scratch. Force it opaque at the one place every source of a
         // color funnels through.
         let color = color.withAlphaComponent(1)
-        // A color selected from either selector is a recent color. The settings
-        // object keeps newest-first order and moves an existing color to the
-        // front instead of creating duplicates.
-        switch target {
-        case .stroke: Settings.shared.noteStrokeColorUsed(color)
-        case .backdrop: Settings.shared.noteBackdropColorUsed(color)
-        }
+        noteRecentColor(color, target: target)
 
         switch target {
         case .stroke:
@@ -678,10 +679,32 @@ final class StylePopover: OverlayPanel {
             style.backdropColor = color
             backdropHexField.stringValue = color.hexString
         }
+        synchronizeOpenColorPanel()
         refreshSelection()
         emit()
         reloadRecentColors()
         onContentChanged?()
+    }
+
+    private func noteRecentColor(_ color: NSColor, target: StyleColorTarget) {
+        // The settings object keeps newest-first order and moves an existing
+        // color to the front instead of creating duplicates.
+        switch target {
+        case .stroke: Settings.shared.noteStrokeColorUsed(color)
+        case .backdrop: Settings.shared.noteBackdropColorUsed(color)
+        }
+    }
+
+    private func synchronizeOpenColorPanel() {
+        guard ownsColorPanel, !isSynchronizingColorPanel else { return }
+        let selected = colorPanelTarget == .stroke ? style.color : style.backdropColor
+        let panel = NSColorPanel.shared
+        let shown = panel.color.usingColorSpace(.sRGB) ?? panel.color
+        guard shown.hexString != selected.hexString else { return }
+
+        isSynchronizingColorPanel = true
+        panel.color = selected
+        isSynchronizingColorPanel = false
     }
 
     /// Reflects an eyedropper sample taken on the overlay.
@@ -721,27 +744,39 @@ final class StylePopover: OverlayPanel {
     }
 
     @objc private func systemPickerTapped(_ sender: OverlayButton) {
-        openSystemColorPanel(
-            for: sender === backdropSystemPicker ? .backdrop : .stroke,
-            initial: sender === backdropSystemPicker ? style.backdropColor : style.color
-        )
+        let target: StyleColorTarget = sender === backdropSystemPicker ? .backdrop : .stroke
+        if ownsColorPanel, target == colorPanelTarget {
+            detachSystemColorPanel()
+        } else {
+            openSystemColorPanel(for: target)
+        }
     }
 
-    private func openSystemColorPanel(for target: StyleColorTarget, initial: NSColor) {
+    private func openSystemColorPanel(for target: StyleColorTarget) {
         colorPanelTarget = target
         let panel = NSColorPanel.shared
-        panel.setTarget(self)
-        panel.setAction(#selector(systemColorChanged(_:)))
+        let selected = target == .stroke ? style.color : style.backdropColor
+
+        // Detach while assigning the initial value. This prevents AppKit from
+        // treating our synchronization as a user selection and adding a
+        // duplicate Recent color.
+        panel.setTarget(nil)
+        panel.setAction(nil)
         // Stroke and backdrop colors are always drawn opaque (see `applyColor`),
         // so the Opacity slider has nothing valid to do here — and left in, it is
         // how the backdrop color ended up silently transparent before.
         panel.showsAlpha = false
-        panel.color = initial
-        panel.isContinuous = true
+        panel.color = selected
+        // Only deliver the final color after the user finishes an interaction.
+        // Continuous delivery makes every intermediate drag position a Recent
+        // color and can leave the final action deferred until another event.
+        panel.isContinuous = false
         // The overlay sits at shielding level, so the panel has to be lifted above
         // it or the user would click a button and see nothing appear.
         panel.level = .init(rawValue: Int(CGShieldingWindowLevel()) + 2)
         panel.hidesOnDeactivate = false
+        panel.setTarget(self)
+        panel.setAction(#selector(systemColorChanged(_:)))
         // Order front FIRST: a panel that has never been shown in this process
         // reports a stale/zero `frame.size` until AppKit actually lays it out,
         // and positioning against that size would leave it placed as an
@@ -750,6 +785,40 @@ final class StylePopover: OverlayPanel {
         panel.makeKeyAndOrderFront(nil)
         positionColorPanel(panel)
         ownsColorPanel = true
+        updateSystemPickerButtonStates()
+        observeColorPanelClosing(panel)
+    }
+
+    private func updateSystemPickerButtonStates() {
+        systemPicker.isActive = ownsColorPanel && colorPanelTarget == .stroke
+        backdropSystemPicker.isActive = ownsColorPanel && colorPanelTarget == .backdrop
+    }
+
+    private func observeColorPanelClosing(_ panel: NSColorPanel) {
+        guard colorPanelCloseObserver == nil else { return }
+        colorPanelCloseObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            self?.colorPanelDidClose()
+        }
+    }
+
+    private func colorPanelDidClose() {
+        ownsColorPanel = false
+        updateSystemPickerButtonStates()
+        removeColorPanelCloseObserver()
+        let panel = NSColorPanel.shared
+        panel.setTarget(nil)
+        panel.setAction(nil)
+    }
+
+    private func removeColorPanelCloseObserver() {
+        if let colorPanelCloseObserver {
+            NotificationCenter.default.removeObserver(colorPanelCloseObserver)
+            self.colorPanelCloseObserver = nil
+        }
     }
 
     /// `NSColorPanel.shared` is a single system-wide window that remembers
@@ -776,7 +845,9 @@ final class StylePopover: OverlayPanel {
     }
 
     @objc private func systemColorChanged(_ sender: NSColorPanel) {
-        applyColor(sender.color.usingColorSpace(.sRGB) ?? sender.color, to: colorPanelTarget)
+        guard !isSynchronizingColorPanel else { return }
+        let color = sender.color.usingColorSpace(.sRGB) ?? sender.color
+        applyColor(color, to: colorPanelTarget)
     }
 
     @objc private func widthChanged() {
@@ -874,8 +945,9 @@ final class StylePopover: OverlayPanel {
     }
 
     func detachSystemColorPanel() {
-        guard ownsColorPanel else { return }
         ownsColorPanel = false
+        updateSystemPickerButtonStates()
+        removeColorPanelCloseObserver()
         let panel = NSColorPanel.shared
         panel.setTarget(nil)
         panel.setAction(nil)

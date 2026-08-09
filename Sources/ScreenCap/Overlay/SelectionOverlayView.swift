@@ -110,6 +110,7 @@ final class SelectionOverlayView: NSView {
     private var editingTextID: UUID?
 
     private var trackingAreaRef: NSTrackingArea?
+    private var textEditorFocusObserver: NSObjectProtocol?
     private let handleRadius: CGFloat = 4.5
     private let handleHitRadius: CGFloat = 9
 
@@ -161,6 +162,32 @@ final class SelectionOverlayView: NSView {
 
         setUpChrome()
 
+        // The Character Viewer temporarily makes its own window key. Restore
+        // the editor when this overlay becomes key again so the selected emoji
+        // is still delivered to the text input client rather than to the
+        // canvas view.
+        textEditorFocusObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let keyWindow = notification.object as? NSWindow,
+                  keyWindow === self.window,
+                  let editor = self.textEditor,
+                  keyWindow.firstResponder !== editor
+            else { return }
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self,
+                      let editor = self.textEditor,
+                      editor.window === keyWindow,
+                      keyWindow.firstResponder !== editor
+                else { return }
+                keyWindow.makeFirstResponder(editor)
+            }
+        }
+
         if case .preselected(let globalRect) = mode {
             let local = globalToLocal(globalRect).clamped(to: bounds)
             if local.width >= 2, local.height >= 2 {
@@ -172,6 +199,12 @@ final class SelectionOverlayView: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not supported") }
+
+    deinit {
+        if let textEditorFocusObserver {
+            NotificationCenter.default.removeObserver(textEditorFocusObserver)
+        }
+    }
 
     override var isFlipped: Bool { false }
     override var acceptsFirstResponder: Bool { true }
@@ -312,7 +345,6 @@ final class SelectionOverlayView: NSView {
 
         toolStrip.onToolSelected = { [weak self] in self?.select(tool: $0) }
         toolStrip.onStyleTapped = { [weak self] in self?.toggleStylePopover() }
-        toolStrip.onStyleLongPressed = { [weak self] in self?.toggleStylePopover() }
         toolStrip.onStyleDoubleTapped = { [weak self] in self?.toggleStylePopover() }
         toolStrip.onUndo = { [weak self] in self?.undo() }
         toolStrip.onRedo = { [weak self] in self?.redo() }
@@ -337,6 +369,19 @@ final class SelectionOverlayView: NSView {
     // MARK: - Tool + style
 
     private func select(tool newTool: ToolKind) {
+        // Clicking Text again is a way to keep working in the current editor,
+        // including its single/double-click variants. It must not commit
+        // the editor merely because the selected tool is already Text.
+        if textEditor != nil, newTool == .text {
+            if let editor = textEditor {
+                window?.makeFirstResponder(editor)
+            }
+            return
+        }
+        // A tool change ends the color-picker interaction as well as the text
+        // editor. Do this before reconfiguring the shared StylePopover so the
+        // system panel cannot remain attached to the old tool.
+        stylePopover?.detachSystemColorPanel()
         commitTextEditorIfNeeded()
         tool = newTool
         toolStrip.setSelected(newTool)
@@ -361,7 +406,6 @@ final class SelectionOverlayView: NSView {
         popover.translatesAutoresizingMaskIntoConstraints = true
         popover.onStyleChange = { [weak self] newStyle in
             guard let self else { return }
-            let colorChanged = newStyle.color.hexString != style.color.hexString
             style = newStyle
             Settings.shared.toolColor = newStyle.color
             Settings.shared.strokeWidth = newStyle.lineWidth
@@ -376,7 +420,6 @@ final class SelectionOverlayView: NSView {
             Settings.shared.counterArrowWidth = newStyle.counterArrowWidth
             Settings.shared.shapeFilled = newStyle.filled
             Settings.shared.arrowDoubleHeaded = newStyle.arrowDoubleHeaded
-            if colorChanged { Settings.shared.noteStrokeColorUsed(newStyle.color) }
             toolStrip.setColor(newStyle.color)
             toolStrip.setAlternate(activeModifiers.contains(.control), style: newStyle)
             // The editor's own glyphs stay `.clear` — see `beginTextEditing` —
@@ -385,10 +428,18 @@ final class SelectionOverlayView: NSView {
             // backdrop, shadow) is the `draft` annotation rebuilt below;
             // without that rebuild a color/backdrop change wouldn't show up
             // until the next keystroke happened to trigger it.
-            let activeEditorStyle = textEditorStyle ?? newStyle
-            textEditor?.font = NSFont.systemFont(ofSize: activeEditorStyle.fontSize, weight: .semibold)
-            textEditor?.insertionPointColor = activeEditorStyle.color
-            if textEditor != nil { updateLiveTextDraft() }
+            if let editor = textEditor {
+                // When an existing annotation is reopened, textEditorStyle
+                // starts as the annotation's old style. Keep it in sync with
+                // the complete style emitted by the popover, otherwise the
+                // preview and the committed annotation continue using the old
+                // color/backdrop/font while only the string appears editable.
+                textEditorStyle = newStyle
+                editor.font = NSFont.systemFont(ofSize: newStyle.fontSize, weight: .semibold)
+                editor.insertionPointColor = newStyle.color
+                editor.relayoutToContent()
+                updateLiveTextDraft()
+            }
             needsDisplay = true
         }
         // Any content change can resize the panel — a new swatch row, a tool with
@@ -962,6 +1013,13 @@ final class SelectionOverlayView: NSView {
 
     private func beginTextEditing(existing annotation: Annotation) {
         guard case .text(let origin, let string) = annotation.shape else { return }
+        // The settings panel must describe the text being edited, rather than
+        // the last defaults used for a newly created annotation. This also
+        // gives a subsequent style change a complete, correct baseline.
+        style = annotation.style
+        toolStrip.setColor(style.color)
+        toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
+        stylePopover?.configure(for: .text, style: style)
         beginTextEditing(
             origin: origin,
             initialText: string,
@@ -996,6 +1054,8 @@ final class SelectionOverlayView: NSView {
         editor.textColor = .clear
         editor.insertionPointColor = editorStyle.color
         editor.isRichText = false
+        editor.isEditable = true
+        editor.isSelectable = true
         editor.drawsBackground = false
         editor.isHorizontallyResizable = true
         editor.isVerticallyResizable = true
@@ -1028,6 +1088,7 @@ final class SelectionOverlayView: NSView {
         positionTextMoveHandle()
 
         window?.makeFirstResponder(editor)
+        editor.relayoutToContent()
         updateLiveTextDraft()
     }
 
@@ -1068,6 +1129,7 @@ final class SelectionOverlayView: NSView {
 
     private func commitTextEditorIfNeeded() {
         guard let editor = textEditor else { return }
+        stylePopover?.detachSystemColorPanel()
         let text = editor.string.trimmingCharacters(in: .whitespacesAndNewlines)
         let origin = textEditorOrigin
         let editorStyle = textEditorStyle ?? style
@@ -1103,6 +1165,7 @@ final class SelectionOverlayView: NSView {
     }
 
     private func discardTextEditor() {
+        stylePopover?.detachSystemColorPanel()
         let wasEditingExisting = editingTextID != nil
         textEditor?.removeFromSuperview()
         textEditor = nil
@@ -1928,6 +1991,12 @@ final class AnnotationTextView: NSTextView {
     /// and the move handle can follow.
     var onTextChanged: (() -> Void)?
 
+    /// The annotation renderer uses the top edge of the text block as its
+    /// anchor. A flipped text view gives AppKit the same top-to-bottom line
+    /// order, so caret rectangles for later lines do not appear above the
+    /// corresponding rendered line.
+    override var isFlipped: Bool { true }
+
     override func cancelOperation(_ sender: Any?) {
         onCancel?()
     }
@@ -1941,8 +2010,55 @@ final class AnnotationTextView: NSTextView {
         super.keyDown(with: event)
     }
 
+    /// Character Viewer can send either a String or an attributed string to
+    /// the first responder. Normalize both forms explicitly: the editor is
+    /// intentionally plain text, and forwarding only the default AppKit path
+    /// can lose the insertion when the overlay regains key status after the
+    /// Character Viewer closes.
+    override func insertText(_ insertString: Any, replacementRange: NSRange) {
+        let string: String
+        if let value = insertString as? String {
+            string = value
+        } else if let value = insertString as? NSAttributedString {
+            string = value.string
+        } else if let value = insertString as? NSString {
+            string = value as String
+        } else {
+            super.insertText(insertString, replacementRange: replacementRange)
+            return
+        }
+
+        let currentRange = replacementRange.location == NSNotFound
+            ? selectedRange
+            : replacementRange
+        guard currentRange.location != NSNotFound else { return }
+        replaceCharacters(in: currentRange, with: string)
+        setSelectedRange(NSRange(
+            location: currentRange.location + (string as NSString).length,
+            length: 0
+        ))
+        scrollRangeToVisible(selectedRange)
+
+        // `replaceCharacters(in:with:)` is also used for Character Viewer
+        // input, but it does not consistently deliver NSTextView's
+        // `didChangeText()` callback on every macOS version. Keep the overlay
+        // draft synchronized explicitly so newly typed text is visible
+        // immediately, without requiring a later style change to trigger a
+        // redraw.
+        relayoutToContent()
+        onTextChanged?()
+    }
+
     override func didChangeText() {
         super.didChangeText()
+        relayoutToContent()
+        onTextChanged?()
+    }
+
+    /// Recomputes the editor frame after text or font changes while keeping its
+    /// top edge anchored to the annotation's origin. This is also called when
+    /// a reopened annotation changes font size in the style popover.
+    func relayoutToContent() {
         guard let layoutManager, let textContainer else { return }
         layoutManager.ensureLayout(for: textContainer)
         let used = layoutManager.usedRect(for: textContainer)
@@ -1950,11 +2066,11 @@ final class AnnotationTextView: NSTextView {
         // against the view's own edge; harmless now that insets are zero and
         // the glyphs themselves are invisible.
         let width = max(used.width + 4, 24)
-        let height = max(used.height, frame.height)
+        let minimumHeight = font.map { $0.ascender - $0.descender + $0.leading + 4 } ?? 4
+        let height = max(used.height, minimumHeight)
         // Grow downwards from the anchor point the user clicked.
         let top = frame.maxY
         frame = CGRect(x: frame.minX, y: top - height, width: width, height: height)
-        onTextChanged?()
     }
 }
 

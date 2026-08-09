@@ -75,10 +75,6 @@ class OverlayPanel: NSVisualEffectView {
 
 /// Square icon button used throughout the overlay chrome.
 final class OverlayButton: NSButton {
-    /// Called after the pointer has stayed on the button for 1.25 seconds.
-    /// The regular click action still fires on mouse-up, so a long press can
-    /// reveal the style panel without changing the meaning of a tool click.
-    var onLongPress: (() -> Void)?
     var onDoubleClick: (() -> Void)?
 
     var isActive = false {
@@ -92,8 +88,6 @@ final class OverlayButton: NSButton {
     private let accented: Bool
     private let fixedSize: CGFloat
     private lazy var hoverTooltip = HoverTooltip(for: self)
-    private var longPressTimer: Timer?
-    private var didFireLongPress = false
 
     init(
         symbolName: String,
@@ -202,8 +196,6 @@ final class OverlayButton: NSButton {
     override func mouseExited(with event: NSEvent) {
         isHovered = false
         hoverTooltip.hide()
-        longPressTimer?.invalidate()
-        longPressTimer = nil
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -211,21 +203,10 @@ final class OverlayButton: NSButton {
         if event.clickCount == 2 {
             onDoubleClick?()
         }
-        didFireLongPress = false
-        longPressTimer?.invalidate()
-        let timer = Timer(timeInterval: 1.25, repeats: false) { [weak self] _ in
-            guard let self, self.isHovered, !self.didFireLongPress else { return }
-            self.didFireLongPress = true
-            self.onLongPress?()
-        }
-        longPressTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
         super.mouseDown(with: event)
     }
 
     override func mouseUp(with event: NSEvent) {
-        longPressTimer?.invalidate()
-        longPressTimer = nil
         super.mouseUp(with: event)
     }
 
