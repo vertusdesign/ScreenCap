@@ -1,6 +1,6 @@
 # ScreenCap architecture and product specification
 
-This document is the engineering contract for ScreenCap 1.1.0. It describes what the
+This document is the engineering contract for ScreenCap 2.0.0. It describes what the
 application does, which invariants must survive refactors, and which parts are tied to
 macOS. It is intentionally more precise than the user-facing [README](README.md).
 
@@ -10,14 +10,23 @@ in [PORTING.md](PORTING.md) while preserving the product and rendering invariant
 
 ## Product contract
 
-ScreenCap is an on-demand screenshot editor. It never records continuously and never uploads
-anything. A capture session follows this sequence:
+ScreenCap is an on-demand screenshot editor with a separate macOS 15+ recording mode. It
+never uploads anything. A screenshot capture session follows this sequence:
 
 1. Capture one frozen still for every currently available display.
 2. Show a full-display overlay so the user can choose an area, a window, or a full display.
 3. Let the user annotate the selected area in place.
 4. Render the screenshot and annotations into one final image.
 5. Copy, save, or print the image, then close the session.
+
+The recording mode is deliberately independent of that flow. It starts a ScreenCaptureKit
+stream for the selected display, applies local level adjustment, peak limiting and optional gentle
+RNNoise suppression to microphone samples, writes video plus system-audio and microphone samples
+to one QuickTime movie, then post-processes a composite audio track to the first audio position
+and finalizes the file on stop. It does not reuse the frozen screenshot, annotation overlay, or
+image output pipeline. The fast path uses the display under the pointer; the alternate path uses
+ScreenCap's own display chooser with a clear selected display and a transparent full-screen hit
+layer, rather than Apple's content-sharing picker.
 
 The supported entry points are:
 
@@ -27,14 +36,19 @@ The supported entry points are:
 | Repeat | Reuse the last selected global rectangle if it still intersects a display; otherwise start Area. |
 | Window | Highlight an on-screen window under the pointer and select it on click. |
 | Full screen | Preselect the display currently containing the pointer. |
-| URL | `screencap://area`, `repeat`, `window`, `fullscreen`, `preferences`, or `about`. |
+| URL | `screencap://area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, or `about`. |
 | Global hotkey | Configurable per action; defaults are documented in the README. |
-| CLI | `--capture <mode>`, `--window <about\|preferences>`, and `--selftest <dir>`. |
+| CLI | `--capture <mode>` including `record`, `--window <about\|preferences>`, and `--selftest <dir>`. |
 
 Current intentional boundaries:
 
 - A selection belongs to one display. It cannot span displays.
-- There is no scrolling capture, video capture, OCR, or annotation of an existing image file.
+- Recording is currently macOS 15+ one-display-at-a-time. Display selection is available through
+  the fast pointer path or ScreenCap's own dimmed display chooser; microphone source selection,
+  pause/resume, countdown, camera, preview, HDR and OCR are not yet implemented. The microphone
+  and system-audio toggles only affect ScreenCap's own tracks and preserve the original timeline
+  with silence. The selected display remains visually clear in the chooser, but the transparent
+  hit layer intercepts clicks so they cannot activate the application underneath.
 - The current app has no automated UI-test suite. Rendering, geometry, encoding, and selected
   capture checks are covered by `--selftest`; interactive flows still need manual testing.
 - macOS is the only implemented platform. See [PORTING.md](PORTING.md) for the target design
@@ -57,6 +71,14 @@ flowchart TD
     Output --> Clipboard[Clipboard]
     Output --> Disk[PNG/JPEG file]
     Output --> Print[Print system]
+    Entry --> Recorder[RecorderController]
+    Recorder --> Picker[ScreenCap display picker]
+    Picker --> Recorder
+    Recorder --> Session[RecordingSession actor]
+    Session --> Stream[RecorderCaptureEngine]
+    Session --> Writer[RecorderWriterService]
+    Stream --> Writer
+    Writer --> Movie[QuickTime .mov: video + composite + system audio + microphone]
 ```
 
 The current source tree maps to these responsibilities:
@@ -70,6 +92,7 @@ The current source tree maps to these responsibilities:
 | Domain model | `Annotations/Annotation.swift`, `OverlayTypes.swift` | Tools, styles, shapes, output actions, geometry and annotation ordering. |
 | Rendering | `AnnotationRenderer`, `AnnotationLayer`, `ObfuscationSource` | One drawing path for live preview and final export; raster layer for erasing. |
 | Output | `Output` | Clipboard, PNG/JPEG encoding, save panel, filename expansion, printing, feedback. |
+| Recording | `Sources/ScreenCap/Recorder` | macOS 15+ ScreenCaptureKit stream, independent audio tracks, PTS normalization and QuickTime output. |
 | Persistence/localization | `Support/Settings.swift`, `L10n.swift`, `Resources/l10n` | User defaults, recent colors, hotkeys, language selection and fallback. |
 
 The important future seam is between the domain/session layer and the platform shell. The

@@ -15,7 +15,7 @@ if arguments.contains("--selftest") {
 let application = NSApplication.shared
 let delegate = AppDelegate()
 
-// `--capture area|repeat|window|fullscreen` fires one capture right after launch;
+// `--capture area|repeat|window|fullscreen|record` fires one action right after launch;
 // the same commands are available at runtime through the screencap:// URL scheme.
 if let flagIndex = arguments.firstIndex(of: "--capture"), flagIndex + 1 < arguments.count {
     switch arguments[flagIndex + 1].lowercased() {
@@ -23,6 +23,7 @@ if let flagIndex = arguments.firstIndex(of: "--capture"), flagIndex + 1 < argume
     case "repeat", "last": delegate.launchAction = .repeatLastArea
     case "window": delegate.launchAction = .captureWindow
     case "fullscreen", "screen": delegate.launchAction = .captureFullScreen
+    case "record", "recording": delegate.launchAction = .toggleRecording
     default: break
     }
 }

@@ -11,8 +11,17 @@ let package = Package(
     name: "ScreenCap",
     platforms: [.macOS(.v14)],
     targets: [
+        .target(
+            name: "RNNoise",
+            path: "Sources/RNNoise",
+            publicHeadersPath: "include",
+            cSettings: [
+                .headerSearchPath("src")
+            ]
+        ),
         .executableTarget(
             name: "ScreenCap",
+            dependencies: ["RNNoise"],
             path: "Sources/ScreenCap"
         )
     ]

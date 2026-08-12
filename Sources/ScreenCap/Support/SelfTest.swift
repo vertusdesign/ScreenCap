@@ -214,7 +214,19 @@ enum SelfTest {
             print("  ✗ сериализация горячей клавиши")
         }
 
-        // 6. Real capture, if the system allows it.
+        // 6. Microphone DSP safety: quiet voice is lifted, loud input stays
+        // below the limiter ceiling. This is a pure signal test, so it works
+        // in headless environments without requesting microphone access.
+        if #available(macOS 15.0, *) {
+            if MicrophoneAudioProcessor.selfTest() {
+                print("  ✓ обработка уровня микрофона и лимитер")
+            } else {
+                failures.append("обработка уровня микрофона")
+                print("  ✗ обработка уровня микрофона")
+            }
+        }
+
+        // 7. Real capture, if the system allows it.
         if ScreenCapture.hasPermission {
             let semaphore = DispatchSemaphore(value: 0)
             var captureError: Error?

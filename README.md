@@ -4,8 +4,9 @@ Freeze the screen, select an area, mark it up in place, then copy or save. A men
 screenshot tool for macOS, built because [Lightshot](https://app.prntscr.com/) — the one
 that did this well — is no longer maintained.
 
-**Version 1.1.0 — stable release.** Everything described below works and has been tested by
-hand. See [Known limitations](#known-limitations) for the remaining intentional boundaries.
+**Version 2.0.0 — stable screenshot and screen-recording release.** ScreenCap now includes
+a native macOS 15+ recorder with separate system-audio, microphone and composite tracks.
+See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
 adaptation are documented in [ARCHITECTURE.md](ARCHITECTURE.md) and
@@ -35,6 +36,7 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
 - An eraser that rubs out part of a stroke rather than deleting whole objects
 - Pixel loupe with an eyedropper, and a color panel with palette, recents, hex and a screen picker
 - Copy to the clipboard, save as PNG, or print
+- Screen recording on macOS 15+: full-display video with separate system-audio and microphone tracks
 - 24 interface languages
 - No Dock icon, no background polling, no network access of any kind
 
@@ -64,6 +66,7 @@ On the first launch, if access is missing, macOS asks for one permission:
 | Permission | Why it is needed |
 |---|---|
 | **Screen Recording** | To read the pixels of the screen you are capturing |
+| **Microphone** | To add your voice as a separate recording track |
 
 After granting it, **restart the app** if macOS does not apply the change to the already
 running process. If the native prompt has already been answered and access is still missing,
@@ -73,8 +76,8 @@ reusable, platform-adapter-friendly algorithm is specified in
 [specs/screen-recording-permissions.md](specs/screen-recording-permissions.md).
 
 macOS calls this permission "Screen Recording" for anything that reads the screen,
-including a single still frame. ScreenCap takes one frame when you press the shortcut and
-nothing else; it never streams, never records, and nothing leaves your machine. See
+including a single still frame. ScreenCap takes one frame when you press the shortcut; the
+recorder is a separate macOS 15+ feature, and nothing leaves your machine. See
 [PRIVACY.md](PRIVACY.md).
 
 ## Capture
@@ -95,6 +98,39 @@ was while you take your time framing the shot.
 If another application already owns a shortcut, macOS gives it to that application and
 ScreenCap's registration silently fails. Settings marks such a shortcut with a warning
 triangle instead of leaving you guessing.
+
+## Recording
+
+On macOS 15 and newer, **Start recording (current display)** immediately records the full
+display under the pointer; selecting it again stops the recording. **Choose display and record**
+opens a lightweight ScreenCap overlay: the display under the pointer stays clear, other displays
+are dimmed, and a transparent interaction layer prevents clicks from reaching the application
+underneath. The bottom-center controls let you cancel or start recording, and the start button
+is focused by default. Both actions are global and fully configurable in Settings. Recording
+settings have their own tab with a destination folder, filename template, save prompt,
+optional system-audio/microphone exclusion, logical-size capture, codec choice, gentle RNNoise
+noise suppression, and an after-recording action. The file is saved as a `.mov` and contains
+independent system-audio and microphone tracks plus a composite audio track first in the
+container for ordinary players. System audio is captured by ScreenCaptureKit, so changing
+headphones, speakers, docks, or output devices does not require a virtual audio driver or
+change the screenshot path.
+
+The recorder uses the system-default input selected when the recording starts. Microphone and
+system-audio toggles are available in the menu bar while recording; they only mute ScreenCap's
+own tracks and do not mute or reconfigure Teams, Zoom, Meet, or another calling app. Muting
+keeps silent samples on the original timeline, so re-enabling a track cannot collapse the gap.
+ScreenCap also applies automatic level adjustment, gentle compression, peak limiting and optional
+light RNNoise suppression to its microphone track after capture. This raises a quiet microphone
+without changing the system input level or the microphone signal received by another app.
+The two persistent “do not record” checkboxes in Recording settings and the recording menu are
+off by default and apply to the next recording. The default recording shortcut is **⌥⌘F2**;
+the display-picker shortcut defaults to **⌥⇧⌘F2**, the microphone toggle to **⌥⇧⌘M**, and the
+system-audio toggle to **⌥⇧⌘S**. All are configurable. The equivalent URL and CLI commands are:
+
+```bash
+open "screencap://record"
+.build/debug/ScreenCap --capture record
+```
 
 ## Drawing
 
@@ -156,17 +192,24 @@ collapses into a single undo step.
   System Settings → Privacy & Security (see [Install](#install)).
 - **A selection lives on one display.** You can capture any display, but a single selection
   cannot span two of them.
-- **No scrolling capture**, no video, no OCR, no annotation of an existing image file.
+- **No scrolling capture**, recorder microphone source picker, pause/resume, countdown, camera
+  overlay, preview/editing window, OCR, HDR capture, or click visualization yet. Recording is
+  currently one full display at a time and available on macOS 15+.
+- **Audio-device recovery and performance validation remain in progress.** The recorder falls
+  back to video/system audio when a microphone is unavailable, monitors input-route changes,
+  keeps a local diagnostic log, and stops safely when disk space is low. Long-duration,
+  Bluetooth disconnect/reconnect, crash-recovery, and Intel/macOS 15 matrix tests still need
+  broader coverage before those guarantees are considered release-grade.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.
 - The app has been tested by hand rather than by an automated UI suite. The rendering and
   export paths are covered by `--selftest`.
 
-## Future work after 1.1
+## Future work after 2.0
 
 The following features remain intentionally out of scope for the current stable release and
-should be considered only after 1.1:
+should be considered only after 2.0:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
@@ -182,11 +225,12 @@ Shortcuts, Raycast, Automator or a script, the app registers a URL scheme:
 open "screencap://area"
 ```
 
-Commands: `area`, `repeat`, `window`, `fullscreen`, `preferences`, `about`.
+Commands: `area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, `about`.
 
 ## Build from source
 
-The current implementation requires macOS 14 or newer and a Swift 5.10 toolchain. Xcode
+The screenshot implementation requires macOS 14 or newer; the recorder requires macOS 15 or
+newer. The project currently uses a Swift 5.10 toolchain. Xcode
 Command Line Tools are enough for a debug build; the universal Intel/Apple Silicon build also
 needs an Xcode toolchain that can emit both architectures. `make dmg` additionally needs the
 macOS `hdiutil` and `codesign` tools. No third-party Swift package dependencies are used.
@@ -223,7 +267,7 @@ make dmg         # DMG + SHA-256 file in dist/
 specific stable release, pass them explicitly, for example:
 
 ```bash
-make dmg VERSION=1.1.0 CHANNEL= BUILD=1
+make dmg VERSION=2.0.0 CHANNEL= BUILD=1
 ```
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful

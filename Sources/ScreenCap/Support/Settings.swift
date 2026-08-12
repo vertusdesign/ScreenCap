@@ -1,6 +1,38 @@
 import AppKit
 import Combine
+import Carbon.HIToolbox
 import ServiceManagement
+
+enum RecordingVideoCodec: String, CaseIterable, Identifiable {
+    case automatic
+    case h264
+    case hevc
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: return L10n.t("prefs.recording.codec.automatic")
+        case .h264: return "H.264"
+        case .hevc: return "HEVC"
+        }
+    }
+}
+
+enum RecordingAfterCaptureAction {
+    static let nothing = "nothing"
+    static let showInFolder = "showInFolder"
+    static let applicationPrefix = "application:"
+
+    static func application(_ bundleIdentifier: String) -> String {
+        applicationPrefix + bundleIdentifier
+    }
+
+    static func bundleIdentifier(from value: String) -> String? {
+        guard value.hasPrefix(applicationPrefix) else { return nil }
+        return String(value.dropFirst(applicationPrefix.count))
+    }
+}
 
 /// User-visible preferences, persisted in `UserDefaults`.
 ///
@@ -13,6 +45,7 @@ final class Settings: ObservableObject {
 
     private enum Key {
         static let hotkeys = "hotkeys"
+        static let hotkeyDefaultsVersion = "hotkeyDefaultsVersion"
         static let language = "language"
         static let saveDirectory = "saveDirectory"
         static let filenameTemplate = "filenameTemplate"
@@ -43,6 +76,15 @@ final class Settings: ObservableObject {
         static let shapeFilled = "shapeFilled"
         static let arrowDoubleHeaded = "arrowDoubleHeaded"
         static let imageFormat = "imageFormat"
+        static let recordingDirectory = "recordingDirectory"
+        static let recordingFilenameTemplate = "recordingFilenameTemplate"
+        static let recordingAskWhereToSave = "recordingAskWhereToSave"
+        static let recordingSkipSystemAudio = "recordingSkipSystemAudio"
+        static let recordingSkipMicrophone = "recordingSkipMicrophone"
+        static let recordingNoiseSuppression = "recordingNoiseSuppression"
+        static let recordingAtLogicalSize = "recordingAtLogicalSize"
+        static let recordingVideoCodec = "recordingVideoCodec"
+        static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
     }
 
     private static let toolDefaults: [String: Any] = [
@@ -80,10 +122,22 @@ final class Settings: ObservableObject {
         Key.imageFormat: ImageFormat.png.rawValue
     ]
 
+    private static let recordingDefaults: [String: Any] = [
+        Key.recordingAskWhereToSave: false,
+        Key.recordingSkipSystemAudio: false,
+        Key.recordingSkipMicrophone: false,
+        Key.recordingNoiseSuppression: false,
+        Key.recordingAtLogicalSize: false,
+        Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
+        Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.nothing
+    ]
+
     private init() {
         var registered = Self.captureDefaults
         registered.merge(Self.toolDefaults) { current, _ in current }
+        registered.merge(Self.recordingDefaults) { current, _ in current }
         defaults.register(defaults: registered)
+        migrateHotkeysIfNeeded()
     }
 
     // MARK: - Language
@@ -110,7 +164,9 @@ final class Settings: ObservableObject {
                   let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data)
             else { return Self.defaultHotkeys }
 
-            var result: [HotkeyAction: Hotkey] = [:]
+            // Merge defaults so an existing installation receives new additive
+            // actions (such as recording) without losing any saved shortcuts.
+            var result = Self.defaultHotkeys
             for (rawAction, hotkey) in stored {
                 if let action = HotkeyAction(rawValue: rawAction) { result[action] = hotkey }
             }
@@ -130,6 +186,28 @@ final class Settings: ObservableObject {
             if let hotkey = action.defaultHotkey { result[action] = hotkey }
         }
         return result
+    }
+
+    private func migrateHotkeysIfNeeded() {
+        let currentVersion = defaults.integer(forKey: Key.hotkeyDefaultsVersion)
+        guard currentVersion < 2 else { return }
+
+        if let data = defaults.data(forKey: Key.hotkeys),
+           var stored = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
+            // Preserve user customisations, but move an untouched first-stage
+            // recording default to the newly agreed instant-recording shortcut.
+            let oldDefault = Hotkey(
+                keyCode: UInt16(kVK_F2),
+                modifierFlags: [.command, .shift]
+            )
+            if stored[HotkeyAction.toggleRecording.rawValue] == oldDefault,
+               let newDefault = HotkeyAction.toggleRecording.defaultHotkey {
+                stored[HotkeyAction.toggleRecording.rawValue] = newDefault
+                let migrated = Dictionary(uniqueKeysWithValues: stored.map { ($0.key, $0.value) })
+                defaults.set(try? JSONEncoder().encode(migrated), forKey: Key.hotkeys)
+            }
+        }
+        defaults.set(2, forKey: Key.hotkeyDefaultsVersion)
     }
 
     // MARK: - Saving
@@ -264,6 +342,70 @@ final class Settings: ObservableObject {
         set { set(newValue.rawValue, Key.imageFormat) }
     }
 
+    // MARK: - Recording
+
+    /// Recordings use their own directory so adding the recorder never changes
+    /// where existing screenshots are saved.
+    var recordingDirectory: URL {
+        get {
+            if let path = defaults.string(forKey: Key.recordingDirectory) {
+                return URL(fileURLWithPath: path, isDirectory: true)
+            }
+            return FileManager.default
+                .urls(for: .moviesDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("ScreenCap", isDirectory: true)
+                ?? saveDirectory
+        }
+        set { set(newValue.path, Key.recordingDirectory) }
+    }
+
+    var recordingFilenameTemplate: String {
+        get { defaults.string(forKey: Key.recordingFilenameTemplate) ?? "Recording_{timestamp}" }
+        set { set(newValue, Key.recordingFilenameTemplate) }
+    }
+
+    var recordingAskWhereToSave: Bool {
+        get { defaults.bool(forKey: Key.recordingAskWhereToSave) }
+        set { set(newValue, Key.recordingAskWhereToSave) }
+    }
+
+    var recordingSkipSystemAudio: Bool {
+        get { defaults.bool(forKey: Key.recordingSkipSystemAudio) }
+        set { set(newValue, Key.recordingSkipSystemAudio) }
+    }
+
+    var recordingSkipMicrophone: Bool {
+        get { defaults.bool(forKey: Key.recordingSkipMicrophone) }
+        set { set(newValue, Key.recordingSkipMicrophone) }
+    }
+
+    var recordingNoiseSuppression: Bool {
+        get { defaults.bool(forKey: Key.recordingNoiseSuppression) }
+        set { set(newValue, Key.recordingNoiseSuppression) }
+    }
+
+    var recordingAtLogicalSize: Bool {
+        get { defaults.bool(forKey: Key.recordingAtLogicalSize) }
+        set { set(newValue, Key.recordingAtLogicalSize) }
+    }
+
+    var recordingVideoCodec: RecordingVideoCodec {
+        get {
+            RecordingVideoCodec(
+                rawValue: defaults.string(forKey: Key.recordingVideoCodec) ?? ""
+            ) ?? .automatic
+        }
+        set { set(newValue.rawValue, Key.recordingVideoCodec) }
+    }
+
+    var recordingAfterCaptureAction: String {
+        get {
+            defaults.string(forKey: Key.recordingAfterCaptureAction)
+                ?? RecordingAfterCaptureAction.nothing
+        }
+        set { set(newValue, Key.recordingAfterCaptureAction) }
+    }
+
     var obfuscation: ObfuscationSettings {
         get {
             ObfuscationSettings(
@@ -349,6 +491,17 @@ final class Settings: ObservableObject {
             defaults.set(value, forKey: key)
         }
         defaults.removeObject(forKey: Key.saveDirectory)
+        objectWillChange.send()
+    }
+
+    /// Restores recording preferences without changing screenshot settings,
+    /// drawing tools, or global shortcuts.
+    func resetRecordingDefaults() {
+        for (key, value) in Self.recordingDefaults {
+            defaults.set(value, forKey: key)
+        }
+        defaults.removeObject(forKey: Key.recordingDirectory)
+        defaults.removeObject(forKey: Key.recordingFilenameTemplate)
         objectWillChange.send()
     }
 

@@ -16,6 +16,10 @@
 "hotkey.repeatLastArea" = "Repeat last area";
 "hotkey.captureWindow" = "Capture window under cursor";
 "hotkey.captureFullScreen" = "Capture full screen";
+"hotkey.toggleRecording" = "Start/stop recording on display under pointer";
+"hotkey.chooseRecordingDisplay" = "Choose display and record";
+"hotkey.toggleRecordingMicrophone" = "Toggle recording microphone";
+"hotkey.toggleRecordingSystemAudio" = "Toggle recording system audio";
 "hotkey.recording" = "Press a shortcut…";
 "hotkey.unset" = "Not set";
 
@@ -86,6 +90,8 @@
 "prefs.title" = "%@ Settings";
 "prefs.tab.shortcuts" = "Shortcuts";
 "prefs.tab.capture" = "Capture";
+"prefs.tab.captureTools" = "Capture tools";
+"prefs.tab.recording" = "Recording";
 "prefs.tab.tools" = "Tools";
 "prefs.launchAtLogin" = "Launch at login";
 "prefs.shortcut.help" = "Click a field and press a shortcut. Delete clears it, Esc cancels recording.";
@@ -106,6 +112,21 @@
 "prefs.dimming" = "Background dimming";
 "prefs.imageFormat" = "Image format";
 "prefs.resetCapture" = "Reset capture settings to defaults";
+"prefs.recording.logicalSize" = "Record at logical size (no Retina ×2)";
+"prefs.recording.logicalSize.help" = "Uses the display's logical resolution instead of recording every Retina pixel. This reduces the video dimensions and file size.";
+"prefs.recording.skipSystemAudio" = "Do not record system audio";
+"prefs.recording.skipMicrophone" = "Do not record microphone";
+"prefs.recording.noiseSuppression" = "Noise suppression";
+"prefs.recording.noiseSuppression.help" = "Uses [RNNoise](https://github.com/xiph/rnnoise) in a gentle mode. It can reduce steady background noise, but may soften quiet speech, miss sudden noise, or use extra CPU; it works with 48 kHz PCM microphone capture.";
+"prefs.recording.codec" = "Video codec";
+"prefs.recording.codec.help" = "Automatic uses the most compatible hardware path. H.264 and HEVC can be selected when supported by the Mac.";
+"prefs.recording.codec.automatic" = "Automatic (recommended)";
+"prefs.recording.afterCapture" = "After recording";
+"prefs.recording.afterCapture.nothing" = "Do nothing";
+"prefs.recording.afterCapture.showInFolder" = "Show in Finder";
+"prefs.recording.afterCapture.openWith" = "Open with %@";
+"prefs.recording.afterCapture.help" = "The list contains installed apps that macOS reports as able to open video files.";
+"prefs.recording.reset" = "Reset recording settings to defaults";
 "prefs.tools.explainer" = "Drawing options live in the overlay, right next to the drawing: color, thickness, redaction and text style are all in the panel behind the color swatch.";
 "prefs.tools.reset" = "Reset tools to defaults";
 "prefs.overlayShortcuts" = "Overlay shortcuts";
@@ -121,6 +142,38 @@
 "permission.toast.detail" = "Enable the app under Screen Recording and restart it";
 
 "common.later" = "Later";
+
+"recording.start" = "Start recording (current display)";
+"recording.stop" = "Stop recording";
+"recording.preparing" = "Preparing recording…";
+"recording.stopping" = "Finishing recording…";
+"recording.saved" = "Recording saved";
+"recording.failed" = "Recording failed";
+"recording.unavailable" = "Screen recording requires macOS 15 or newer.";
+"recording.microphoneOff" = "Turn recording microphone off";
+"recording.microphoneOn" = "Turn recording microphone on";
+"recording.microphoneStatusRole" = "Recording microphone toggle";
+"recording.microphoneDenied" = "Microphone access was not granted; recording without microphone audio.";
+"recording.noMicrophone" = "No microphone is available; recording without microphone audio.";
+"recording.diskSpaceLow" = "Not enough free disk space for recording (only %@ GB remains).";
+"recording.diskSpaceWarning" = "Recording stopped safely because free disk space is low.";
+"recording.bluetoothHFP" = "Bluetooth headset microphone is active; macOS may reduce headphone playback quality while recording.";
+"recording.systemAudioOff" = "Turn recording system audio off";
+"recording.systemAudioOn" = "Turn recording system audio on";
+"recording.systemAudioStatusRole" = "Recording system audio toggle";
+"recording.skipSystemAudio" = "Do not record system audio";
+"recording.skipMicrophone" = "Do not record microphone";
+"recording.chooseDestination" = "Choose where to save the recording";
+"recording.chooseDestinationPrompt" = "Choose";
+"recording.selection.cancel" = "Cancel";
+"recording.selection.start" = "Start recording";
+"recording.selection.title" = "Record this display";
+"recording.selection.display" = "Display · %@ × %@ pixels";
+"recording.selection.audio" = "Audio";
+"recording.selection.systemAudio" = "System audio";
+"recording.selection.microphone" = "Microphone";
+"recording.selection.noiseSuppression" = "Noise suppression";
+"recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 
 "error.permissionDenied" = "No Screen Recording permission.";
 "error.noDisplays" = "No displays found.";

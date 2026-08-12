@@ -1,6 +1,6 @@
 APP_NAME    := ScreenCap
 BUNDLE_ID   := com.vertusdesign.ScreenCap
-VERSION     ?= 1.1.0
+VERSION     ?= 2.0.0
 # "alpha", "beta", or empty for a stable build.
 CHANNEL     ?=
 BUILD       ?= 1
@@ -62,8 +62,10 @@ app: universal icon
 		Resources/Info.plist > "$(CONTENTS)/Info.plist"
 	cp Resources/AppIcon.icns "$(RES_DIR)/AppIcon.icns"
 	cp -R Resources/l10n/*.lproj "$(RES_DIR)/"
+	mkdir -p "$(RES_DIR)/ThirdParty"
+	cp Resources/ThirdParty/RNNoise-LICENSE.txt "$(RES_DIR)/ThirdParty/RNNoise-LICENSE.txt"
 	printf 'APPL????' > "$(CONTENTS)/PkgInfo"
-	codesign --force --deep --options runtime --sign "$(SIGN_ID)" "$(APP)"
+	codesign --force --deep --options runtime --entitlements Resources/ScreenCap.entitlements --sign "$(SIGN_ID)" "$(APP)"
 	@echo "Готово: $(APP)"
 	@lipo -archs "$(BIN_DIR)/$(APP_NAME)"
 

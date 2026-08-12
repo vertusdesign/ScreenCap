@@ -33,6 +33,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         L10n.reload()
         installMainMenu()
 
+        if #available(macOS 15.0, *) {
+            Task {
+                await RecorderRecovery.recoverStaleRecordings(
+                    in: Settings.shared.recordingDirectory
+                )
+            }
+        }
+
         statusItem = StatusItemController()
 
         HotkeyManager.shared.handler = { action in
@@ -71,11 +79,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if #available(macOS 15.0, *), RecorderController.shared.isActive {
+            RecorderController.shared.stopForTermination {
+                sender.reply(toApplicationShouldTerminate: true)
+            }
+            return .terminateLater
+        }
+        return .terminateNow
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         HotkeyManager.shared.unregisterAll()
     }
 
-    /// `screencap://area|repeat|window|fullscreen|preferences`.
+    /// `screencap://area|repeat|window|fullscreen|record|preferences`.
     ///
     /// Gives Shortcuts, Raycast, Automator and plain `open` a way in when a
     /// global shortcut is already taken by another app.
@@ -93,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "repeat", "last": CaptureController.shared.perform(.repeatLastArea)
         case "window": CaptureController.shared.perform(.captureWindow)
         case "fullscreen", "screen": CaptureController.shared.perform(.captureFullScreen)
+        case "record", "recording": CaptureController.shared.perform(.toggleRecording)
         case "preferences", "settings": PreferencesWindowController.shared.show()
         case "about": AboutWindowController.shared.show()
         default: NSLog("ScreenCap: unknown URL command — \(command)")

@@ -7,8 +7,22 @@ enum HotkeyAction: String, CaseIterable, Codable {
     case repeatLastArea
     case captureWindow
     case captureFullScreen
+    case toggleRecording
+    case chooseRecordingDisplay
+    case toggleRecordingMicrophone
+    case toggleRecordingSystemAudio
 
     var title: String { L10n.t("hotkey.\(rawValue)") }
+
+    var isAvailable: Bool {
+        switch self {
+        case .toggleRecording, .chooseRecordingDisplay, .toggleRecordingMicrophone, .toggleRecordingSystemAudio:
+            if #available(macOS 15.0, *) { return true }
+            return false
+        default:
+            return true
+        }
+    }
 
     var symbolName: String {
         switch self {
@@ -16,6 +30,10 @@ enum HotkeyAction: String, CaseIterable, Codable {
         case .repeatLastArea: return "arrow.clockwise.square"
         case .captureWindow: return "macwindow"
         case .captureFullScreen: return "rectangle.inset.filled"
+        case .toggleRecording: return "record.circle"
+        case .chooseRecordingDisplay: return "rectangle.2.swap"
+        case .toggleRecordingMicrophone: return "mic.fill"
+        case .toggleRecordingSystemAudio: return "speaker.wave.2.fill"
         }
     }
 
@@ -29,6 +47,13 @@ enum HotkeyAction: String, CaseIterable, Codable {
         // reaches the app; ⌘⌥F4 sits next to "capture window" (⌘F4) but with a
         // different modifier, so the two never conflict.
         case .captureFullScreen: return Hotkey(keyCode: UInt16(kVK_F4), modifierFlags: [.command, .option])
+        // Recording is deliberately next to the screenshot shortcuts without
+        // reusing any of them. It is ignored on macOS 14, where the recorder is
+        // unavailable but the static screenshot feature remains supported.
+        case .toggleRecording: return Hotkey(keyCode: UInt16(kVK_F2), modifierFlags: [.command, .option])
+        case .chooseRecordingDisplay: return Hotkey(keyCode: UInt16(kVK_F2), modifierFlags: [.command, .option, .shift])
+        case .toggleRecordingMicrophone: return Hotkey(keyCode: UInt16(kVK_ANSI_M), modifierFlags: [.command, .option, .shift])
+        case .toggleRecordingSystemAudio: return Hotkey(keyCode: UInt16(kVK_ANSI_S), modifierFlags: [.command, .option, .shift])
         }
     }
 }
@@ -66,7 +91,7 @@ final class HotkeyManager {
         installEventHandlerIfNeeded()
         unregisterAll()
         failedActions.removeAll()
-        for (action, hotkey) in bindings where hotkey.isValid {
+        for (action, hotkey) in bindings where action.isAvailable && hotkey.isValid {
             register(hotkey, for: action)
         }
         NotificationCenter.default.post(name: .hotkeyRegistrationChanged, object: nil)

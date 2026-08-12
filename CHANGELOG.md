@@ -3,6 +3,43 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] — 2026-08-12
+
+Stable full-display screen recording for macOS 15+ while preserving the existing static
+screenshot workflow.
+
+### Added
+
+- **Full-display recorder** with an instant current-display path and a ScreenCap display picker.
+  The picker leaves the selected display visually clear, uses a recording-reticle cursor, and
+  intercepts clicks across the transparent display surface so the underlying app is not activated.
+- **Three audio tracks** in each recording: a composite track first for ordinary players, then
+  independent system-audio and microphone tracks for editing.
+- **Audio controls during recording** for system audio and microphone, with timeline-preserving
+  silence instead of track gaps. These controls do not mute or reconfigure other applications.
+- **Microphone processing** with automatic level adjustment, gentle compression, peak limiting and
+  optional light RNNoise suppression.
+- **Recording settings** for folder, filename template, save prompt, logical-size capture, H.264/
+  HEVC selection, audio exclusions, RNNoise and after-recording application actions.
+- **VLC handling** that reuses the existing VLC instance/playlist where possible and pauses the
+  newly opened recording after the video window is ready.
+- **Stability safeguards** including hardware encoder selection, silent-audio fallback, microphone
+  route monitoring, disk-space checks, five-second movie fragments, recovery markers and bounded
+  diagnostic logs.
+
+### Changed
+
+- The menu item **Start recording** is now **Start recording (current display)**. **Stop recording**
+  remains unchanged.
+- The release version is now 2.0.0 and the documentation describes the recorder as part of the
+  stable product surface.
+
+### Known limitations
+
+Pause/resume, window/application/area recording, countdown, live audio meters, camera overlay,
+preview/editing, HDR, click visualization, full crash-recovery UX, and broad long-duration,
+Bluetooth, Intel and macOS 15 regression coverage remain future work.
+
 ## [1.1.0] — 2026-08-09
 
 Polished stable release focused on the capture overlay, permission recovery and distribution

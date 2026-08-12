@@ -147,19 +147,59 @@ enum ScreenCapture {
             let scale = screen.backingScaleFactor
 
             let filter = SCContentFilter(display: display, excludingWindows: [])
-            let configuration = SCStreamConfiguration()
-            configuration.width = Int((screen.frame.width * scale).rounded())
-            configuration.height = Int((screen.frame.height * scale).rounded())
-            configuration.showsCursor = false
-            configuration.captureResolution = .best
-            configuration.scalesToFit = false
-            configuration.colorSpaceName = CGColorSpace.sRGB
 
             do {
-                let image = try await SCScreenshotManager.captureImage(
-                    contentFilter: filter,
-                    configuration: configuration
-                )
+                let image: CGImage
+                if #available(macOS 26.0, *) {
+                    Log.diagnostic(
+                        "still capture api=SCScreenshotConfiguration display="
+                            + "\(Int((screen.frame.width * scale).rounded()))x"
+                            + "\(Int((screen.frame.height * scale).rounded())) shadows=true dynamicRange=SDR"
+                    )
+                    // macOS 26 introduced a dedicated screenshot
+                    // configuration. Its `ignoreShadows` flag controls
+                    // window framing for still images; the older
+                    // SCStreamConfiguration path can silently omit shadows.
+                    let configuration = SCScreenshotConfiguration()
+                    configuration.width = Int((screen.frame.width * scale).rounded())
+                    configuration.height = Int((screen.frame.height * scale).rounded())
+                    configuration.showsCursor = false
+                    configuration.dynamicRange = .sdr
+                    configuration.ignoreShadows = false
+
+                    let output = try await SCScreenshotManager.captureScreenshot(
+                        contentFilter: filter,
+                        configuration: configuration
+                    )
+                    guard let sdrImage = output.sdrImage else {
+                        throw ScreenCaptureError.captureFailed("ScreenshotKit returned no SDR image")
+                    }
+                    image = sdrImage
+                } else {
+                    Log.diagnostic(
+                        "still capture api=SCStreamConfiguration display="
+                            + "\(Int((screen.frame.width * scale).rounded()))x"
+                            + "\(Int((screen.frame.height * scale).rounded())) shadows=true dynamicRange=SDR"
+                    )
+                    let configuration = SCStreamConfiguration()
+                    configuration.width = Int((screen.frame.width * scale).rounded())
+                    configuration.height = Int((screen.frame.height * scale).rounded())
+                    configuration.showsCursor = false
+                    configuration.captureResolution = .best
+                    configuration.scalesToFit = false
+                    configuration.colorSpaceName = CGColorSpace.sRGB
+                    if #available(macOS 15.0, *) {
+                        configuration.captureDynamicRange = SCCaptureDynamicRange(rawValue: 0)!
+                    }
+                    // Keep the display's window framing in still captures on
+                    // the legacy path as well.
+                    configuration.ignoreShadowsDisplay = false
+
+                    image = try await SCScreenshotManager.captureImage(
+                        contentFilter: filter,
+                        configuration: configuration
+                    )
+                }
                 snapshots.append(
                     DisplaySnapshot(
                         displayID: display.displayID,

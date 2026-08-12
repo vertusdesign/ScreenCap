@@ -47,6 +47,34 @@ final class CaptureController {
                 ?? NSScreen.screens.first
             guard let screen else { return }
             begin(mode: .preselected(globalRect: screen.frame))
+
+        case .toggleRecording:
+            if #available(macOS 15.0, *) {
+                RecorderController.shared.toggle(startMode: .displayUnderPointer)
+            } else {
+                Feedback.flash(message: L10n.t("recording.unavailable"))
+            }
+
+        case .chooseRecordingDisplay:
+            if #available(macOS 15.0, *) {
+                RecorderController.shared.toggle(startMode: .displayPicker)
+            } else {
+                Feedback.flash(message: L10n.t("recording.unavailable"))
+            }
+
+        case .toggleRecordingMicrophone:
+            if #available(macOS 15.0, *) {
+                RecorderController.shared.toggleMicrophone()
+            } else {
+                Feedback.flash(message: L10n.t("recording.unavailable"))
+            }
+
+        case .toggleRecordingSystemAudio:
+            if #available(macOS 15.0, *) {
+                RecorderController.shared.toggleSystemAudio()
+            } else {
+                Feedback.flash(message: L10n.t("recording.unavailable"))
+            }
         }
     }
 

@@ -19,7 +19,7 @@ enum AppInfo {
         Bundle.main.object(forInfoDictionaryKey: "SCVersionChannel") as? String ?? ""
     }
 
-    /// A numeric stable version, or e.g. `1.1.0-beta` for a prerelease build.
+    /// A numeric stable version, or e.g. `2.0.0-beta` for a prerelease build.
     static var displayVersion: String {
         channel.isEmpty ? version : "\(version)-\(channel)"
     }

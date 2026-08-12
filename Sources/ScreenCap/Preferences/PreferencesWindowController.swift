@@ -11,6 +11,7 @@ final class PreferencesWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         window.setFrameAutosaveName("PreferencesWindow")
+        window.setContentSize(Self.preferredContentSize)
         super.init(window: window)
 
         // SwiftUI caches the strings it rendered, so switching language means a
@@ -30,7 +31,13 @@ final class PreferencesWindowController: NSWindowController {
     private func rebuild() {
         window?.title = L10n.t("prefs.title", AppInfo.name)
         window?.contentViewController = NSHostingController(rootView: PreferencesView())
+        window?.setContentSize(Self.preferredContentSize)
     }
+
+    private static let preferredContentSize = NSSize(
+        width: 500 + 32,
+        height: PreferencesView.tabHeight + 32
+    )
 
     func show() {
         NSApp.activate(ignoringOtherApps: true)

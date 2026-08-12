@@ -32,6 +32,14 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>To capture the screen and system audio when you record.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>To record your voice on a separate audio track.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>To capture system audio while you record the screen.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>To pause a recording after opening it in VLC.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSSupportsAutomaticTermination</key>

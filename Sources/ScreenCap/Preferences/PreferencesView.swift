@@ -1,30 +1,100 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PreferencesView: View {
     @ObservedObject private var settings = Settings.shared
     @State private var selection: Tab = .shortcuts
 
+    /// Recording is currently the tallest tab. Keeping one stable tab height
+    /// avoids the preferences window jumping when the user changes tabs.
+    static let tabHeight: CGFloat = 560
+
     enum Tab: Hashable {
-        case shortcuts, capture, tools
+        case shortcuts, capture, recording, tools
+
+        var title: String {
+            switch self {
+            case .shortcuts: return L10n.t("prefs.tab.shortcuts")
+            case .capture: return L10n.t("prefs.tab.capture")
+            case .recording: return L10n.t("prefs.tab.recording")
+            case .tools: return L10n.t("prefs.tab.captureTools")
+            }
+        }
     }
 
     var body: some View {
-        TabView(selection: $selection) {
-            ShortcutsTab()
-                .tabItem { Label(L10n.t("prefs.tab.shortcuts"), systemImage: "keyboard") }
-                .tag(Tab.shortcuts)
-            CaptureTab()
-                .tabItem { Label(L10n.t("prefs.tab.capture"), systemImage: "camera") }
-                .tag(Tab.capture)
-            ToolsTab()
-                .tabItem { Label(L10n.t("prefs.tab.tools"), systemImage: "paintbrush") }
-                .tag(Tab.tools)
+        VStack(spacing: 8) {
+            HStack(spacing: 0) {
+                ForEach(Array(availableTabs.enumerated()), id: \.element) { index, tab in
+                    if index > 0 {
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.22))
+                            .frame(width: 1, height: 15)
+                    }
+
+                    Button {
+                        selection = tab
+                    } label: {
+                        Text(tab.title)
+                            .lineLimit(1)
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selection == tab ? Color.white : Color.primary)
+                    .background {
+                        if selection == tab {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color.accentColor)
+                        }
+                    }
+                    .focusable(false)
+                    .accessibilityAddTraits(selection == tab ? [.isSelected] : [])
+                }
+            }
+            .padding(3)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .fixedSize()
+
+            Group {
+                switch selection {
+                case .shortcuts:
+                    ShortcutsTab()
+                case .capture:
+                    CaptureTab()
+                case .tools:
+                    ToolsTab()
+                case .recording:
+                    if #available(macOS 15.0, *) {
+                        RecordingTab()
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(width: 500)
+        .frame(width: 500, height: Self.tabHeight, alignment: .topLeading)
         .padding(16)
         .environmentObject(settings)
     }
+
+    private var availableTabs: [Tab] {
+        if #available(macOS 15.0, *) {
+            return [.shortcuts, .capture, .tools, .recording]
+        }
+        return [.shortcuts, .capture, .tools]
+    }
+}
+
+private struct RecordingVideoApplication: Identifiable, Hashable {
+    let url: URL
+    let bundleIdentifier: String
+    let name: String
+
+    var id: String { bundleIdentifier }
 }
 
 private struct ShortcutsTab: View {
@@ -33,7 +103,7 @@ private struct ShortcutsTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(HotkeyAction.allCases, id: \.self) { action in
+            ForEach(HotkeyAction.allCases.filter(\.isAvailable), id: \.self) { action in
                 HStack {
                     Label(action.title, systemImage: action.symbolName)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,11 +162,10 @@ private struct ShortcutsTab: View {
             ))
             .help(L10n.t("prefs.launchAtLogin"))
 
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .frame(height: 340, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onReceive(NotificationCenter.default.publisher(for: .hotkeyRegistrationChanged)) { _ in
             conflicts = HotkeyManager.shared.failedActions
         }
@@ -215,14 +284,10 @@ private struct CaptureTab: View {
             }
             .help(L10n.t("prefs.resetCapture"))
 
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        // A hardcoded height here has twice now fallen behind the row count
-        // that grew underneath it and clipped the reset button — let SwiftUI
-        // report the tab's actual content height instead of guessing again.
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var filenameTemplateBinding: Binding<String> {
@@ -237,6 +302,196 @@ private struct CaptureTab: View {
         panel.directoryURL = settings.saveDirectory
         if panel.runModal() == .OK, let url = panel.url {
             settings.saveDirectory = url
+        }
+    }
+}
+
+private struct RecordingTab: View {
+    @EnvironmentObject private var settings: Settings
+    @StateObject private var filenameBridge = FilenameFieldBridge()
+    @State private var videoApplications: [RecordingVideoApplication] = []
+
+    private static let filenameTokens = ["{date}", "{time}", "{timestamp}", "{width}", "{height}"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(L10n.t("prefs.saveFolder"))
+                Spacer()
+                Text(settings.recordingDirectory.lastPathComponent)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Button(L10n.t("prefs.choose")) { chooseDirectory() }
+                    .help(L10n.t("prefs.choose"))
+            }
+
+            HStack {
+                Text(L10n.t("prefs.filenameTemplate"))
+                FilenameField(text: filenameTemplateBinding, bridge: filenameBridge)
+                    .help(L10n.t("prefs.filenameTemplate"))
+            }
+            HStack(spacing: 4) {
+                Text(L10n.t("prefs.filenameTokens"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(Self.filenameTokens, id: \.self) { token in
+                    Button(token) {
+                        filenameBridge.insert(token, into: filenameTemplateBinding)
+                    }
+                    .buttonStyle(.link)
+                    .font(.caption)
+                    .help(token)
+                }
+            }
+
+            Toggle(L10n.t("prefs.askWhereToSave"), isOn: Binding(
+                get: { settings.recordingAskWhereToSave },
+                set: { settings.recordingAskWhereToSave = $0 }
+            ))
+
+            Toggle(L10n.t("prefs.recording.skipSystemAudio"), isOn: Binding(
+                get: { settings.recordingSkipSystemAudio },
+                set: { settings.recordingSkipSystemAudio = $0 }
+            ))
+            Toggle(L10n.t("prefs.recording.skipMicrophone"), isOn: Binding(
+                get: { settings.recordingSkipMicrophone },
+                set: { settings.recordingSkipMicrophone = $0 }
+            ))
+
+            Divider()
+
+            Toggle(L10n.t("prefs.recording.noiseSuppression"), isOn: Binding(
+                get: { settings.recordingNoiseSuppression },
+                set: { settings.recordingNoiseSuppression = $0 }
+            ))
+            Text(.init(L10n.t("prefs.recording.noiseSuppression.help")))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            Toggle(L10n.t("prefs.recording.logicalSize"), isOn: Binding(
+                get: { settings.recordingAtLogicalSize },
+                set: { settings.recordingAtLogicalSize = $0 }
+            ))
+            Text(L10n.t("prefs.recording.logicalSize.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Text(L10n.t("prefs.recording.codec"))
+                Spacer()
+                Picker("", selection: Binding(
+                    get: { settings.recordingVideoCodec },
+                    set: { settings.recordingVideoCodec = $0 }
+                )) {
+                    ForEach(RecordingVideoCodec.allCases) { codec in
+                        Text(codec.title).tag(codec)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 270, alignment: .trailing)
+                .help(L10n.t("prefs.recording.codec.help"))
+            }
+
+            Divider()
+
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.t("prefs.recording.afterCapture"))
+                Spacer()
+                Picker("", selection: afterCaptureBinding) {
+                    Text(L10n.t("prefs.recording.afterCapture.nothing"))
+                        .tag(RecordingAfterCaptureAction.nothing)
+                    Text(L10n.t("prefs.recording.afterCapture.showInFolder"))
+                        .tag(RecordingAfterCaptureAction.showInFolder)
+                    ForEach(videoApplications) { application in
+                        Text(L10n.t("prefs.recording.afterCapture.openWith", application.name))
+                            .tag(RecordingAfterCaptureAction.application(application.bundleIdentifier))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 270, alignment: .trailing)
+            }
+            Text(L10n.t("prefs.recording.afterCapture.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            Button(L10n.t("prefs.recording.reset")) {
+                settings.resetRecordingDefaults()
+            }
+            .help(L10n.t("prefs.recording.reset"))
+
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            refreshVideoApplications()
+        }
+    }
+
+    private var filenameTemplateBinding: Binding<String> {
+        Binding(
+            get: { settings.recordingFilenameTemplate },
+            set: { settings.recordingFilenameTemplate = $0 }
+        )
+    }
+
+    private var afterCaptureBinding: Binding<String> {
+        Binding(
+            get: { settings.recordingAfterCaptureAction },
+            set: { settings.recordingAfterCaptureAction = $0 }
+        )
+    }
+
+    private func chooseDirectory() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = settings.recordingDirectory
+        if panel.runModal() == .OK, let url = panel.url {
+            settings.recordingDirectory = url
+        }
+    }
+
+    private func refreshVideoApplications() {
+        let applications = NSWorkspace.shared
+            // ScreenCap writes QuickTime movie containers. Querying the
+            // umbrella `public.movie` type misses apps such as VLC that
+            // register the concrete QuickTime movie UTI instead.
+            .urlsForApplications(toOpen: .quickTimeMovie)
+            .compactMap { url -> RecordingVideoApplication? in
+                guard let bundle = Bundle(url: url),
+                      let bundleIdentifier = bundle.bundleIdentifier
+                else { return nil }
+                let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                    ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                    ?? url.deletingPathExtension().lastPathComponent
+                return RecordingVideoApplication(
+                    url: url,
+                    bundleIdentifier: bundleIdentifier,
+                    name: name
+                )
+            }
+            .reduce(into: [RecordingVideoApplication]()) { result, application in
+                guard !result.contains(where: { $0.bundleIdentifier == application.bundleIdentifier }) else {
+                    return
+                }
+                result.append(application)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        videoApplications = applications
+        if let selected = RecordingAfterCaptureAction.bundleIdentifier(
+            from: settings.recordingAfterCaptureAction
+        ), !applications.contains(where: { $0.bundleIdentifier == selected }) {
+            settings.recordingAfterCaptureAction = RecordingAfterCaptureAction.nothing
         }
     }
 }
@@ -320,11 +575,10 @@ private struct ToolsTab: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Spacer(minLength: 0)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .frame(height: 320, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var toolShortcuts: String {
