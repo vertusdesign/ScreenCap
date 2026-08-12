@@ -112,6 +112,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     private var textAnalysisOverlay: ImageAnalysisOverlayView?
     private var textAnalysisTask: Task<Void, Never>?
     private var textRecognitionKeyMonitor: Any?
+    private var overlayKeyMonitor: Any?
     /// The opened-image editor has a larger canvas around the image. Keeping
     /// this separate from `bounds` lets its panels live in that surrounding
     /// space while annotations remain image-local.
@@ -219,6 +220,9 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         if let textRecognitionKeyMonitor {
             NSEvent.removeMonitor(textRecognitionKeyMonitor)
         }
+        if let overlayKeyMonitor {
+            NSEvent.removeMonitor(overlayKeyMonitor)
+        }
         if let textEditorFocusObserver {
             NotificationCenter.default.removeObserver(textEditorFocusObserver)
         }
@@ -228,18 +232,22 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        // AppKit normally stops hit testing at this view's bounds. In the
-        // opened-image editor the panels intentionally extend beyond those
-        // bounds, so forward those clicks explicitly when the canvas asks.
+    override func cancelOperation(_ sender: Any?) {
+        cancel()
+    }
+
+    /// Hit-tests panels that may extend beyond the image view in the opened
+    /// image editor. The normal AppKit hit-test path must remain untouched for
+    /// ordinary screenshot overlays, otherwise buttons inside the selection
+    /// view can stop receiving mouse events.
+    func hitTestChrome(_ point: NSPoint) -> NSView? {
         var panels: [NSView] = [toolStrip, actionBar]
         if let stylePopover { panels.append(stylePopover) }
         for panel in panels where !panel.isHidden && panel.frame.contains(point) {
             let localPoint = convert(point, to: panel)
             return panel.hitTest(localPoint) ?? panel
         }
-        guard bounds.contains(point) else { return nil }
-        return super.hitTest(point)
+        return nil
     }
 
     private func globalToLocal(_ rect: CGRect) -> CGRect {
@@ -393,9 +401,46 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     /// Called once the view is in a window and its size is final.
     func activate() {
+        installOverlayKeyMonitorIfNeeded()
         updateChromeVisibility()
         layoutChrome()
         needsDisplay = true
+    }
+
+    /// Tool buttons and VisionKit can become the first responder. Keep the
+    /// overlay-level Escape and tool shortcuts reliable regardless of which
+    /// child currently owns keyboard focus.
+    private func installOverlayKeyMonitorIfNeeded() {
+        guard overlayKeyMonitor == nil else { return }
+        overlayKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            guard let self, self.window?.isKeyWindow == true else {
+                return event
+            }
+            guard self.textEditor == nil else { return event }
+
+            let modifiers = self.normalized(event.modifierFlags)
+            if event.keyCode == UInt16(kVK_Escape) {
+                if self.eyedropperActive {
+                    self.eyedropperActive = false
+                    self.stylePopover?.setEyedropperActive(false)
+                    self.updateCursor()
+                    self.needsDisplay = true
+                } else {
+                    // Escape is the unambiguous cancel action for both the
+                    // screenshot and opened-image sessions.
+                    self.cancel()
+                }
+                return nil
+            }
+
+            guard modifiers.isEmpty || modifiers == .shift,
+                  let matched = ToolStrip.tools.first(where: { $0.shortcutKeyCode == event.keyCode })
+            else { return event }
+
+            self.select(tool: matched)
+            return nil
+        }
     }
 
     /// Sets the larger coordinate area available to the floating chrome. Normal
@@ -427,6 +472,9 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         toolStrip.setSelected(newTool)
         toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
         stylePopover?.configure(for: newTool, style: style)
+        if newTool != .recognizeText {
+            window?.makeFirstResponder(self)
+        }
         layoutChrome()
         if newTool == .recognizeText { startTextRecognition() }
         updateCursor()
@@ -2155,9 +2203,9 @@ final class OverlayCanvasView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         if let editorView {
             let editorPoint = convert(point, to: editorView)
-            if let hit = editorView.hitTest(editorPoint) { return hit }
+            if let hit = editorView.hitTestChrome(editorPoint) { return hit }
         }
-        return self
+        return super.hitTest(point) ?? self
     }
 }
 
