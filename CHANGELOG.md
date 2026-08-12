@@ -3,6 +3,27 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-08-13
+
+Text recognition and existing-image annotation, while preserving the stable 2.0 screenshot
+and recording workflows.
+
+### Added
+
+- **Text recognition tool** as the second item in the annotation toolbar. It uses macOS
+  VisionKit locally, highlights recognized text, supports selection, `Cmd+A` and copying,
+  and leaves the image pixels unchanged.
+- **Finder image opening** for image files through the standard Open With/context-menu flow.
+  Opened images use the existing annotation and export pipeline and the source file is never
+  overwritten automatically.
+
+### Compatibility
+
+- The current stable release remains available as `v2.0.0`; this release adds only the two
+  image workflow features and keeps static screenshot and recording paths independent.
+- The minimum macOS requirement remains 14.0. VisionKit image analysis is available on the
+  supported macOS baseline; devices without image analysis support show an explanatory toast.
+
 ## [2.0.0] — 2026-08-12
 
 Stable full-display screen recording for macOS 15+ while preserving the existing static

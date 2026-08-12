@@ -1,6 +1,6 @@
 # ScreenCap architecture and product specification
 
-This document is the engineering contract for ScreenCap 2.0.0. It describes what the
+This document is the engineering contract for ScreenCap 2.1.0. It describes what the
 application does, which invariants must survive refactors, and which parts are tied to
 macOS. It is intentionally more precise than the user-facing [README](README.md).
 
@@ -18,6 +18,12 @@ never uploads anything. A screenshot capture session follows this sequence:
 3. Let the user annotate the selected area in place.
 4. Render the screenshot and annotations into one final image.
 5. Copy, save, or print the image, then close the session.
+
+An image can also enter the same editor through Finder. ScreenCap loads the image as a
+preselected editing canvas, preserves its pixel dimensions for export, and leaves the
+original file untouched. The second toolbar tool activates macOS VisionKit text analysis
+for the selected area; it provides text highlighting, selection, `Cmd+A` and copying, but
+does not edit the recognized text.
 
 The recording mode is deliberately independent of that flow. It starts a ScreenCaptureKit
 stream for the selected display, applies local level adjustment, peak limiting and optional gentle
@@ -45,7 +51,7 @@ Current intentional boundaries:
 - A selection belongs to one display. It cannot span displays.
 - Recording is currently macOS 15+ one-display-at-a-time. Display selection is available through
   the fast pointer path or ScreenCap's own dimmed display chooser; microphone source selection,
-  pause/resume, countdown, camera, preview, HDR and OCR are not yet implemented. The microphone
+  pause/resume, countdown, camera, preview and HDR are not yet implemented. The microphone
   and system-audio toggles only affect ScreenCap's own tracks and preserve the original timeline
   with silence. The selected display remains visually clear in the chooser, but the transparent
   hit layer intercepts clicks so they cannot activate the application underneath.

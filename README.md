@@ -5,8 +5,8 @@ display with system audio and microphone tracks. A menu-bar screenshot and scree
 recorder for macOS, built because [Lightshot](https://app.prntscr.com/) — the one that did
 this well — is no longer maintained.
 
-**Version 2.0.0 — stable screenshot and screen-recording release.** ScreenCap now includes
-a native macOS 15+ recorder with separate system-audio, microphone and composite tracks.
+**Version 2.1.0 — screenshot, annotation and screen-recording release.** ScreenCap now
+includes a native macOS 15+ recorder, local text recognition and Finder image opening.
 See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
@@ -33,6 +33,8 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
 - Four capture modes on global shortcuts: area, repeat last area, window under the cursor, full screen
 - The screen freezes the moment you press, so menus and tooltips stay put while you aim
 - Draw on top: pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbering, text
+- Recognize text as a dedicated second toolbar tool, select it with Live Text and copy it
+- Open existing images from Finder and annotate them with the same tools
 - Redaction does pixelation or blur, in a rectangle, an ellipse or a free brush stroke
 - An eraser that rubs out part of a stroke rather than deleting whole objects
 - Pixel loupe with an eyedropper, and a color panel with palette, recents, hex and a screen picker
@@ -194,7 +196,7 @@ collapses into a single undo step.
 - **A selection lives on one display.** You can capture any display, but a single selection
   cannot span two of them.
 - **No scrolling capture**, recorder microphone source picker, pause/resume, countdown, camera
-  overlay, preview/editing window, OCR, HDR capture, or click visualization yet. Recording is
+  overlay, preview/editing window, HDR capture, or click visualization yet. Recording is
   currently one full display at a time and available on macOS 15+.
 - **Audio-device recovery and performance validation remain in progress.** The recorder falls
   back to video/system audio when a microphone is unavailable, monitors input-route changes,
@@ -207,15 +209,13 @@ collapses into a single undo step.
 - The app has been tested by hand rather than by an automated UI suite. The rendering and
   export paths are covered by `--selftest`.
 
-## Future work after 2.0
+## Future work after 2.1
 
 The following features remain intentionally out of scope for the current stable release and
-should be considered only after 2.0:
+should be considered only after 2.1:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
-- **Annotation of existing images.** Open an image file and use the same annotation,
-  redaction and export tools without taking a new screenshot first.
 - **Swift 6 migration before 3.0.0.** First enable complete concurrency checking in CI,
   isolate AppKit and UI code with `@MainActor`, and resolve shared mutable state plus
   `AVAssetWriter`/`AVAssetReader` isolation. Only after a clean Swift 5 migration pass
@@ -273,7 +273,7 @@ make dmg         # DMG + SHA-256 file in dist/
 specific stable release, pass them explicitly, for example:
 
 ```bash
-make dmg VERSION=2.0.0 CHANNEL= BUILD=1
+make dmg VERSION=2.1.0 CHANNEL= BUILD=1
 ```
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful

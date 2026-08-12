@@ -175,6 +175,14 @@ enum SelfTest {
             do {
                 try data.write(to: url, options: .atomic)
                 print("  ✓ PNG записан: \(url.lastPathComponent) (\(data.count / 1024) КБ)")
+                if let loaded = try? ImageFileLoader.loadCGImage(from: url),
+                   loaded.width == rendered.cgImage.width,
+                   loaded.height == rendered.cgImage.height {
+                    print("  ✓ изображение загружается через Finder/open pipeline")
+                } else {
+                    failures.append("загрузка существующего изображения")
+                    print("  ✗ загрузка существующего изображения")
+                }
             } catch {
                 failures.append("запись PNG: \(error.localizedDescription)")
                 print("  ✗ запись PNG: \(error.localizedDescription)")
@@ -182,6 +190,13 @@ enum SelfTest {
         } else {
             failures.append("кодирование PNG")
             print("  ✗ кодирование PNG")
+        }
+
+        if ToolStrip.tools.dropFirst().first == .recognizeText {
+            print("  ✓ распознавание текста стоит вторым инструментом")
+        } else {
+            failures.append("порядок инструмента распознавания текста")
+            print("  ✗ распознавание текста не стоит вторым инструментом")
         }
 
         // 3. Filename template expansion.

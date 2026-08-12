@@ -8,6 +8,9 @@ enum CaptureMode {
     case window
     /// Open with a ready-made selection (repeat-last-area, full screen).
     case preselected(globalRect: CGRect)
+    /// Edit an image opened from Finder. The image is centered inside a larger
+    /// editor window so the tool and action panels can live outside the pixels.
+    case openedImage
 }
 
 /// What to do with the finished capture.

@@ -1,6 +1,8 @@
 Freeze the screen, select an area, mark it up in place, then copy or save. Universal binary — runs natively on Apple silicon and Intel.
 
-ScreenCap 2.0 adds the first stable full-display recording workflow for macOS 15+:
+ScreenCap 2.1 adds a local text-recognition tool as the second annotation tool and lets Finder open existing images in the same annotation workflow. The stable 2.0 screenshot and recording paths remain independent.
+
+The 2.0 stable release added the first full-display recording workflow for macOS 15+:
 
 - Start recording the current display under the pointer or choose a display in ScreenCap's own picker.
 - Record system audio and microphone audio independently, plus a composite track first for ordinary players.
@@ -8,7 +10,7 @@ ScreenCap 2.0 adds the first stable full-display recording workflow for macOS 15
 - Use logical-size capture, H.264/HEVC selection, optional gentle RNNoise suppression, safe disk-space checks and local diagnostics.
 - Open finished recordings in the installed video application, including VLC's existing playlist with the item paused when supported.
 
-The static screenshot workflow remains independent and unchanged. See the [changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md#200--2026-08-12) for the full list.
+The static screenshot workflow remains independent and unchanged. See the [changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md#210--2026-08-13) for the full list.
 
 ### What it does
 
@@ -59,7 +61,7 @@ Nothing leaves your machine: the app contains no networking code at all. See [PR
 ### Verify the download
 
 ```
-shasum -a 256 -c ScreenCap-2.0.0.dmg.sha256
+shasum -a 256 -c ScreenCap-2.1.0.dmg.sha256
 ```
 
 ### Requirements

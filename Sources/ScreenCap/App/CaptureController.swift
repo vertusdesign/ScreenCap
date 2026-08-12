@@ -6,6 +6,7 @@ final class CaptureController {
 
     private var overlay: OverlayController?
     private var isCapturing = false
+    private var isEditingOpenedImage = false
     private var previousApp: NSRunningApplication?
 
     /// Remembered for the "repeat last area" shortcut.
@@ -78,6 +79,34 @@ final class CaptureController {
         }
     }
 
+    /// Opens an image received from Finder in the same annotation overlay as a
+    /// fresh screenshot. The source is fitted to the current display for
+    /// comfortable editing, while `DisplaySnapshot.pixelScale` keeps export at
+    /// the original image resolution.
+    func openImage(_ url: URL) {
+        guard !isCapturing else { return }
+        guard url.isFileURL else { return }
+
+        Log.debug("open image \(url.path)")
+        isCapturing = true
+        isEditingOpenedImage = true
+        previousApp = NSWorkspace.shared.frontmostApplication
+
+        Task { @MainActor in
+            do {
+                let image = try await Task.detached(priority: .userInitiated) {
+                    try ImageFileLoader.loadCGImage(from: url)
+                }.value
+                presentOpenedImage(image)
+            } catch {
+                isCapturing = false
+                isEditingOpenedImage = false
+                Feedback.flash(message: L10n.t("error.openImage"), subtitle: error.localizedDescription)
+                previousApp = nil
+            }
+        }
+    }
+
     // MARK: - Session
 
     private func begin(mode: CaptureMode) {
@@ -90,6 +119,7 @@ final class CaptureController {
         // dialog before every single capture. Just try, and only explain if the
         // attempt actually comes back denied.
         isCapturing = true
+        isEditingOpenedImage = false
         previousApp = NSWorkspace.shared.frontmostApplication
 
         Task { @MainActor in
@@ -105,6 +135,47 @@ final class CaptureController {
                 handle(error)
             }
         }
+    }
+
+    @MainActor
+    private func presentOpenedImage(_ image: CGImage) {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            isCapturing = false
+            isEditingOpenedImage = false
+            previousApp = nil
+            return
+        }
+
+        let visible = screen.visibleFrame.insetBy(dx: 48, dy: 72)
+        let imageSize = CGSize(width: image.width, height: image.height)
+        let fitScale = min(
+            1,
+            visible.width / max(imageSize.width, 1),
+            visible.height / max(imageSize.height, 1)
+        )
+        let pointSize = CGSize(
+            width: max(1, imageSize.width * fitScale),
+            height: max(1, imageSize.height * fitScale)
+        )
+        let frame = CGRect(
+            x: visible.midX - pointSize.width / 2,
+            y: visible.midY - pointSize.height / 2,
+            width: pointSize.width,
+            height: pointSize.height
+        )
+        let displayID = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)
+            .map { CGDirectDisplayID(truncating: $0) } ?? 0
+        let snapshot = DisplaySnapshot(
+            displayID: displayID,
+            screen: screen,
+            cocoaFrame: frame,
+            image: image
+        )
+        presentOverlay(
+            snapshots: [snapshot],
+            mode: .openedImage,
+            targets: []
+        )
     }
 
     @MainActor
@@ -126,7 +197,9 @@ final class CaptureController {
 
     @MainActor
     private func complete(image: CapturedImage, action: OutputAction, globalRect: CGRect) {
-        lastGlobalRect = globalRect
+        if !isEditingOpenedImage {
+            lastGlobalRect = globalRect
+        }
 
         // Take the overlay down first: the save and print panels are ordinary
         // modal windows and behave badly underneath a shielding-level window.
@@ -134,6 +207,7 @@ final class CaptureController {
             || (action == .save && Settings.shared.askWhereToSave)
         overlay?.dismiss()
         overlay = nil
+        isEditingOpenedImage = false
 
         switch action {
         case .copy:
@@ -163,6 +237,7 @@ final class CaptureController {
         overlay?.dismiss()
         overlay = nil
         isCapturing = false
+        isEditingOpenedImage = false
         // The tooltip is a singleton window outliving any one overlay — if the
         // session ends (e.g. a shortcut fires) while the pointer is still
         // sitting over a button, its scheduled/visible tooltip would otherwise

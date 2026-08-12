@@ -98,7 +98,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Gives Shortcuts, Raycast, Automator and plain `open` a way in when a
     /// global shortcut is already taken by another app.
     func application(_ application: NSApplication, open urls: [URL]) {
-        urls.forEach(handle)
+        for url in urls {
+            if url.scheme == "screencap" {
+                handle(url)
+            } else if url.isFileURL {
+                CaptureController.shared.openImage(url)
+            }
+        }
+    }
+
+    /// Finder may deliver a document through the legacy open-files event when
+    /// the app is registered as an image handler. Keep it as a compatibility
+    /// path alongside `application(_:open:)`.
+    func application(_ sender: NSApplication, openFiles filenames: [String]) {
+        filenames.forEach { CaptureController.shared.openImage(URL(fileURLWithPath: $0)) }
+        sender.reply(toOpenOrPrint: .success)
     }
 
     private func handle(_ url: URL) {

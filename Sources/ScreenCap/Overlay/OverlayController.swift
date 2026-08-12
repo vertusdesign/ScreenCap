@@ -22,16 +22,47 @@ final class OverlayController: NSObject, SelectionOverlayViewDelegate {
         redoStack.removeAll()
         isDismissing = false
         for snapshot in snapshots {
-            let window = OverlayWindow(screenFrame: snapshot.cocoaFrame)
+            let isOpenedImage: Bool
+            if case .openedImage = mode {
+                isOpenedImage = true
+            } else {
+                isOpenedImage = false
+            }
+
+            let windowFrame = isOpenedImage
+                ? snapshot.screen.visibleFrame
+                : snapshot.cocoaFrame
+            let window = OverlayWindow(
+                screenFrame: windowFrame,
+                transparentBackground: isOpenedImage
+            )
             let view = SelectionOverlayView(
                 snapshot: snapshot,
                 mode: mode,
                 windows: windowTargets
             )
             view.delegate = self
-            view.frame = CGRect(origin: .zero, size: snapshot.cocoaFrame.size)
-            view.autoresizingMask = [.width, .height]
-            window.contentView = view
+            view.frame = CGRect(
+                x: snapshot.cocoaFrame.minX - windowFrame.minX,
+                y: snapshot.cocoaFrame.minY - windowFrame.minY,
+                width: snapshot.cocoaFrame.width,
+                height: snapshot.cocoaFrame.height
+            )
+            view.autoresizingMask = []
+            if isOpenedImage {
+                let canvas = OverlayCanvasView(frame: CGRect(origin: .zero, size: windowFrame.size))
+                canvas.editorView = view
+                canvas.addSubview(view)
+                window.contentView = canvas
+                view.setChromeBounds(CGRect(
+                    x: windowFrame.minX - snapshot.cocoaFrame.minX,
+                    y: windowFrame.minY - snapshot.cocoaFrame.minY,
+                    width: windowFrame.width,
+                    height: windowFrame.height
+                ))
+            } else {
+                window.contentView = view
+            }
             windows.append(window)
             views.append(view)
         }

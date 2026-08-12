@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import VisionKit
 
 protocol SelectionOverlayViewDelegate: AnyObject {
     /// The pointer entered this display — it should take keyboard focus.
@@ -34,7 +35,7 @@ struct SelectionOverlayState {
 ///
 /// The view's coordinate space is the display in Cocoa points with the origin at
 /// its bottom-left corner, which is also the space every annotation is stored in.
-final class SelectionOverlayView: NSView {
+final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     private enum Phase {
         case idle
@@ -108,6 +109,13 @@ final class SelectionOverlayView: NSView {
     private var textMoveHandle: TextMoveHandle?
     private var textEditorStyle: ToolStyle?
     private var editingTextID: UUID?
+    private var textAnalysisOverlay: ImageAnalysisOverlayView?
+    private var textAnalysisTask: Task<Void, Never>?
+    private var textRecognitionKeyMonitor: Any?
+    /// The opened-image editor has a larger canvas around the image. Keeping
+    /// this separate from `bounds` lets its panels live in that surrounding
+    /// space while annotations remain image-local.
+    private var chromeBounds: CGRect?
 
     private var trackingAreaRef: NSTrackingArea?
     private var textEditorFocusObserver: NSObjectProtocol?
@@ -188,12 +196,18 @@ final class SelectionOverlayView: NSView {
             }
         }
 
-        if case .preselected(let globalRect) = mode {
+        switch mode {
+        case .preselected(let globalRect):
             let local = globalToLocal(globalRect).clamped(to: bounds)
             if local.width >= 2, local.height >= 2 {
                 selection = local
                 phase = .ready
             }
+        case .openedImage:
+            selection = bounds
+            phase = .ready
+        default:
+            break
         }
     }
 
@@ -201,6 +215,10 @@ final class SelectionOverlayView: NSView {
     required init?(coder: NSCoder) { fatalError("not supported") }
 
     deinit {
+        textAnalysisTask?.cancel()
+        if let textRecognitionKeyMonitor {
+            NSEvent.removeMonitor(textRecognitionKeyMonitor)
+        }
         if let textEditorFocusObserver {
             NotificationCenter.default.removeObserver(textEditorFocusObserver)
         }
@@ -209,6 +227,20 @@ final class SelectionOverlayView: NSView {
     override var isFlipped: Bool { false }
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // AppKit normally stops hit testing at this view's bounds. In the
+        // opened-image editor the panels intentionally extend beyond those
+        // bounds, so forward those clicks explicitly when the canvas asks.
+        var panels: [NSView] = [toolStrip, actionBar]
+        if let stylePopover { panels.append(stylePopover) }
+        for panel in panels where !panel.isHidden && panel.frame.contains(point) {
+            let localPoint = convert(point, to: panel)
+            return panel.hitTest(localPoint) ?? panel
+        }
+        guard bounds.contains(point) else { return nil }
+        return super.hitTest(point)
+    }
 
     private func globalToLocal(_ rect: CGRect) -> CGRect {
         CGRect(
@@ -366,6 +398,13 @@ final class SelectionOverlayView: NSView {
         needsDisplay = true
     }
 
+    /// Sets the larger coordinate area available to the floating chrome. Normal
+    /// screenshot overlays leave this unset and retain their existing layout.
+    func setChromeBounds(_ bounds: CGRect) {
+        chromeBounds = bounds
+        layoutChrome()
+    }
+
     // MARK: - Tool + style
 
     private func select(tool newTool: ToolKind) {
@@ -383,12 +422,141 @@ final class SelectionOverlayView: NSView {
         // system panel cannot remain attached to the old tool.
         stylePopover?.detachSystemColorPanel()
         commitTextEditorIfNeeded()
+        if newTool != .recognizeText { stopTextRecognition() }
         tool = newTool
         toolStrip.setSelected(newTool)
         toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
         stylePopover?.configure(for: newTool, style: style)
         layoutChrome()
+        if newTool == .recognizeText { startTextRecognition() }
         updateCursor()
+        needsDisplay = true
+    }
+
+    private func stopTextRecognition() {
+        textAnalysisTask?.cancel()
+        textAnalysisTask = nil
+        if let textRecognitionKeyMonitor {
+            NSEvent.removeMonitor(textRecognitionKeyMonitor)
+            self.textRecognitionKeyMonitor = nil
+        }
+        textAnalysisOverlay?.removeFromSuperview()
+        textAnalysisOverlay = nil
+    }
+
+    private func startTextRecognition() {
+        stopTextRecognition()
+        guard tool == .recognizeText, let selection,
+              #available(macOS 13.0, *), ImageAnalyzer.isSupported,
+              let image = snapshot.crop(toGlobalRect: CGRect(
+                  x: selection.minX + snapshot.cocoaFrame.minX,
+                  y: selection.minY + snapshot.cocoaFrame.minY,
+                  width: selection.width,
+                  height: selection.height
+              ))
+        else {
+            if #available(macOS 13.0, *), !ImageAnalyzer.isSupported {
+                Feedback.flash(message: L10n.t("error.textRecognition"))
+            }
+            return
+        }
+
+        let overlay = ImageAnalysisOverlayView(frame: selection)
+        overlay.preferredInteractionTypes = [.textSelection]
+        overlay.selectableItemsHighlighted = true
+        overlay.delegate = self
+        addSubview(overlay, positioned: .above, relativeTo: nil)
+        textAnalysisOverlay = overlay
+        // The analysis surface covers the selected image, but the toolbar and
+        // action bar must remain reachable even when macOS has placed them
+        // inside that rectangle on a small display.
+        addSubview(toolStrip, positioned: .above, relativeTo: nil)
+        addSubview(actionBar, positioned: .above, relativeTo: nil)
+        if let stylePopover { addSubview(stylePopover, positioned: .above, relativeTo: nil) }
+        textRecognitionKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            guard let self,
+                  self.tool == .recognizeText,
+                  let overlay = self.textAnalysisOverlay,
+                  self.handleTextRecognitionKey(event, overlay: overlay)
+            else { return event }
+            return nil
+        }
+
+        let analyzer = ImageAnalyzer()
+        textAnalysisTask = Task { @MainActor [weak self, weak overlay] in
+            do {
+                let analysis = try await analyzer.analyze(
+                    image,
+                    orientation: .up,
+                    configuration: ImageAnalyzer.Configuration([.text])
+                )
+                guard let self,
+                      let overlay,
+                      !Task.isCancelled,
+                      self.tool == .recognizeText,
+                      self.textAnalysisOverlay === overlay
+                else { return }
+                overlay.analysis = analysis
+                overlay.selectableItemsHighlighted = true
+                self.window?.makeFirstResponder(overlay)
+                self.needsDisplay = true
+            } catch {
+                guard !Task.isCancelled else { return }
+                Log.debug("text recognition failed: \(error.localizedDescription)")
+                Feedback.flash(message: L10n.t("error.textRecognitionFailed"))
+            }
+        }
+    }
+
+    private func copyRecognizedText(from overlay: ImageAnalysisOverlayView) {
+        let text = overlay.selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        Feedback.flash(message: L10n.t("toast.textCopied"))
+    }
+
+    private func handleTextRecognitionKey(
+        _ event: NSEvent,
+        overlay: ImageAnalysisOverlayView
+    ) -> Bool {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard modifiers.contains(.command) else { return false }
+
+        switch Int(event.keyCode) {
+        case kVK_ANSI_A:
+            let text = overlay.text
+            guard !text.isEmpty else { return true }
+            overlay.selectedRanges = [text.startIndex..<text.endIndex]
+            return true
+        case kVK_ANSI_C:
+            copyRecognizedText(from: overlay)
+            return true
+        default:
+            return false
+        }
+    }
+
+    // MARK: - VisionKit text selection
+
+    func overlayView(
+        _ overlayView: ImageAnalysisOverlayView,
+        shouldBeginAt point: CGPoint,
+        forAnalysisType analysisType: ImageAnalysisOverlayView.InteractionTypes
+    ) -> Bool {
+        analysisType.contains(.textSelection)
+            && (overlayView.analysisHasText(at: point) || overlayView.hasActiveTextSelection)
+    }
+
+    func overlayView(
+        _ overlayView: ImageAnalysisOverlayView,
+        shouldHandleKeyDownEvent event: NSEvent
+    ) -> Bool {
+        handleTextRecognitionKey(event, overlay: overlayView)
+    }
+
+    func textSelectionDidChange(_ overlayView: ImageAnalysisOverlayView) {
         needsDisplay = true
     }
 
@@ -685,6 +853,9 @@ final class SelectionOverlayView: NSView {
             phase = .drawing(origin: point)
             draft = makeDraft(from: point, to: point)
             needsDisplay = true
+        case .recognizeText:
+            phase = .ready
+            return
         case .eraser:
             if style.eraserMode == .objects {
                 if let index = annotationIndex(at: point) {
@@ -828,6 +999,7 @@ final class SelectionOverlayView: NSView {
         }
         updateChromeVisibility()
         layoutChrome()
+        if tool == .recognizeText { startTextRecognition() }
         updateCursor()
         needsDisplay = true
     }
@@ -959,7 +1131,7 @@ final class SelectionOverlayView: NSView {
                 style: style
             )
 
-        case .move, .text:
+        case .move, .recognizeText, .text:
             return nil
         }
     }
@@ -1433,6 +1605,7 @@ final class SelectionOverlayView: NSView {
             stylePopover?.removeFromSuperview()
             stylePopover = nil
             eyedropperActive = false
+            stopTextRecognition()
         }
         updateHistoryButtons()
     }
@@ -1440,7 +1613,7 @@ final class SelectionOverlayView: NSView {
     private func layoutChrome() {
         guard let selection, !toolStrip.isHidden else { return }
         let gap: CGFloat = 8
-        let safe = bounds.insetBy(dx: 4, dy: 4)
+        let safe = (chromeBounds ?? bounds).insetBy(dx: 4, dy: 4)
 
         var stripFrame = CGRect(origin: .zero, size: toolStrip.fittingSize)
         stripFrame.origin.x = selection.maxX + gap
@@ -1488,6 +1661,11 @@ final class SelectionOverlayView: NSView {
 
         if let handle = textMoveHandle, !handle.isHidden, handle.frame.contains(cursorPoint) {
             NSCursor.openHand.set()
+            return
+        }
+
+        if tool == .recognizeText, !isPointerOverChrome {
+            NSCursor.iBeam.set()
             return
         }
 
@@ -1963,6 +2141,23 @@ final class SelectionOverlayView: NSView {
         container.stroke()
 
         context.restoreGraphicsState()
+    }
+}
+
+/// Full-size transparent canvas around an opened image. It shields the area
+/// outside the image from the application underneath while forwarding events
+/// to the image editor and its panels.
+final class OverlayCanvasView: NSView {
+    weak var editorView: SelectionOverlayView?
+
+    override var isOpaque: Bool { false }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if let editorView {
+            let editorPoint = convert(point, to: editorView)
+            if let hit = editorView.hitTest(editorPoint) { return hit }
+        }
+        return self
     }
 }
 

@@ -4,6 +4,7 @@ import Carbon.HIToolbox
 /// The drawing tools available once an area has been selected.
 enum ToolKind: String, CaseIterable, Codable {
     case move
+    case recognizeText
     case pen
     case marker
     case line
@@ -21,6 +22,7 @@ enum ToolKind: String, CaseIterable, Codable {
     var symbolName: String {
         switch self {
         case .move: return "arrow.up.left.and.arrow.down.right"
+        case .recognizeText: return "text.viewfinder"
         case .pen: return "pencil.tip"
         case .marker: return "highlighter"
         case .line: return "line.diagonal"
@@ -67,6 +69,7 @@ enum ToolKind: String, CaseIterable, Codable {
     var shortcutKey: String {
         switch self {
         case .move: return "V"
+        case .recognizeText: return "I"
         case .pen: return "P"
         case .marker: return "H"
         case .line: return "L"
@@ -88,6 +91,7 @@ enum ToolKind: String, CaseIterable, Codable {
     var shortcutKeyCode: UInt16 {
         switch self {
         case .move: return UInt16(kVK_ANSI_V)
+        case .recognizeText: return UInt16(kVK_ANSI_I)
         case .pen: return UInt16(kVK_ANSI_P)
         case .marker: return UInt16(kVK_ANSI_H)
         case .line: return UInt16(kVK_ANSI_L)
