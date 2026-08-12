@@ -1,8 +1,9 @@
 # ScreenCap
 
-Freeze the screen, select an area, mark it up in place, then copy or save. A menu-bar
-screenshot tool for macOS, built because [Lightshot](https://app.prntscr.com/) — the one
-that did this well — is no longer maintained.
+Freeze the screen, select an area, mark it up in place, capture stills, or record the
+display with system audio and microphone tracks. A menu-bar screenshot and screen
+recorder for macOS, built because [Lightshot](https://app.prntscr.com/) — the one that did
+this well — is no longer maintained.
 
 **Version 2.0.0 — stable screenshot and screen-recording release.** ScreenCap now includes
 a native macOS 15+ recorder with separate system-audio, microphone and composite tracks.

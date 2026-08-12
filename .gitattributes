@@ -1,0 +1,2 @@
+# Keep the vendored RNNoise implementation out of GitHub's language statistics.
+Sources/RNNoise/** linguist-vendored
