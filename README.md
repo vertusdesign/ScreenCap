@@ -216,6 +216,11 @@ should be considered only after 2.0:
   displays, with the overlay and export composing the relevant parts of each screen.
 - **Annotation of existing images.** Open an image file and use the same annotation,
   redaction and export tools without taking a new screenshot first.
+- **Swift 6 migration before 3.0.0.** First enable complete concurrency checking in CI,
+  isolate AppKit and UI code with `@MainActor`, and resolve shared mutable state plus
+  `AVAssetWriter`/`AVAssetReader` isolation. Only after a clean Swift 5 migration pass
+  should the project switch to Swift 6 language mode. This is a language-mode change, not
+  a reason to raise the current macOS 14 screenshot or macOS 15 recorder requirements.
 
 ## Automation
 

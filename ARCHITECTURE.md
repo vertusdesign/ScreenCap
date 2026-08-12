@@ -101,6 +101,24 @@ the domain model, state transitions, renderer rules, and acceptance tests indepe
 window system, then provide platform adapters for capture, windows, input, overlay, storage,
 clipboard, dialogs, printing and packaging.
 
+## Swift 6 migration gate
+
+The project currently uses Swift 5.10 language mode. A migration to Swift 6 is planned as a
+release-readiness task before version 3.0.0, after the recorder's stability work has settled.
+It must be performed incrementally:
+
+1. Enable complete concurrency checking in CI while remaining in Swift 5 language mode.
+2. Isolate AppKit and UI-facing code with `@MainActor` and define explicit actor boundaries
+   for recorder/session state.
+3. Remove unsafe shared mutable state and make `AVAssetWriter`/`AVAssetReader` processing
+   conform to the chosen isolation model.
+4. Switch the target to Swift 6 language mode only after the diagnostic pass is clean, then
+   make concurrency warnings blocking in CI.
+
+This migration is a compiler/language-mode change. It should preserve the existing macOS 14
+deployment requirement for screenshots and macOS 15 requirement for recording unless a
+separate product decision changes those targets.
+
 ## Domain model
 
 ### Display snapshot
