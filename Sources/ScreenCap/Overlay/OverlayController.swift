@@ -42,11 +42,18 @@ final class OverlayController: NSObject, SelectionOverlayViewDelegate {
                 windows: windowTargets
             )
             view.delegate = self
-            view.frame = CGRect(
+            let imageOrigin = CGPoint(
                 x: snapshot.cocoaFrame.minX - windowFrame.minX,
-                y: snapshot.cocoaFrame.minY - windowFrame.minY,
-                width: snapshot.cocoaFrame.width,
-                height: snapshot.cocoaFrame.height
+                y: snapshot.cocoaFrame.minY - windowFrame.minY
+            )
+            // SelectionOverlayView may have a larger bounds rect around an
+            // opened image. Its bounds origin is offset so image-local (0, 0)
+            // remains stable while the extra canvas is exposed for expansion.
+            view.frame = CGRect(
+                x: imageOrigin.x + view.bounds.minX,
+                y: imageOrigin.y + view.bounds.minY,
+                width: view.bounds.width,
+                height: view.bounds.height
             )
             view.autoresizingMask = []
             if isOpenedImage {

@@ -43,6 +43,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         case ready
         case moving(grabOffset: CGSize)
         case resizing(handle: SelectionHandle)
+        case panning(startImageOrigin: CGPoint, startWindowPoint: CGPoint)
         case drawing(origin: CGPoint)
     }
 
@@ -123,6 +124,17 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     private let handleRadius: CGFloat = 4.5
     private let handleHitRadius: CGFloat = 9
 
+    private var isOpenedImageMode: Bool {
+        if case .openedImage = mode { return true }
+        return false
+    }
+
+    /// Image-local coordinates remain anchored at (0, 0), even when the view's
+    /// bounds includes the surrounding canvas reserve.
+    private var imageRect: CGRect {
+        CGRect(origin: .zero, size: snapshot.cocoaFrame.size)
+    }
+
     // MARK: - Init
 
     init(snapshot: DisplaySnapshot, mode: CaptureMode, windows: [WindowTarget]) {
@@ -134,6 +146,14 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             pixelScale: snapshot.pixelScale
         )
         super.init(frame: CGRect(origin: .zero, size: snapshot.cocoaFrame.size))
+        if isOpenedImageMode {
+            let inset = OpenedImageEditorGeometry.canvasInset
+            setFrameSize(CGSize(
+                width: snapshot.cocoaFrame.width + inset * 2,
+                height: snapshot.cocoaFrame.height + inset * 2
+            ))
+            setBoundsOrigin(CGPoint(x: -inset, y: -inset))
+        }
         wantsLayer = true
         annotationLayer = AnnotationLayer(
             pointSize: snapshot.cocoaFrame.size,
@@ -205,7 +225,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
                 phase = .ready
             }
         case .openedImage:
-            selection = bounds
+            selection = imageRect
             phase = .ready
         default:
             break
@@ -402,6 +422,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     /// Called once the view is in a window and its size is final.
     func activate() {
         installOverlayKeyMonitorIfNeeded()
+        updateChromeBoundsForCurrentViewport()
         updateChromeVisibility()
         layoutChrome()
         needsDisplay = true
@@ -872,6 +893,24 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             return
         }
 
+        // In the opened-image editor Move pans the 100% image. Crop handles
+        // were handled above, so dragging anywhere else never changes the crop
+        // rectangle and can safely navigate a large image.
+        if isOpenedImageMode, tool == .move {
+            let imageOrigin = CGPoint(
+                x: frame.minX - bounds.minX,
+                y: frame.minY - bounds.minY
+            )
+            phase = .panning(
+                startImageOrigin: imageOrigin,
+                startWindowPoint: event.locationInWindow
+            )
+            updateChromeVisibility()
+            updateCursor()
+            needsDisplay = true
+            return
+        }
+
         // Outside the selection: drop it and rubber-band a new one, whatever tool
         // is active. Reaching for a different area is more common mid-session than
         // drawing outside the frame, which is not possible anyway.
@@ -976,6 +1015,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             guard let current = selection else { return }
             selection = handle.resize(current, to: point).clamped(to: bounds)
 
+        case .panning(let startImageOrigin, let startWindowPoint):
+            let delta = CGSize(
+                width: event.locationInWindow.x - startWindowPoint.x,
+                height: event.locationInWindow.y - startWindowPoint.y
+            )
+            setImageOrigin(startImageOrigin.offsetBy(dx: delta.width, dy: delta.height))
+
         case .drawing(let origin):
             if tool == .eraser, style.eraserShape == .brush {
                 let previous = eraseStroke.last ?? point
@@ -1016,6 +1062,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             phase = .ready
             finishSelectionChange()
 
+        case .panning:
+            phase = .ready
+            updateChromeVisibility()
+            updateChromeBoundsForCurrentViewport()
+            updateCursor()
+            needsDisplay = true
+
         case .drawing(let origin):
             phase = .ready
             if tool == .eraser, style.eraserShape == .brush {
@@ -1050,6 +1103,40 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         if tool == .recognizeText { startTextRecognition() }
         updateCursor()
         needsDisplay = true
+    }
+
+    /// Applies a panning position while preserving a 300–400 point safety
+    /// margin, so the image never fills the entire viewport edge-to-edge.
+    private func setImageOrigin(_ proposed: CGPoint) {
+        guard isOpenedImageMode, let canvas = superview else { return }
+        let origin = OpenedImageEditorGeometry.constrainedImageOrigin(
+            proposed: proposed,
+            imageSize: imageRect.size,
+            viewport: canvas.bounds
+        )
+        frame.origin = CGPoint(
+            x: origin.x + bounds.minX,
+            y: origin.y + bounds.minY
+        )
+        updateChromeBoundsForCurrentViewport()
+        needsDisplay = true
+    }
+
+    /// Converts the visible window viewport into this view's image-local
+    /// coordinates so the floating panels remain outside the image after a pan.
+    private func updateChromeBoundsForCurrentViewport() {
+        guard isOpenedImageMode, let canvas = superview else { return }
+        let imageOrigin = CGPoint(
+            x: frame.minX - bounds.minX,
+            y: frame.minY - bounds.minY
+        )
+        chromeBounds = CGRect(
+            x: canvas.bounds.minX - imageOrigin.x,
+            y: canvas.bounds.minY - imageOrigin.y,
+            width: canvas.bounds.width,
+            height: canvas.bounds.height
+        )
+        layoutChrome()
     }
 
     // MARK: - Drafts
@@ -1417,7 +1504,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             case kVK_ANSI_A:
                 pushUndoState(.selection)
                 delegate?.overlayDidBeginSelection(self)
-                selection = bounds
+                selection = isOpenedImageMode ? imageRect : bounds
                 phase = .ready
                 finishSelectionChange()
                 return
@@ -1598,18 +1685,26 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         NSGraphicsContext.current = graphicsContext
 
         context.interpolationQuality = .high
-        context.draw(snapshot.image, in: bounds)
+        if isOpenedImageMode {
+            style.color.setFill()
+            bounds.fill(using: .sourceOver)
+            context.draw(snapshot.image, in: imageRect)
+        } else {
+            context.draw(snapshot.image, in: bounds)
+        }
 
         // Re-flatten at the export scale rather than upsampling the on-screen
         // layer, so a 1× export is genuinely rendered at 1× and a Retina export
         // keeps full detail.
-        let exportObfuscationLayer = AnnotationLayer(pointSize: bounds.size, scale: scale)
+        let layerPointSize = isOpenedImageMode ? imageRect.size : bounds.size
+        let layerRect = isOpenedImageMode ? imageRect : bounds
+        let exportObfuscationLayer = AnnotationLayer(pointSize: layerPointSize, scale: scale)
         exportObfuscationLayer?.rebuild(
             annotations: annotations.filter { $0.isObfuscation || $0.isErase },
             obfuscation: obfuscation,
             obfuscationBlendMode: .normal
         )
-        let exportAnnotationLayer = AnnotationLayer(pointSize: bounds.size, scale: scale)
+        let exportAnnotationLayer = AnnotationLayer(pointSize: layerPointSize, scale: scale)
         exportAnnotationLayer?.rebuild(
             annotations: annotations.filter { !$0.isObfuscation },
             obfuscation: nil
@@ -1618,8 +1713,8 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
            let annotations = exportAnnotationLayer?.image {
             context.saveGState()
             context.clip(to: rect)
-            context.draw(obfuscations, in: bounds)
-            context.draw(annotations, in: bounds)
+            context.draw(obfuscations, in: layerRect)
+            context.draw(annotations, in: layerRect)
             context.restoreGState()
         }
 
@@ -1637,7 +1732,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     /// pointer around the screen.
     private var isAdjustingSelectionBounds: Bool {
         switch phase {
-        case .creating, .moving, .resizing: return true
+        case .creating, .moving, .resizing, .panning: return true
         case .idle, .ready, .drawing: return false
         }
     }
@@ -1747,6 +1842,10 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             }
             return
         }
+        if isOpenedImageMode, tool == .move, bounds.contains(cursorPoint) {
+            NSCursor.openHand.set()
+            return
+        }
         NSCursor.crosshair.set()
     }
 
@@ -1787,7 +1886,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         let cgContext = context.cgContext
 
         cgContext.interpolationQuality = .none
-        cgContext.draw(snapshot.image, in: bounds)
+        if isOpenedImageMode {
+            style.color.setFill()
+            bounds.fill(using: .sourceOver)
+            cgContext.draw(snapshot.image, in: imageRect)
+        } else {
+            cgContext.draw(snapshot.image, in: bounds)
+        }
 
         if let selection {
             // Obfuscations are a separate background sheet. A live pass is
@@ -1878,7 +1983,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         context.saveGraphicsState()
         NSBezierPath(rect: rect).addClip()
         context.cgContext.interpolationQuality = .high
-        context.cgContext.draw(image, in: bounds)
+        context.cgContext.draw(image, in: isOpenedImageMode ? imageRect : bounds)
         context.restoreGraphicsState()
     }
 
@@ -1925,7 +2030,9 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     }
 
     private func drawDimming(excluding selection: CGRect?) {
-        let dim = NSColor.black.withAlphaComponent(CGFloat(Settings.shared.dimOpacity))
+        let dim = NSColor.black.withAlphaComponent(
+            isOpenedImageMode ? 0.12 : CGFloat(Settings.shared.dimOpacity)
+        )
         dim.setFill()
 
         guard let selection else {
@@ -2061,7 +2168,8 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         // hex is already fixed-width on its own (`#RRGGBB`), and coordinates
         // vary little enough in practice not to matter.
         let color = sampleColor(at: point) ?? .black
-        let coordText = "\(Int(point.x)), \(Int(bounds.height - point.y))"
+        let sourceHeight = isOpenedImageMode ? imageRect.height : bounds.height
+        let coordText = "\(Int(point.x)), \(Int(sourceHeight - point.y))"
         let hexText = color.hexString
         let rgbText = color.fixedWidthRgbString
         let readoutFont = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
@@ -2107,7 +2215,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         // interpolation, so individual pixels stay square.
         let scale = snapshot.pixelScale
         let centerPixelX = (point.x * scale).rounded(.down)
-        let centerPixelY = ((bounds.height - point.y) * scale).rounded(.down)
+        let centerPixelY = ((sourceHeight - point.y) * scale).rounded(.down)
         let half = CGFloat(pixelsAcross / 2)
         let cropRect = CGRect(
             x: centerPixelX - half,

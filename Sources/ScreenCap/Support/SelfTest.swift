@@ -218,7 +218,99 @@ enum SelfTest {
             print("  ✓ конвертация координат CG↔Cocoa")
         }
 
-        // 5. Hotkey encoding round-trip.
+        // 5. Opened-image editor geometry: 100% placement, panning limits and
+        // the reserved canvas area used by crop expansion.
+        let viewport = CGRect(x: 0, y: 0, width: 1200, height: 800)
+        let largeImage = CGSize(width: 2400, height: 1600)
+        let initialOrigin = OpenedImageEditorGeometry.initialImageOrigin(
+            imageSize: largeImage,
+            viewport: viewport
+        )
+        let constrainedMinimum = OpenedImageEditorGeometry.constrainedImageOrigin(
+            proposed: CGPoint(x: -10_000, y: -10_000),
+            imageSize: largeImage,
+            viewport: viewport
+        )
+        let expectedMinimum = CGPoint(
+            x: viewport.minX + OpenedImageEditorGeometry.edgeReserve - largeImage.width,
+            y: viewport.minY + OpenedImageEditorGeometry.edgeReserve - largeImage.height
+        )
+        let expectedMaximumX = viewport.maxX - OpenedImageEditorGeometry.edgeReserve
+        let expectedMaximumY = viewport.maxY - OpenedImageEditorGeometry.edgeReserve
+        let maximumProbe = OpenedImageEditorGeometry.constrainedImageOrigin(
+            proposed: CGPoint(x: 10_000, y: 10_000),
+            imageSize: largeImage,
+            viewport: viewport
+        )
+        if initialOrigin == CGPoint(x: 360, y: 360),
+           constrainedMinimum == expectedMinimum,
+           maximumProbe == CGPoint(x: expectedMaximumX, y: expectedMaximumY) {
+            print("  ✓ открытое изображение: 100% и границы панорамирования")
+        } else {
+            failures.append("геометрия открытого изображения")
+            print("  ✗ геометрия открытого изображения (initial: \(initialOrigin), min: \(constrainedMinimum), max: \(maximumProbe))")
+        }
+        let smallOrigin = OpenedImageEditorGeometry.initialImageOrigin(
+            imageSize: CGSize(width: 600, height: 400),
+            viewport: viewport
+        )
+        if smallOrigin == CGPoint(x: 300, y: 200) {
+            print("  ✓ небольшое изображение центрируется без панорамирования")
+        } else {
+            failures.append("центрирование небольшого изображения")
+            print("  ✗ центрирование небольшого изображения (origin: \(smallOrigin))")
+        }
+
+        let expandedCanvasSize = CGSize(width: 30, height: 28)
+        let expandedCanvasRect = CGRect(x: -5, y: -3, width: expandedCanvasSize.width, height: expandedCanvasSize.height)
+        let primaryFill = NSColor(srgbRed: 0.2, green: 0.4, blue: 0.8, alpha: 1)
+        if let context = CGContext(
+            data: nil,
+            width: Int(expandedCanvasSize.width),
+            height: Int(expandedCanvasSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) {
+            context.translateBy(x: -expandedCanvasRect.minX, y: -expandedCanvasRect.minY)
+            let previous = NSGraphicsContext.current
+            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
+            primaryFill.setFill()
+            expandedCanvasRect.fill()
+            context.draw(base, in: CGRect(origin: .zero, size: pointSize))
+            NSGraphicsContext.current = previous
+
+            let expandedImage = context.makeImage()
+            let outsideColor = expandedImage.flatMap {
+                // x=1 is one point into the left extension; y=27 is one point
+                // into the bottom extension in the editor's bottom-left space.
+                pixelColor(in: $0, at: CGPoint(x: 1, y: 27), scale: 1)
+            }?.usingColorSpace(.sRGB)
+            let expectedFill = primaryFill.usingColorSpace(.sRGB)
+            if let outsideColor, let expectedFill,
+               // Compare in the same AppKit/CG colour pipeline used by the
+               // editor, avoiding false failures from colour-profile rounding.
+               abs(outsideColor.redComponent - expectedFill.redComponent) < 0.1,
+               abs(outsideColor.greenComponent - expectedFill.greenComponent) < 0.1,
+               abs(outsideColor.blueComponent - expectedFill.blueComponent) < 0.1 {
+                print("  ✓ расширение canvas заливается основным цветом")
+            } else {
+                failures.append("заливка расширенного canvas")
+                let actual = outsideColor.map {
+                    "\($0.redComponent),\($0.greenComponent),\($0.blueComponent)"
+                } ?? "nil"
+                let expected = expectedFill.map {
+                    "\($0.redComponent),\($0.greenComponent),\($0.blueComponent)"
+                } ?? "nil"
+                print("  ✗ заливка расширенного canvas (actual: \(actual), expected: \(expected))")
+            }
+        } else {
+            failures.append("создание тестового expanded canvas")
+            print("  ✗ создание тестового expanded canvas")
+        }
+
+        // 6. Hotkey encoding round-trip.
         let hotkey = Hotkey(keyCode: 120, modifierFlags: [.command, .shift])
         if let data = try? JSONEncoder().encode(hotkey),
            let decoded = try? JSONDecoder().decode(Hotkey.self, from: data),
@@ -229,7 +321,7 @@ enum SelfTest {
             print("  ✗ сериализация горячей клавиши")
         }
 
-        // 6. Microphone DSP safety: quiet voice is lifted, loud input stays
+        // 7. Microphone DSP safety: quiet voice is lifted, loud input stays
         // below the limiter ceiling. This is a pure signal test, so it works
         // in headless environments without requesting microphone access.
         if #available(macOS 15.0, *) {
@@ -241,7 +333,7 @@ enum SelfTest {
             }
         }
 
-        // 7. Real capture, if the system allows it.
+        // 8. Real capture, if the system allows it.
         if ScreenCapture.hasPermission {
             let semaphore = DispatchSemaphore(value: 0)
             var captureError: Error?

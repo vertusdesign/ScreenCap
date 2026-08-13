@@ -39,6 +39,60 @@ enum Geometry {
     }
 }
 
+/// Geometry rules shared by the opened-image editor. The extra canvas reserve
+/// gives crop handles room to grow the output and leaves a comfortable blank
+/// strip at the edge of the viewport for the floating controls.
+enum OpenedImageEditorGeometry {
+    static let canvasInset: CGFloat = 400
+    static let edgeReserve: CGFloat = 360
+
+    static func initialImageOrigin(imageSize: CGSize, viewport: CGRect) -> CGPoint {
+        let x: CGFloat
+        if imageSize.width <= viewport.width {
+            x = viewport.midX - imageSize.width / 2
+        } else {
+            x = viewport.minX + edgeReserve
+        }
+
+        let y: CGFloat
+        if imageSize.height <= viewport.height {
+            y = viewport.midY - imageSize.height / 2
+        } else {
+            y = viewport.minY + edgeReserve
+        }
+        return CGPoint(x: x, y: y)
+    }
+
+    /// Keeps at least `edgeReserve` points of the image visible at each side
+    /// when the image is larger than the viewport. Smaller images stay centred.
+    static func constrainedImageOrigin(
+        proposed: CGPoint,
+        imageSize: CGSize,
+        viewport: CGRect
+    ) -> CGPoint {
+        let x: CGFloat
+        if imageSize.width <= viewport.width {
+            x = viewport.midX - imageSize.width / 2
+        } else {
+            x = min(
+                viewport.maxX - edgeReserve,
+                max(viewport.minX + edgeReserve - imageSize.width, proposed.x)
+            )
+        }
+
+        let y: CGFloat
+        if imageSize.height <= viewport.height {
+            y = viewport.midY - imageSize.height / 2
+        } else {
+            y = min(
+                viewport.maxY - edgeReserve,
+                max(viewport.minY + edgeReserve - imageSize.height, proposed.y)
+            )
+        }
+        return CGPoint(x: x, y: y)
+    }
+}
+
 extension CGRect {
     /// A rect spanning two arbitrary corner points.
     init(corner a: CGPoint, corner b: CGPoint) {

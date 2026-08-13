@@ -80,9 +80,9 @@ final class CaptureController {
     }
 
     /// Opens an image received from Finder in the same annotation overlay as a
-    /// fresh screenshot. The source is fitted to the current display for
-    /// comfortable editing, while `DisplaySnapshot.pixelScale` keeps export at
-    /// the original image resolution.
+    /// fresh screenshot. The source stays at 100% and can be panned when it is
+    /// larger than the display; the editor's reserved canvas also supports
+    /// expanding the crop with a solid fill.
     func openImage(_ url: URL) {
         guard !isCapturing else { return }
         guard url.isFileURL else { return }
@@ -148,18 +148,17 @@ final class CaptureController {
 
         let visible = screen.visibleFrame.insetBy(dx: 48, dy: 72)
         let imageSize = CGSize(width: image.width, height: image.height)
-        let fitScale = min(
-            1,
-            visible.width / max(imageSize.width, 1),
-            visible.height / max(imageSize.height, 1)
-        )
-        let pointSize = CGSize(
-            width: max(1, imageSize.width * fitScale),
-            height: max(1, imageSize.height * fitScale)
+        // Opened images use a literal 100% canvas: one source pixel is one
+        // editor point. Large images are navigated with the Move tool instead
+        // of being silently reduced to fit the display.
+        let pointSize = imageSize
+        let origin = OpenedImageEditorGeometry.initialImageOrigin(
+            imageSize: pointSize,
+            viewport: visible
         )
         let frame = CGRect(
-            x: visible.midX - pointSize.width / 2,
-            y: visible.midY - pointSize.height / 2,
+            x: origin.x,
+            y: origin.y,
             width: pointSize.width,
             height: pointSize.height
         )
