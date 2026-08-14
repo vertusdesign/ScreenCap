@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 12 August 2026. Applies to ScreenCap 2.0.0.**
+**Last updated: 14 August 2026. Applies to ScreenCap 2.2.0.**
 
 ScreenCap collects nothing, stores nothing about you, and sends nothing anywhere. This
 document exists because the app requests a powerful permission, and you deserve a precise

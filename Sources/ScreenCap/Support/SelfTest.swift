@@ -199,6 +199,15 @@ enum SelfTest {
             print("  ✗ распознавание текста не стоит вторым инструментом")
         }
 
+        let scrollProbe = CGSize(width: 12, height: -8)
+        let reversedScroll = SystemScrollDirection.contentDelta(scrollProbe, naturalScrolling: false)
+        if reversedScroll == CGSize(width: -12, height: 8) {
+            print("  ✓ направление панорамирования учитывает системную настройку прокрутки")
+        } else {
+            failures.append("направление системной прокрутки")
+            print("  ✗ направление системной прокрутки")
+        }
+
         // 3. Filename template expansion.
         let name = ImageOutput.filename(for: rendered)
         if name.isEmpty || name.contains("{") {
@@ -242,7 +251,7 @@ enum SelfTest {
             imageSize: largeImage,
             viewport: viewport
         )
-        if initialOrigin == CGPoint(x: 360, y: 360),
+        if initialOrigin == CGPoint(x: -600, y: -400),
            constrainedMinimum == expectedMinimum,
            maximumProbe == CGPoint(x: expectedMaximumX, y: expectedMaximumY) {
             print("  ✓ открытое изображение: 100% и границы панорамирования")
@@ -261,53 +270,43 @@ enum SelfTest {
             print("  ✗ центрирование небольшого изображения (origin: \(smallOrigin))")
         }
 
-        let expandedCanvasSize = CGSize(width: 30, height: 28)
-        let expandedCanvasRect = CGRect(x: -5, y: -3, width: expandedCanvasSize.width, height: expandedCanvasSize.height)
-        let primaryFill = NSColor(srgbRed: 0.2, green: 0.4, blue: 0.8, alpha: 1)
-        if let context = CGContext(
-            data: nil,
-            width: Int(expandedCanvasSize.width),
-            height: Int(expandedCanvasSize.height),
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) {
-            context.translateBy(x: -expandedCanvasRect.minX, y: -expandedCanvasRect.minY)
-            let previous = NSGraphicsContext.current
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
-            primaryFill.setFill()
-            expandedCanvasRect.fill()
-            context.draw(base, in: CGRect(origin: .zero, size: pointSize))
-            NSGraphicsContext.current = previous
-
-            let expandedImage = context.makeImage()
-            let outsideColor = expandedImage.flatMap {
-                // x=1 is one point into the left extension; y=27 is one point
-                // into the bottom extension in the editor's bottom-left space.
-                pixelColor(in: $0, at: CGPoint(x: 1, y: 27), scale: 1)
-            }?.usingColorSpace(.sRGB)
-            let expectedFill = primaryFill.usingColorSpace(.sRGB)
-            if let outsideColor, let expectedFill,
-               // Compare in the same AppKit/CG colour pipeline used by the
-               // editor, avoiding false failures from colour-profile rounding.
-               abs(outsideColor.redComponent - expectedFill.redComponent) < 0.1,
-               abs(outsideColor.greenComponent - expectedFill.greenComponent) < 0.1,
-               abs(outsideColor.blueComponent - expectedFill.blueComponent) < 0.1 {
-                print("  ✓ расширение canvas заливается основным цветом")
-            } else {
-                failures.append("заливка расширенного canvas")
-                let actual = outsideColor.map {
-                    "\($0.redComponent),\($0.greenComponent),\($0.blueComponent)"
-                } ?? "nil"
-                let expected = expectedFill.map {
-                    "\($0.redComponent),\($0.greenComponent),\($0.blueComponent)"
-                } ?? "nil"
-                print("  ✗ заливка расширенного canvas (actual: \(actual), expected: \(expected))")
-            }
+        let expandedCanvasRect = CGRect(x: -240, y: -120, width: 2_640, height: 1_780)
+        let expandedCanvasOrigin = OpenedImageEditorGeometry.constrainedCanvasImageOrigin(
+            proposedImageOrigin: CGPoint(x: 10_000, y: 10_000),
+            canvasRect: expandedCanvasRect,
+            viewport: viewport
+        )
+        let expectedExpandedCanvasOrigin = CGPoint(
+            x: expectedMaximumX - expandedCanvasRect.minX,
+            y: expectedMaximumY - expandedCanvasRect.minY
+        )
+        if expandedCanvasOrigin == expectedExpandedCanvasOrigin {
+            print("  ✓ расширенное полотно добавляет область в панорамирование")
         } else {
-            failures.append("создание тестового expanded canvas")
-            print("  ✗ создание тестового expanded canvas")
+            failures.append("панорамирование расширенного canvas")
+            print("  ✗ панорамирование расширенного canvas (actual: \(expandedCanvasOrigin), expected: \(expectedExpandedCanvasOrigin))")
+        }
+
+        let originalImageRect = CGRect(x: 0, y: 0, width: 20, height: 18)
+        let expandedSelection = CGRect(x: -5, y: -3, width: 30, height: 28)
+        let extensionRects = OpenedImageEditorGeometry.canvasExtensionRects(
+            selection: expandedSelection,
+            imageRect: originalImageRect
+        )
+        let extensionArea = extensionRects.reduce(CGFloat.zero) { $0 + $1.width * $1.height }
+        let expectedExtensionArea = expandedSelection.width * expandedSelection.height
+            - originalImageRect.width * originalImageRect.height
+        let noExtensionForOriginalImage = OpenedImageEditorGeometry.canvasExtensionRects(
+            selection: originalImageRect,
+            imageRect: originalImageRect
+        ).isEmpty
+        if extensionRects.count == 4,
+           abs(extensionArea - expectedExtensionArea) < 0.001,
+           noExtensionForOriginalImage {
+            print("  ✓ фон редактора отделён от заливки расширенного canvas")
+        } else {
+            failures.append("геометрия заливки расширенного canvas")
+            print("  ✗ геометрия заливки расширенного canvas")
         }
 
         // 6. Hotkey encoding round-trip.

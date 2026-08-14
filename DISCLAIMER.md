@@ -8,7 +8,7 @@ anything working.
 
 ## Stable release, with documented boundaries
 
-Version 2.0.0 is the current stable release. The capture, drawing, export and core full-display
+Version 2.2.0 is the current stable release. The capture, drawing, export and core full-display
 recording paths work and have been tested by hand. The remaining intentional boundaries are listed in the
 [README](README.md#known-limitations).
 

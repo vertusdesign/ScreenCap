@@ -26,6 +26,7 @@ final class RecorderWriterService: @unchecked Sendable {
     private var receivedSamples: [RecorderOutputType: Int] = [:]
     private var appendedSamples: [RecorderOutputType: Int] = [:]
     private var lastEndTimes: [RecorderOutputType: Double] = [:]
+    private let backpressureTimeout: TimeInterval = 5.0
 
     var outputURL: URL { file.url }
     var requestedMicrophone: Bool { captureMicrophone }
@@ -65,7 +66,7 @@ final class RecorderWriterService: @unchecked Sendable {
         writer.movieFragmentInterval = CMTime(seconds: 5, preferredTimescale: 1_000)
     }
 
-    func append(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) {
+    func append(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) async {
         guard !hasFinished else { return }
         guard type != .systemAudio || captureSystemAudio else { return }
         guard type != .microphone || captureMicrophone else { return }
@@ -98,19 +99,22 @@ final class RecorderWriterService: @unchecked Sendable {
             // Keep startup bounded if a device never emits its first buffer.
             // The session will fall back to video + system audio after the
             // startup grace period.
-            let limit = type == .screen ? 120 : 64
+            let limit = type == .screen ? 600 : 256
             if pending[type, default: []].count < limit {
                 pending[type, default: []].append(bufferToAppend)
-            } else if type == .screen {
-                droppedVideoFrames += 1
+            } else {
+                let reason = "recorder startup queue overflow for \(type)"
+                failure = RecorderError.writerFailed(reason)
+                Log.error(reason)
+                return
             }
             if canStart {
-                startIfPossible()
+                await startIfPossible()
             }
             return
         }
 
-        appendRetimed(bufferToAppend, type: type)
+        await appendRetimed(bufferToAppend, type: type)
     }
 
     /// If a microphone is unavailable, finish with video + system audio rather
@@ -141,7 +145,7 @@ final class RecorderWriterService: @unchecked Sendable {
             // Finish a valid video (and any microphone track already available)
             // instead of turning that case into a zero-byte recording. When
             // system audio is present, it is still added normally.
-            startIfPossible(
+            await startIfPossible(
                 forceWithoutMicrophone: false,
                 forceWithoutSystemAudio: true
             )
@@ -165,7 +169,13 @@ final class RecorderWriterService: @unchecked Sendable {
             }
         }
         let outputURL = await RecorderPostProcessor.addCompositeAudioTrack(to: file.url)
-        await RecorderPostProcessor.validateFinalRecording(at: outputURL)
+        let validation = await RecorderPostProcessor.validateFinalRecording(at: outputURL)
+        guard validation.isValid else {
+            RecorderRecovery.clearMarker(for: file.url)
+            throw RecorderError.writerFailed(
+                "final recording failed container validation: \(validation.summary)"
+            )
+        }
         RecorderRecovery.clearMarker(for: file.url)
         return outputURL
     }
@@ -176,9 +186,9 @@ final class RecorderWriterService: @unchecked Sendable {
         writer.cancelWriting()
     }
 
-    func startWithAvailableTracksIfNeeded() {
+    func startWithAvailableTracksIfNeeded() async {
         guard !hasStarted else { return }
-        startIfPossible(
+        await startIfPossible(
             forceWithoutMicrophone: false,
             forceWithoutSystemAudio: true
         )
@@ -220,7 +230,7 @@ final class RecorderWriterService: @unchecked Sendable {
     private func startIfPossible(
         forceWithoutMicrophone: Bool = false,
         forceWithoutSystemAudio: Bool = false
-    ) {
+    ) async {
         guard !hasStarted, failure == nil else { return }
         let useMicrophone = captureMicrophone && !forceWithoutMicrophone
 
@@ -279,7 +289,7 @@ final class RecorderWriterService: @unchecked Sendable {
             for (type, samples) in buffers {
                 guard inputs[type] != nil else { continue }
                 for sample in samples {
-                    appendRetimed(sample, type: type)
+                    await appendRetimed(sample, type: type)
                 }
             }
         } catch {
@@ -303,7 +313,13 @@ final class RecorderWriterService: @unchecked Sendable {
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: 10_000_000,
                 AVVideoExpectedSourceFrameRateKey: 60,
-                AVVideoMaxKeyFrameIntervalKey: 120
+                // ScreenCap writes a real-time screen stream. B-frame
+                // reordering produces negative composition offsets in the
+                // MOV ctts table. Apple players understand the resulting
+                // cslg workaround, but VLC and several other players do not.
+                // A no-reordering stream keeps PTS/DTS portable and stable.
+                AVVideoAllowFrameReorderingKey: false,
+                AVVideoMaxKeyFrameIntervalKey: 60
             ]
         ]
         if usesHardwareVideoEncoder {
@@ -414,34 +430,68 @@ final class RecorderWriterService: @unchecked Sendable {
         return result
     }
 
-    private func appendRetimed(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) {
+    private func appendRetimed(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) async {
         guard failure == nil else { return }
-        guard let input = inputs[type], input.isReadyForMoreMediaData else {
-            if type == .screen { droppedVideoFrames += 1 }
+        guard let input = inputs[type] else {
             return
         }
         guard let baseTime else { return }
 
         let presentationTime = sampleBuffer.presentationTimeStamp
-        guard presentationTime.isValid, CMTimeCompare(presentationTime, baseTime) >= 0 else {
+        guard presentationTime.isValid else {
+            let reason = "recorder received a video sample without a valid presentation timestamp"
+            if type == .screen { droppedVideoFrames += 1 }
+            failure = RecorderError.writerFailed(reason)
+            Log.error(reason)
+            return
+        }
+        guard CMTimeCompare(presentationTime, baseTime) >= 0 else {
+            let reason = "recorder received a sample before the recording timeline origin"
+            if type == .screen { droppedVideoFrames += 1 }
+            failure = RecorderError.writerFailed(reason)
+            Log.error(reason)
             return
         }
 
         guard let adjusted = copy(sampleBuffer, subtracting: baseTime) else {
             if type == .screen { droppedVideoFrames += 1 }
+            failure = RecorderError.writerFailed(
+                "recorder could not retime a \(type) sample"
+            )
+            Log.error("recorder could not retime a \(type) sample")
             return
         }
+
+        let deadline = Date().addingTimeInterval(backpressureTimeout)
+        while !input.isReadyForMoreMediaData {
+            if writer.status == .failed || writer.status == .cancelled {
+                failure = RecorderError.writerFailed(
+                    writer.error?.localizedDescription ?? "writer stopped while accepting media"
+                )
+                return
+            }
+            if Date() >= deadline {
+                let reason = "recorder writer backpressure timeout for \(type)"
+                failure = RecorderError.writerFailed(reason)
+                Log.error(reason)
+                return
+            }
+            try? await Task.sleep(nanoseconds: 2_000_000)
+        }
+
         guard input.append(adjusted) else {
-            if type == .screen { droppedVideoFrames += 1 }
-            let reason = writer.error?.localizedDescription ?? "unknown"
+            let reason = writer.error?.localizedDescription ?? "could not append media sample"
             if writer.status == .failed {
                 failure = RecorderError.writerFailed(reason)
+            } else {
+                failure = RecorderError.writerFailed(
+                    "recorder input append failed for \(type): \(reason)"
+                )
             }
             Log.error(
                 "recorder input append failed: type=\(type) writerStatus=\(writer.status.rawValue) " +
                 "reason=\(reason) details=\(describe(writer.error))"
             )
-            Log.debug("recorder input append failed: \(reason)")
             return
         }
         appendedSamples[type, default: 0] += 1

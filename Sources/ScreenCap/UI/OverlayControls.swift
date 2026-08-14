@@ -63,14 +63,41 @@ class OverlayPanel: NSVisualEffectView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not supported") }
 
-    /// The panel swallows clicks so a press on a button never falls through and
-    /// starts a new selection underneath.
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        let hit = super.hitTest(point)
-        return hit ?? (bounds.contains(convert(point, from: superview)) ? self : nil)
+    /// Finds a control without depending on the default hit-test behaviour of
+    /// `NSVisualEffectView`. That behaviour is normally fine, but can return
+    /// the effect view itself when the panel has been moved through a second
+    /// canvas hierarchy (the opened-image editor). In that case the panel's
+    /// own `mouseDown` would swallow the event before it reached a button.
+    private func control(at point: NSPoint, in view: NSView) -> NSControl? {
+        for child in view.subviews.reversed() where !child.isHidden && child.alphaValue > 0 {
+            let childPoint = child.convert(point, from: view)
+            guard child.bounds.contains(childPoint) else { continue }
+            if let control = child as? NSControl {
+                return control
+            }
+            if let control = control(at: childPoint, in: child) {
+                return control
+            }
+        }
+        return nil
     }
 
-    override func mouseDown(with event: NSEvent) { /* swallow */ }
+    /// The panel swallows clicks so a press on a button never falls through and
+    /// starts a new selection underneath, while still routing a button press to
+    /// the actual control even when AppKit's recursive hit-test stops at the
+    /// visual-effect container.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard bounds.contains(point) else { return nil }
+        return control(at: point, in: self) ?? self
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if let button = control(at: point, in: self), button !== self {
+            button.performClick(nil)
+        }
+        // Empty panel space remains intentionally inert.
+    }
 }
 
 /// Square icon button used throughout the overlay chrome.

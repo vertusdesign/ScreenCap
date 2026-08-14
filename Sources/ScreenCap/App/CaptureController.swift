@@ -7,6 +7,7 @@ final class CaptureController {
     private var overlay: OverlayController?
     private var isCapturing = false
     private var isEditingOpenedImage = false
+    private var openedImageURL: URL?
     private var previousApp: NSRunningApplication?
 
     /// Remembered for the "repeat last area" shortcut.
@@ -90,6 +91,7 @@ final class CaptureController {
         Log.debug("open image \(url.path)")
         isCapturing = true
         isEditingOpenedImage = true
+        openedImageURL = url.standardizedFileURL
         previousApp = NSWorkspace.shared.frontmostApplication
 
         Task { @MainActor in
@@ -101,6 +103,7 @@ final class CaptureController {
             } catch {
                 isCapturing = false
                 isEditingOpenedImage = false
+                openedImageURL = nil
                 Feedback.flash(message: L10n.t("error.openImage"), subtitle: error.localizedDescription)
                 previousApp = nil
             }
@@ -142,6 +145,7 @@ final class CaptureController {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else {
             isCapturing = false
             isEditingOpenedImage = false
+            openedImageURL = nil
             previousApp = nil
             return
         }
@@ -199,6 +203,7 @@ final class CaptureController {
         if !isEditingOpenedImage {
             lastGlobalRect = globalRect
         }
+        let sourceURL = isEditingOpenedImage ? openedImageURL : nil
 
         // Take the overlay down first: the save and print panels are ordinary
         // modal windows and behave badly underneath a shielding-level window.
@@ -215,7 +220,18 @@ final class CaptureController {
             Feedback.flash(message: L10n.t("toast.copied"))
 
         case .save, .saveAs:
-            if let url = ImageOutput.save(image, forcePanel: action == .saveAs) {
+            let savedURL: URL?
+            if let sourceURL {
+                savedURL = ImageOutput.save(
+                    image,
+                    forcePanel: action == .saveAs,
+                    preferredDirectory: sourceURL.deletingLastPathComponent(),
+                    suggestedName: ImageOutput.openedImageFilename(for: sourceURL)
+                )
+            } else {
+                savedURL = ImageOutput.save(image, forcePanel: action == .saveAs)
+            }
+            if let url = savedURL {
                 if Settings.shared.copyOnSave { ImageOutput.copyToClipboard(image) }
                 Feedback.shutter()
                 Feedback.flash(
@@ -237,6 +253,7 @@ final class CaptureController {
         overlay = nil
         isCapturing = false
         isEditingOpenedImage = false
+        openedImageURL = nil
         // The tooltip is a singleton window outliving any one overlay — if the
         // session ends (e.g. a shortcut fires) while the pointer is still
         // sitting over a button, its scheduled/visible tooltip would otherwise

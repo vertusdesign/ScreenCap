@@ -29,42 +29,75 @@ enum ImageOutput {
     // MARK: - Saving
 
     /// Saves using the configured folder, filename template and image format.
+    /// A caller may provide a preferred directory/name for document editing;
+    /// ordinary screenshot saves continue to use the user preferences.
     @discardableResult
-    static func save(_ captured: CapturedImage, forcePanel: Bool) -> URL? {
+    static func save(
+        _ captured: CapturedImage,
+        forcePanel: Bool,
+        preferredDirectory: URL? = nil,
+        suggestedName: String? = nil
+    ) -> URL? {
         let format = Settings.shared.imageFormat
-        let suggestedName = filename(for: captured)
+        let suggestedName = suggestedName ?? filename(for: captured)
+        let directory = preferredDirectory ?? Settings.shared.saveDirectory
 
         if forcePanel || Settings.shared.askWhereToSave {
-            return saveWithPanel(captured, suggestedName: suggestedName, format: format)
+            return saveWithPanel(
+                captured,
+                suggestedName: suggestedName,
+                format: format,
+                directory: directory
+            )
         }
 
-        let directory = Settings.shared.saveDirectory
         do {
             try FileManager.default.createDirectory(
                 at: directory,
                 withIntermediateDirectories: true
             )
         } catch {
-            presentError(L10n.t("error.createFolder"), error)
-            return saveWithPanel(captured, suggestedName: suggestedName, format: format)
+            if preferredDirectory == nil {
+                presentError(L10n.t("error.createFolder"), error)
+            }
+            return saveWithPanel(
+                captured,
+                suggestedName: suggestedName,
+                format: format,
+                directory: directory
+            )
         }
 
         let url = uniqueURL(in: directory, name: suggestedName, extension: format.fileExtension)
-        guard write(captured, to: url, format: format) else { return nil }
+        guard write(captured, to: url, format: format, showError: preferredDirectory == nil) else {
+            // Finder may open a file from a location that is readable but not
+            // writable. Keep the user's work recoverable by falling back to a
+            // normal save panel instead of ending the save attempt silently.
+            if preferredDirectory != nil {
+                return saveWithPanel(
+                    captured,
+                    suggestedName: suggestedName,
+                    format: format,
+                    directory: directory
+                )
+            }
+            return nil
+        }
         return url
     }
 
     private static func saveWithPanel(
         _ captured: CapturedImage,
         suggestedName: String,
-        format: ImageFormat
+        format: ImageFormat,
+        directory: URL
     ) -> URL? {
         // The overlay runs at shielding level; the panel has to be lifted above it.
         let panel = NSSavePanel()
         var selectedFormat = format
         panel.allowedContentTypes = [selectedFormat.contentType]
         panel.nameFieldStringValue = suggestedName + "." + selectedFormat.fileExtension
-        panel.directoryURL = Settings.shared.saveDirectory
+        panel.directoryURL = directory
         panel.canCreateDirectories = true
         panel.level = .init(rawValue: Int(CGShieldingWindowLevel()) + 2)
 
@@ -86,16 +119,25 @@ enum ImageOutput {
     }
 
     @discardableResult
-    private static func write(_ captured: CapturedImage, to url: URL, format: ImageFormat) -> Bool {
+    private static func write(
+        _ captured: CapturedImage,
+        to url: URL,
+        format: ImageFormat,
+        showError: Bool = true
+    ) -> Bool {
         guard let data = encode(captured, as: format) else {
-            presentError(L10n.t(format == .png ? "error.encodePNG" : "error.encodeJPEG"), nil)
+            if showError {
+                presentError(L10n.t(format == .png ? "error.encodePNG" : "error.encodeJPEG"), nil)
+            }
             return false
         }
         do {
             try data.write(to: url, options: .atomic)
             return true
         } catch {
-            presentError(L10n.t("error.saveFile"), error)
+            if showError {
+                presentError(L10n.t("error.saveFile"), error)
+            }
             return false
         }
     }
@@ -145,6 +187,17 @@ enum ImageOutput {
     }
 
     // MARK: - Filename
+
+    /// Suggested name for an edited Finder image. The source extension is not
+    /// reused because the configured output format controls the actual export.
+    static func openedImageFilename(for sourceURL: URL) -> String {
+        let base = sourceURL.deletingPathExtension().lastPathComponent
+        let sanitized = base
+            .components(separatedBy: CharacterSet(charactersIn: "/:\\?%*|\"<>") )
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (sanitized.isEmpty ? L10n.t("filename.fallback") : sanitized) + "_ScreenCap"
+    }
 
     /// Expands the filename template: `{date}`, `{time}`, `{timestamp}`,
     /// `{width}`, `{height}`.

@@ -30,7 +30,12 @@ actor RecordingSession {
         self.writer = writer
 
         var createdContinuation: AsyncStream<RecordingSample>.Continuation?
-        let stream = AsyncStream<RecordingSample>(bufferingPolicy: .bufferingNewest(180)) { continuation in
+        // Keep the oldest samples when the writer is briefly busy. The old
+        // bufferingNewest policy silently discarded video samples, creating
+        // multi-minute holes in the final timeline. If this bounded queue is
+        // ever exhausted, fail the session explicitly instead of publishing a
+        // file with an unexplained gap.
+        let stream = AsyncStream<RecordingSample>(bufferingPolicy: .bufferingOldest(4096)) { continuation in
             createdContinuation = continuation
         }
         guard let continuation = createdContinuation else {
@@ -50,7 +55,17 @@ actor RecordingSession {
         }
         engine.onSampleBuffer = { [weak self] sampleBuffer, outputType in
             guard self != nil else { return }
-            continuation.yield(RecordingSample(buffer: sampleBuffer, type: outputType))
+            switch continuation.yield(RecordingSample(buffer: sampleBuffer, type: outputType)) {
+            case .enqueued(_):
+                break
+            case .dropped:
+                Log.error("recorder sample queue overflow; stopping before a timeline gap is created")
+                Task { await self?.fail(RecorderError.writerFailed("recording pipeline overloaded")) }
+            case .terminated:
+                break
+            @unknown default:
+                break
+            }
         }
         engine.onFailure = { [weak self] error in
             Task { await self?.fail(error) }
@@ -122,9 +137,9 @@ actor RecordingSession {
         setState(.idle)
     }
 
-    private func append(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) {
+    private func append(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) async {
         guard !hasFailed, state == .recording || state == .preparing else { return }
-        writer.append(sampleBuffer, type: type)
+        await writer.append(sampleBuffer, type: type)
         if let failure = writer.failure {
             fail(failure)
         }
@@ -144,9 +159,9 @@ actor RecordingSession {
         setState(.failed(error.localizedDescription))
     }
 
-    private func startWithAvailableTracksIfNeeded() {
+    private func startWithAvailableTracksIfNeeded() async {
         guard state == .recording else { return }
-        writer.startWithAvailableTracksIfNeeded()
+        await writer.startWithAvailableTracksIfNeeded()
         let metrics = writer.metricsSnapshot()
         if writer.requestedMicrophone,
            metrics.receivedMicrophoneSamples == 0,

@@ -1,15 +1,34 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import CoreMedia
 
 @available(macOS 15.0, *)
 enum RecorderPostProcessor {
-    static func validateFinalRecording(at url: URL) async {
+    // AVFoundation's writer/reader objects are intentionally confined to the
+    // serial post-processing queue below. The SDK marks them non-Sendable, but
+    // requestMediaDataWhenReady uses a @Sendable callback even though the
+    // callback is executed on that explicitly owned queue. Keep the boundary
+    // explicit until the planned Swift 6 actor migration can replace it with
+    // a stronger isolation model.
+    private final class QueueConfined<Value>: @unchecked Sendable {
+        var value: Value
+
+        init(_ value: Value) {
+            self.value = value
+        }
+    }
+
+    struct ValidationResult: Sendable {
+        let isValid: Bool
+        let summary: String
+    }
+
+    static func validateFinalRecording(at url: URL) async -> ValidationResult {
         do {
             let asset = AVURLAsset(url: url)
             let tracks = try await asset.load(.tracks)
             guard let video = tracks.first(where: { $0.mediaType == .video }) else {
                 Log.error("recorder validation failed: final file has no video track")
-                return
+                return ValidationResult(isValid: false, summary: "no video track")
             }
             let videoRange = try await video.load(.timeRange)
             let videoDuration = videoRange.duration.seconds
@@ -30,7 +49,28 @@ enum RecorderPostProcessor {
             )
             guard videoDuration.isFinite, videoDuration > 0 else {
                 Log.error("recorder validation failed: video duration is invalid")
-                return
+                return ValidationResult(isValid: false, summary: "invalid video duration")
+            }
+
+            let timeline = try inspectVideoTimeline(asset: asset, track: video)
+            if timeline.invalidTimingSamples > 0 {
+                Log.error(
+                    "recorder validation failed: video contains "
+                        + "\(timeline.invalidTimingSamples) invalid timing samples"
+                )
+            }
+            if timeline.negativeCompositionSamples > 0 {
+                Log.error(
+                    "recorder validation failed: video contains "
+                        + "\(timeline.negativeCompositionSamples) negative PTS/DTS offsets"
+                )
+            }
+            if timeline.maxDecodeGap > 2.0 {
+                Log.diagnostic(
+                    "recorder video timeline gap="
+                        + String(format: "%.3f", timeline.maxDecodeGap)
+                        + "s (a static screen can legitimately produce a gap)"
+                )
             }
             for duration in audioDurations where abs(duration - videoDuration) > 1.0 {
                 Log.error(
@@ -41,8 +81,14 @@ enum RecorderPostProcessor {
                         + "s"
                 )
             }
+            let valid = timeline.sampleCount > 0
+                && timeline.invalidTimingSamples == 0
+                && timeline.negativeCompositionSamples == 0
+            let summary = timeline.summary
+            return ValidationResult(isValid: valid, summary: summary)
         } catch {
             Log.error("recorder final validation failed: \(error.localizedDescription)")
+            return ValidationResult(isValid: false, summary: error.localizedDescription)
         }
     }
 
@@ -151,6 +197,7 @@ enum RecorderPostProcessor {
         try? FileManager.default.removeItem(at: temporaryURL)
 
         let writer = try AVAssetWriter(outputURL: temporaryURL, fileType: .mov)
+        writer.shouldOptimizeForNetworkUse = true
         let videoInput = AVAssetWriterInput(
             mediaType: .video,
             outputSettings: nil,
@@ -261,13 +308,16 @@ enum RecorderPostProcessor {
         writer: AVAssetWriter,
         initialSample: CMSampleBuffer? = nil
     ) async throws -> Int {
-        try await withCheckedThrowingContinuation {
+        let outputBox = QueueConfined(output)
+        let inputBox = QueueConfined(input)
+        let writerBox = QueueConfined(writer)
+        let pendingInitialSampleBox = QueueConfined(initialSample)
+        return try await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<Int, Error>) in
             let queue = DispatchQueue(
                 label: "com.vertusdesign.ScreenCap.recorder.postprocess",
                 qos: .userInitiated
             )
-            var pendingInitialSample = initialSample
             var count = 0
             var didFinish = false
 
@@ -278,35 +328,35 @@ enum RecorderPostProcessor {
                 continuation.resume(with: result)
             }
 
-            input.requestMediaDataWhenReady(on: queue) {
+            inputBox.value.requestMediaDataWhenReady(on: queue) {
                 guard !didFinish else { return }
 
-                while input.isReadyForMoreMediaData {
-                    if writer.status == .failed || writer.status == .cancelled {
+                while inputBox.value.isReadyForMoreMediaData {
+                    if writerBox.value.status == .failed || writerBox.value.status == .cancelled {
                         finish(.failure(RecorderPostProcessorError.writerFailed(
-                            writer.error?.localizedDescription
+                            writerBox.value.error?.localizedDescription
                                 ?? "writer stopped during post-processing"
                         )))
                         return
                     }
 
                     let sampleBuffer: CMSampleBuffer?
-                    if let initial = pendingInitialSample {
+                    if let initial = pendingInitialSampleBox.value {
                         sampleBuffer = initial
-                        pendingInitialSample = nil
+                        pendingInitialSampleBox.value = nil
                     } else {
-                        sampleBuffer = output.copyNextSampleBuffer()
+                        sampleBuffer = outputBox.value.copyNextSampleBuffer()
                     }
 
                     guard let sampleBuffer else {
-                        input.markAsFinished()
+                        inputBox.value.markAsFinished()
                         finish(.success(count))
                         return
                     }
 
-                    guard input.append(sampleBuffer) else {
+                    guard inputBox.value.append(sampleBuffer) else {
                         finish(.failure(RecorderPostProcessorError.writerFailed(
-                            writer.error?.localizedDescription
+                            writerBox.value.error?.localizedDescription
                                 ?? "could not append media sample"
                         )))
                         return
@@ -318,13 +368,14 @@ enum RecorderPostProcessor {
     }
 
     private static func finish(writer: AVAssetWriter) async throws {
+        let writerBox = QueueConfined(writer)
         try await withCheckedThrowingContinuation { continuation in
-            writer.finishWriting {
-                if writer.status == .completed {
+            writerBox.value.finishWriting {
+                if writerBox.value.status == .completed {
                     continuation.resume(returning: ())
                 } else {
                     continuation.resume(throwing: RecorderPostProcessorError.writerFailed(
-                        writer.error?.localizedDescription
+                        writerBox.value.error?.localizedDescription
                             ?? "could not finish composite movie"
                     ))
                 }
@@ -353,6 +404,92 @@ enum RecorderPostProcessor {
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: channelCount
         ]
+    }
+
+    private struct VideoTimelineReport {
+        var sampleCount = 0
+        var invalidTimingSamples = 0
+        var negativeCompositionSamples = 0
+        var maxDecodeGap = 0.0
+
+        var summary: String {
+            "samples=\(sampleCount), invalidTiming=\(invalidTimingSamples), "
+                + "negativeComposition=\(negativeCompositionSamples), "
+                + "maxDecodeGap=\(String(format: "%.3f", maxDecodeGap))s"
+        }
+    }
+
+    private static func inspectVideoTimeline(
+        asset: AVAsset,
+        track: AVAssetTrack
+    ) throws -> VideoTimelineReport {
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        output.alwaysCopiesSampleData = false
+        guard reader.canAdd(output) else {
+            throw RecorderPostProcessorError.readerFailed("could not inspect final video track")
+        }
+        reader.add(output)
+        guard reader.startReading() else {
+            throw RecorderPostProcessorError.readerFailed(
+                reader.error?.localizedDescription ?? "could not read final video track"
+            )
+        }
+
+        var report = VideoTimelineReport()
+        var previousDecodeTime: Double?
+        while let sample = output.copyNextSampleBuffer() {
+            // AVAssetReader may expose zero-sample boundary buffers at the
+            // beginning/end of a compressed track. They carry no media data
+            // and legitimately have an indefinite timestamp; treating them
+            // as video samples creates a false validation failure on otherwise
+            // playable long recordings.
+            guard CMSampleBufferGetNumSamples(sample) > 0 else {
+                continue
+            }
+
+            report.sampleCount += 1
+            let presentation = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+            let decode = CMSampleBufferGetDecodeTimeStamp(sample).seconds
+            let duration = CMSampleBufferGetDuration(sample).seconds
+
+            guard presentation.isFinite,
+                  presentation >= -0.001
+            else {
+                report.invalidTimingSamples += 1
+                continue
+            }
+            if duration.isInfinite {
+                report.invalidTimingSamples += 1
+            }
+
+            if decode.isFinite {
+                if let previousDecodeTime {
+                    let gap = decode - previousDecodeTime
+                    if gap < -0.001 {
+                        report.invalidTimingSamples += 1
+                    } else {
+                        report.maxDecodeGap = max(report.maxDecodeGap, gap)
+                    }
+                }
+                previousDecodeTime = decode
+            }
+
+            if presentation + 0.001 < decode {
+                // A negative composition offset requires ctts version 1. The
+                // current recorder deliberately disables frame reordering so
+                // this is a portable-container failure, not merely a seek
+                // quirk in one player.
+                report.negativeCompositionSamples += 1
+            }
+        }
+
+        guard reader.status == .completed else {
+            throw RecorderPostProcessorError.readerFailed(
+                reader.error?.localizedDescription ?? "video timeline inspection did not complete"
+            )
+        }
+        return report
     }
 
     private static func linearPCMSettings(

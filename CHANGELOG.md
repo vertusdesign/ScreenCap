@@ -3,6 +3,29 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] — 2026-08-14
+
+More reliable long recordings and a smoother opened-image editing workflow.
+
+### Added and improved
+
+- **Recording output reliability**: bounded writer backpressure, explicit overflow handling,
+  safer QuickTime timestamp validation and final movie checks for long recordings. The recorder
+  now rejects genuinely incomplete video instead of silently accepting it, while ignoring
+  metadata-only boundary samples that AVFoundation exposes around a valid movie.
+- **Opened-image canvas**: source images open at 100% scale, centre on screen when possible, and
+  support panning with a trackpad gesture or mouse wheel from any annotation tool.
+- **System scroll direction**: opened-image panning follows macOS's Natural scrolling setting.
+- **Opened-image saving**: saving without confirmation prefers the source folder and adds the
+  `_ScreenCap` suffix before the extension, with a Save Panel fallback when needed.
+- **Canvas extension**: dragging an image edge outward expands the scrollable editing area and
+  fills only the newly added area with the current primary colour.
+
+### Compatibility
+
+- The static screenshot workflow remains independent of the recorder.
+- The macOS 14 screenshot and macOS 15 recording requirements remain unchanged.
+
 ## [2.1.0] — 2026-08-13
 
 Text recognition and existing-image annotation, while preserving the stable 2.0 screenshot

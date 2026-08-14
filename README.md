@@ -5,8 +5,8 @@ display with system audio and microphone tracks. A menu-bar screenshot and scree
 recorder for macOS, built because [Lightshot](https://app.prntscr.com/) — the one that did
 this well — is no longer maintained.
 
-**Version 2.1.0 — screenshot, annotation and screen-recording release.** ScreenCap now
-includes a native macOS 15+ recorder, local text recognition and Finder image opening.
+**Version 2.2.0 — reliable recording and opened-image editing release.** ScreenCap includes
+a native macOS 15+ recorder, local text recognition and Finder image opening.
 See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
@@ -135,6 +135,16 @@ open "screencap://record"
 .build/debug/ScreenCap --capture record
 ```
 
+## Opened images
+
+Images opened from Finder use the same annotation editor without changing the source file.
+They open at 100% scale and are centred when possible; large images can be panned with a
+trackpad gesture or mouse wheel from any tool, with the movement following macOS's Natural
+scrolling setting. Dragging an image edge outward extends the editable canvas and fills only
+the new area with the current primary colour. With confirmation disabled, saving writes next
+to the source using a `_ScreenCap` suffix; if that folder is not writable, ScreenCap opens a
+save panel instead.
+
 ## Drawing
 
 Pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbered circles, text and an
@@ -198,21 +208,21 @@ collapses into a single undo step.
 - **No scrolling capture**, recorder microphone source picker, pause/resume, countdown, camera
   overlay, preview/editing window, HDR capture, or click visualization yet. Recording is
   currently one full display at a time and available on macOS 15+.
-- **Audio-device recovery and performance validation remain in progress.** The recorder falls
-  back to video/system audio when a microphone is unavailable, monitors input-route changes,
-  keeps a local diagnostic log, and stops safely when disk space is low. Long-duration,
-  Bluetooth disconnect/reconnect, crash-recovery, and Intel/macOS 15 matrix tests still need
-  broader coverage before those guarantees are considered release-grade.
+- **Audio-device recovery and performance validation remain platform-dependent.** The recorder
+  falls back to video/system audio when a microphone is unavailable, monitors input-route
+  changes, keeps a bounded local diagnostic log, validates the finished movie, and stops safely
+  when disk space is low. Broader Bluetooth disconnect/reconnect, crash-recovery, Intel and
+  macOS 15 matrix coverage remains limited.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.
 - The app has been tested by hand rather than by an automated UI suite. The rendering and
   export paths are covered by `--selftest`.
 
-## Future work after 2.1
+## Future work after 2.2
 
 The following features remain intentionally out of scope for the current stable release and
-should be considered only after 2.1:
+should be considered only after 2.2:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
@@ -273,7 +283,7 @@ make dmg         # DMG + SHA-256 file in dist/
 specific stable release, pass them explicitly, for example:
 
 ```bash
-make dmg VERSION=2.1.0 CHANNEL= BUILD=1
+make dmg VERSION=2.2.0 CHANNEL= BUILD=1
 ```
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful

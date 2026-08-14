@@ -135,6 +135,14 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         CGRect(origin: .zero, size: snapshot.cocoaFrame.size)
     }
 
+    /// The complete content that Move should be able to reveal. An outward
+    /// crop immediately becomes part of the scrollable canvas; an inward crop
+    /// does not make the source image disappear from it.
+    private var openedImageCanvasRect: CGRect {
+        guard isOpenedImageMode, let selection else { return imageRect }
+        return imageRect.union(selection)
+    }
+
     // MARK: - Init
 
     init(snapshot: DisplaySnapshot, mode: CaptureMode, windows: [WindowTarget]) {
@@ -256,15 +264,33 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         cancel()
     }
 
+    /// Give the floating chrome first refusal in every editor mode. The opened
+    /// image editor already performs this routing from `OverlayCanvasView`, but
+    /// a normal screenshot hosts this view directly as the window content view.
+    /// Relying on AppKit's default recursive hit-test in that second hierarchy
+    /// lets a click on a visual-effect panel reach `mouseDown(with:)` here and
+    /// be interpreted as a new selection.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if let hit = hitTestChrome(point, from: self) {
+            return hit
+        }
+        return super.hitTest(point)
+    }
+
     /// Hit-tests panels that may extend beyond the image view in the opened
-    /// image editor. The normal AppKit hit-test path must remain untouched for
-    /// ordinary screenshot overlays, otherwise buttons inside the selection
-    /// view can stop receiving mouse events.
-    func hitTestChrome(_ point: NSPoint) -> NSView? {
+    /// image editor. The point is supplied by a common ancestor (the full-size
+    /// canvas), so this remains correct even when the editor's bounds origin
+    /// and frame have moved independently during panning or canvas growth.
+    func hitTestChrome(_ point: NSPoint, from ancestor: NSView) -> NSView? {
         var panels: [NSView] = [toolStrip, actionBar]
         if let stylePopover { panels.append(stylePopover) }
-        for panel in panels where !panel.isHidden && panel.frame.contains(point) {
-            let localPoint = convert(point, to: panel)
+        for panel in panels where !panel.isHidden {
+            let localPoint = panel.convert(point, from: ancestor)
+            guard panel.bounds.contains(localPoint) else { continue }
+            // Return the deepest control so NSButton receives the mouse-down
+            // and performs its action. Returning the panel as a fallback is
+            // intentional only for its empty background area, which should
+            // swallow the click without starting a capture underneath.
             return panel.hitTest(localPoint) ?? panel
         }
         return nil
@@ -551,7 +577,6 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             else { return event }
             return nil
         }
-
         let analyzer = ImageAnalyzer()
         textAnalysisTask = Task { @MainActor [weak self, weak overlay] in
             do {
@@ -627,6 +652,85 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     func textSelectionDidChange(_ overlayView: ImageAnalysisOverlayView) {
         needsDisplay = true
+    }
+
+    @available(macOS 13.0, *)
+    func overlayView(
+        _ overlayView: ImageAnalysisOverlayView,
+        shouldShowMenuForEvent event: NSEvent,
+        atPoint point: CGPoint
+    ) -> Bool {
+        overlayView.hasActiveTextSelection || overlayView.analysisHasText(at: point)
+    }
+
+    // Keep VisionKit's native text actions, including Look Up and Translate.
+    // Remove only actions that operate on the underlying image/subject or
+    // unrelated sharing/search destinations. Using the native menu is
+    // important: those actions carry their system-provided services and
+    // localization, which a manually rebuilt menu cannot reproduce.
+    @available(macOS 14.0, *)
+    func overlayView(
+        _ overlayView: ImageAnalysisOverlayView,
+        updatedMenuFor menu: NSMenu,
+        for event: NSEvent,
+        at point: CGPoint
+    ) -> NSMenu {
+        filterTextRecognitionMenu(menu)
+        return menu
+    }
+
+    @available(macOS 14.0, *)
+    func overlayView(_ overlayView: ImageAnalysisOverlayView, needsUpdate menu: NSMenu) {
+        filterTextRecognitionMenu(menu)
+    }
+
+    @available(macOS 14.0, *)
+    func overlayView(_ overlayView: ImageAnalysisOverlayView, willOpen menu: NSMenu) {
+        filterTextRecognitionMenu(menu)
+    }
+
+    @available(macOS 14.0, *)
+    private func filterTextRecognitionMenu(_ menu: NSMenu) {
+        let hiddenTags: Set<Int> = [
+            ImageAnalysisOverlayView.MenuTag.copyImage,
+            ImageAnalysisOverlayView.MenuTag.shareImage,
+            ImageAnalysisOverlayView.MenuTag.copySubject,
+            ImageAnalysisOverlayView.MenuTag.shareSubject
+        ]
+        let hiddenTitleTokens = [
+            "google", "search", "share", "image", "subject", "подел", "найти",
+            "изображ", "объект"
+        ]
+
+        for index in menu.items.indices.reversed() {
+            let item = menu.items[index]
+            let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let hasHiddenSemantic = hiddenTitleTokens.contains { title.contains($0) }
+            if hiddenTags.contains(item.tag) || hasHiddenSemantic {
+                menu.removeItem(at: index)
+                continue
+            }
+            if let submenu = item.submenu {
+                filterTextRecognitionMenu(submenu)
+            }
+        }
+
+        // VisionKit can leave a separator behind after a tagged action is
+        // removed. Keep the native menu compact and avoid leading/trailing or
+        // doubled separators.
+        while menu.items.first?.isSeparatorItem == true {
+            menu.removeItem(at: 0)
+        }
+        while menu.items.last?.isSeparatorItem == true {
+            menu.removeItem(at: menu.items.count - 1)
+        }
+        var index = menu.items.count - 1
+        while index > 0 {
+            if menu.items[index].isSeparatorItem && menu.items[index - 1].isSeparatorItem {
+                menu.removeItem(at: index)
+            }
+            index -= 1
+        }
     }
 
     private func toggleStylePopover() {
@@ -1013,7 +1117,11 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
         case .resizing(let handle):
             guard let current = selection else { return }
-            selection = handle.resize(current, to: point).clamped(to: bounds)
+            let resized = handle.resize(current, to: point)
+            if isOpenedImageMode {
+                expandOpenedImageCanvas(to: resized)
+            }
+            selection = resized.clamped(to: bounds)
 
         case .panning(let startImageOrigin, let startWindowPoint):
             let delta = CGSize(
@@ -1093,6 +1201,53 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         }
     }
 
+    /// In the opened-image editor the Move tool also behaves like a lightweight
+    /// scroll view. Both wheel mice and precise trackpad gestures arrive here;
+    /// using `scrollingDelta` preserves the smoother trackpad values while the
+    /// fallback keeps ordinary wheel notches useful.
+    override func scrollWheel(with event: NSEvent) {
+        guard isOpenedImageMode else {
+            super.scrollWheel(with: event)
+            return
+        }
+
+        let multiplier: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 20
+        let rawDelta = CGSize(
+            width: event.scrollingDeltaX * multiplier,
+            height: event.scrollingDeltaY * multiplier
+        )
+        panOpenedImage(by: SystemScrollDirection.contentDelta(rawDelta))
+    }
+
+    /// Trackpad swipe gestures are separate from ordinary two-finger scrolling
+    /// on some macOS versions. Both gestures pan the image regardless of the
+    /// selected annotation tool; no click-drag or Move tool is required.
+    override func swipe(with event: NSEvent) {
+        guard isOpenedImageMode else {
+            super.swipe(with: event)
+            return
+        }
+        panOpenedImage(by: SystemScrollDirection.contentDelta(CGSize(
+            width: event.deltaX * 80,
+            height: event.deltaY * 80
+        )))
+    }
+
+    func panOpenedImage(by delta: CGSize) {
+        guard isOpenedImageMode else { return }
+        guard abs(delta.width) > 0.001 || abs(delta.height) > 0.001 else { return }
+
+        let imageOrigin = CGPoint(
+            x: frame.minX - bounds.minX,
+            y: frame.minY - bounds.minY
+        )
+        setImageOrigin(imageOrigin.offsetBy(dx: delta.width, dy: delta.height))
+        updateChromeVisibility()
+        updateChromeBoundsForCurrentViewport()
+        updateCursor()
+        needsDisplay = true
+    }
+
     private func finishSelectionChange() {
         if var current = selection {
             current = Geometry.pixelAligned(current, scale: snapshot.pixelScale)
@@ -1109,15 +1264,51 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     /// margin, so the image never fills the entire viewport edge-to-edge.
     private func setImageOrigin(_ proposed: CGPoint) {
         guard isOpenedImageMode, let canvas = superview else { return }
-        let origin = OpenedImageEditorGeometry.constrainedImageOrigin(
-            proposed: proposed,
-            imageSize: imageRect.size,
+        let origin = OpenedImageEditorGeometry.constrainedCanvasImageOrigin(
+            proposedImageOrigin: proposed,
+            canvasRect: openedImageCanvasRect,
             viewport: canvas.bounds
         )
         frame.origin = CGPoint(
             x: origin.x + bounds.minX,
             y: origin.y + bounds.minY
         )
+        updateChromeBoundsForCurrentViewport()
+        needsDisplay = true
+    }
+
+    /// Grows the editor view when a crop handle reaches the current reserve.
+    /// The new area therefore becomes real content that Move can pan through,
+    /// instead of stopping at the old image-plus-reserve boundary. The source
+    /// image keeps the same screen position while the local bounds grow around
+    /// it.
+    private func expandOpenedImageCanvas(to proposedSelection: CGRect) {
+        guard isOpenedImageMode else { return }
+        let target = imageRect.union(proposedSelection)
+        let reserve = OpenedImageEditorGeometry.canvasInset
+        let newMinX = min(bounds.minX, target.minX - reserve)
+        let newMinY = min(bounds.minY, target.minY - reserve)
+        let newMaxX = max(bounds.maxX, target.maxX + reserve)
+        let newMaxY = max(bounds.maxY, target.maxY + reserve)
+        let targetBounds = CGRect(
+            x: newMinX,
+            y: newMinY,
+            width: newMaxX - newMinX,
+            height: newMaxY - newMinY
+        )
+        guard targetBounds != bounds else { return }
+
+        let imageOrigin = CGPoint(
+            x: frame.minX - bounds.minX,
+            y: frame.minY - bounds.minY
+        )
+        setFrameSize(targetBounds.size)
+        setBoundsOrigin(targetBounds.origin)
+        frame.origin = CGPoint(
+            x: imageOrigin.x + bounds.minX,
+            y: imageOrigin.y + bounds.minY
+        )
+        updateTrackingAreas()
         updateChromeBoundsForCurrentViewport()
         needsDisplay = true
     }
@@ -1686,9 +1877,8 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
         context.interpolationQuality = .high
         if isOpenedImageMode {
-            style.color.setFill()
-            bounds.fill(using: .sourceOver)
             context.draw(snapshot.image, in: imageRect)
+            drawOpenedImageCanvasFill(for: rect)
         } else {
             context.draw(snapshot.image, in: bounds)
         }
@@ -1887,9 +2077,10 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
         cgContext.interpolationQuality = .none
         if isOpenedImageMode {
-            style.color.setFill()
-            bounds.fill(using: .sourceOver)
             cgContext.draw(snapshot.image, in: imageRect)
+            if let selection {
+                drawOpenedImageCanvasFill(for: selection)
+            }
         } else {
             cgContext.draw(snapshot.image, in: bounds)
         }
@@ -1936,6 +2127,23 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
            selection?.contains(cursorPoint) == true, textEditor == nil,
            !isPointerOverChrome {
             drawBrushCursor(diameter: diameter)
+        }
+    }
+
+    /// Fills only the newly added canvas inside an outward crop. The rest of
+    /// the surrounding editor stays clear, allowing the overlay window's
+    /// semi-transparent background to remain visible just like in screenshot
+    /// capture mode.
+    private func drawOpenedImageCanvasFill(for selection: CGRect) {
+        let extensionRects = OpenedImageEditorGeometry.canvasExtensionRects(
+            selection: selection,
+            imageRect: imageRect
+        )
+        guard !extensionRects.isEmpty else { return }
+
+        style.color.setFill()
+        for rect in extensionRects {
+            rect.intersection(bounds).fill(using: .sourceOver)
         }
     }
 
@@ -2030,8 +2238,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     }
 
     private func drawDimming(excluding selection: CGRect?) {
+        // Opened-image windows already provide the general semi-transparent
+        // backdrop through `OverlayWindow`. Painting these bands as well would
+        // create a second, visibly darker halo around the image/canvas.
+        guard !isOpenedImageMode else { return }
+
         let dim = NSColor.black.withAlphaComponent(
-            isOpenedImageMode ? 0.12 : CGFloat(Settings.shared.dimOpacity)
+            CGFloat(Settings.shared.dimOpacity)
         )
         dim.setFill()
 
@@ -2308,12 +2521,54 @@ final class OverlayCanvasView: NSView {
 
     override var isOpaque: Bool { false }
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        if let editorView {
-            let editorPoint = convert(point, to: editorView)
-            if let hit = editorView.hitTestChrome(editorPoint) { return hit }
+    override func scrollWheel(with event: NSEvent) {
+        guard let editorView else {
+            super.scrollWheel(with: event)
+            return
         }
-        return super.hitTest(point) ?? self
+        let rawDelta = CGSize(
+            width: event.scrollingDeltaX * (event.hasPreciseScrollingDeltas ? 1 : 20),
+            height: event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 1 : 20)
+        )
+        editorView.panOpenedImage(by: SystemScrollDirection.contentDelta(rawDelta))
+    }
+
+    override func swipe(with event: NSEvent) {
+        guard let editorView else {
+            super.swipe(with: event)
+            return
+        }
+        editorView.panOpenedImage(by: SystemScrollDirection.contentDelta(CGSize(
+            width: event.deltaX * 80,
+            height: event.deltaY * 80
+        )))
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let editorView else {
+            return super.hitTest(point) ?? self
+        }
+
+        let editorPoint = convert(point, to: editorView)
+
+        // The opened-image editor deliberately lets its panels live outside the
+        // editor view's image frame. Route those points explicitly first;
+        // relying on the normal parent hit-test would otherwise stop at the
+        // editor view and never reach a toolbar button after the canvas moves
+        // or grows.
+        if let hit = editorView.hitTestChrome(point, from: self) {
+            return hit
+        }
+
+        // For points over the actual editor, ask the editor to resolve its own
+        // subviews (Live Text, text editing and the canvas itself) directly.
+        // This keeps the transparent canvas as a shield without making it the
+        // responder for clicks that belong to the editor.
+        if editorView.frame.contains(point) {
+            return editorView.hitTest(editorPoint) ?? editorView
+        }
+
+        return self
     }
 }
 
