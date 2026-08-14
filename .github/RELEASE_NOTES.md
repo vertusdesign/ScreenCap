@@ -1,17 +1,15 @@
-ScreenCap 2.2.0 improves long-recording output reliability and the opened-image editing workflow.
+ScreenCap 2.2.0 adds text recognition and editing of existing images, while improving the reliability of screen recordings.
 
-### Improvements
+### New since 2.0.0
 
-- Long recordings use bounded writer backpressure, explicit overflow handling and final QuickTime
-  movie validation, so incomplete video is reported instead of being silently accepted.
-- Video saving keeps valid timestamps and handles AVFoundation's metadata-only boundary samples
-  without rejecting an otherwise playable movie.
-- Images opened from Finder start at 100% scale, centre when possible, and can be panned with a
-  trackpad gesture or mouse wheel from any annotation tool.
-- Opened-image panning follows macOS's Natural scrolling preference.
-- Saving an opened image without confirmation prefers the source folder and adds `_ScreenCap`
-  before the extension, with a Save Panel fallback when that folder is unavailable.
-- Extending an opened image's edge expands the scrollable canvas and fills only the new area with
-  the current primary colour.
+- **Text recognition:** a dedicated toolbar tool uses macOS Live Text to recognize text on the image. Recognized text can be selected and looked-up, translated, or copied. The image itself is not modified.
+- **Open images from Finder:** use **Open With → ScreenCap** from Finder to annotate an existing image. Among other features: the image edges can be expanded, which creates additional editable canvas filled with the selected color.
 
-The screenshot path remains independent of screen recording.
+### Screen recording improvements
+
+- **More reliable recordings:** reduced the risk of lost video samples during lengthy or high-resolution recordings.
+- **Improved MOV saving:** fixed cases where a recording could be saved with invalid video timing and then appear frozen or behave incorrectly in some third-party video players (such as VLC), even though it played correctly in QuickTime.
+- **Final file validation:** ScreenCap now checks the finished movie before confirming that the recording was saved. Incomplete or invalid video is reported instead of being silently accepted.
+- **Better compatibility of saved recordings:** video and audio tracks are checked for consistent duration and timeline integrity.
+
+[Full changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md)
