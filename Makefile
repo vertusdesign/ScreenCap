@@ -105,7 +105,9 @@ Resources/AppIcon.icns: Scripts/make-icon.swift
 
 run: app
 ifeq ($(BUILD_FLAVOR),base)
-	-pkill -x $(APP_NAME) || true
+	-pkill -f '/Applications/ScreenCap 3\.app/Contents/MacOS/ScreenCap$$' || true
+	-pkill -f '/Applications/ScreenCap\.app/Contents/MacOS/ScreenCap$$' || true
+	-pkill -f '$(CURDIR)/dist/ScreenCap 3\.app/Contents/MacOS/ScreenCap$$' || true
 endif
 	open "$(APP)"
 
@@ -114,7 +116,8 @@ ifeq ($(BUILD_FLAVOR),pro)
 	@echo "Refusing to install the Pro flavor; launch it from dist instead." >&2
 	@exit 1
 else
-	-pkill -x $(APP_NAME) || true
+	-pkill -f '/Applications/ScreenCap 3\.app/Contents/MacOS/ScreenCap$$' || true
+	-pkill -f '/Applications/ScreenCap\.app/Contents/MacOS/ScreenCap$$' || true
 	-rm -rf "/Applications/ScreenCap.app"
 	-rm -rf "/Applications/ScreenCap 3.app"
 	cp -R "$(APP)" "/Applications/ScreenCap 3.app"
