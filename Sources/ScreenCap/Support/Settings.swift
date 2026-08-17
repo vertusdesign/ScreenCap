@@ -22,6 +22,7 @@ enum RecordingVideoCodec: String, CaseIterable, Identifiable {
 enum RecordingAfterCaptureAction {
     static let nothing = "nothing"
     static let showInFolder = "showInFolder"
+    static let openInPlayer = "openInPlayer"
     static let applicationPrefix = "application:"
 
     static func application(_ bundleIdentifier: String) -> String {
@@ -85,6 +86,7 @@ final class Settings: ObservableObject {
         static let recordingAtLogicalSize = "recordingAtLogicalSize"
         static let recordingVideoCodec = "recordingVideoCodec"
         static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
+        static let playerTranscriptionMode = "playerTranscriptionMode"
     }
 
     private static let toolDefaults: [String: Any] = [
@@ -129,7 +131,8 @@ final class Settings: ObservableObject {
         Key.recordingNoiseSuppression: false,
         Key.recordingAtLogicalSize: false,
         Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
-        Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.nothing
+        Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.openInPlayer,
+        Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
     ]
 
     private init() {
@@ -401,9 +404,18 @@ final class Settings: ObservableObject {
     var recordingAfterCaptureAction: String {
         get {
             defaults.string(forKey: Key.recordingAfterCaptureAction)
-                ?? RecordingAfterCaptureAction.nothing
+                ?? RecordingAfterCaptureAction.openInPlayer
         }
         set { set(newValue, Key.recordingAfterCaptureAction) }
+    }
+
+    var playerTranscriptionMode: PlayerTranscriptionMode {
+        get {
+            PlayerTranscriptionMode(
+                rawValue: defaults.string(forKey: Key.playerTranscriptionMode) ?? ""
+            ) ?? .onDemand
+        }
+        set { set(newValue.rawValue, Key.playerTranscriptionMode) }
     }
 
     var obfuscation: ObfuscationSettings {

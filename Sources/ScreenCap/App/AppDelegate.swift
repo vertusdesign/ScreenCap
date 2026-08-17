@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
@@ -102,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if url.scheme == "screencap" {
                 handle(url)
             } else if url.isFileURL {
-                CaptureController.shared.openImage(url)
+                openDocument(url)
             }
         }
     }
@@ -111,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// the app is registered as an image handler. Keep it as a compatibility
     /// path alongside `application(_:open:)`.
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
-        filenames.forEach { CaptureController.shared.openImage(URL(fileURLWithPath: $0)) }
+        filenames.forEach { openDocument(URL(fileURLWithPath: $0)) }
         sender.reply(toOpenOrPrint: .success)
     }
 
@@ -127,8 +128,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "fullscreen", "screen": CaptureController.shared.perform(.captureFullScreen)
         case "record", "recording": CaptureController.shared.perform(.toggleRecording)
         case "preferences", "settings": PreferencesWindowController.shared.show()
+        case "player", "playback": DispatchQueue.main.async { PlayerWindowController.shared.show() }
         case "about": AboutWindowController.shared.show()
         default: NSLog("ScreenCap: unknown URL command — \(command)")
+        }
+    }
+
+    private func openDocument(_ url: URL) {
+        let contentType = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
+        if contentType?.conforms(to: .movie) == true ||
+            ["mov", "mp4", "m4v", "m4a", "avi", "mkv", "webm"].contains(url.pathExtension.lowercased()) {
+            DispatchQueue.main.async { PlayerWindowController.shared.show(url: url) }
+        } else {
+            CaptureController.shared.openImage(url)
         }
     }
 

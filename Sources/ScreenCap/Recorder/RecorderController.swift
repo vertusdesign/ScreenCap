@@ -502,6 +502,8 @@ final class RecorderController {
             break
         case RecordingAfterCaptureAction.showInFolder:
             NSWorkspace.shared.activateFileViewerSelecting([url])
+        case RecordingAfterCaptureAction.openInPlayer:
+            DispatchQueue.main.async { PlayerWindowController.shared.show(url: url) }
         default:
             guard let bundleIdentifier = RecordingAfterCaptureAction.bundleIdentifier(from: action),
                   let applicationURL = NSWorkspace.shared

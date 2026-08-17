@@ -3,6 +3,26 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] — 2026-08-17
+
+### Added
+
+- **ScreenCap Player module** with a native macOS playback window, recording-library sidebar,
+  folder grouping, add-video/add-folder flows and playlist-only removal.
+- **Synchronized Track Editor** with a composite audio track, raw system/microphone tracks,
+  shared playhead, current/total time, waveform lanes and always-available trim handles.
+- **Non-destructive edits** with mute/remove confirmation, undo/redo, unsaved-edit protection when
+  switching recordings, save-copy and atomic replace-original export paths.
+- **Privacy-first transcription** using Apple's on-device Speech Recognition path when available;
+  transcription is on-demand by default and can be explicitly switched to idle-time automatic mode.
+- **After-recording action**: Open in ScreenCap Player is available in Preferences and is the
+  default for new installations when the player module is present.
+
+### Compatibility
+
+- Existing VLC/QuickTime after-recording actions remain available.
+- Removing a video or folder from the Player library never removes the source files from disk.
+
 ## [2.2.0] — 2026-08-14
 
 More reliable long recordings and a smoother opened-image editing workflow.

@@ -138,6 +138,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        let player = NSMenuItem(
+            title: L10n.t("menu.player"),
+            action: #selector(openPlayer),
+            keyEquivalent: ""
+        )
+        player.target = self
+        player.image = symbol("play.rectangle")
+        menu.addItem(player)
+
         let about = NSMenuItem(
             title: L10n.t("menu.about", AppInfo.name),
             action: #selector(openAbout),
@@ -366,6 +375,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc func openPreferences() {
         PreferencesWindowController.shared.show()
+    }
+
+    @objc private func openPlayer() {
+        DispatchQueue.main.async { PlayerWindowController.shared.show() }
     }
 
     @objc private func openAbout() {

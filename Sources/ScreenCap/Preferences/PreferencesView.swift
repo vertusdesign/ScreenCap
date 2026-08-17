@@ -406,6 +406,8 @@ private struct RecordingTab: View {
                         .tag(RecordingAfterCaptureAction.nothing)
                     Text(L10n.t("prefs.recording.afterCapture.showInFolder"))
                         .tag(RecordingAfterCaptureAction.showInFolder)
+                    Text(L10n.t("prefs.recording.afterCapture.openInPlayer"))
+                        .tag(RecordingAfterCaptureAction.openInPlayer)
                     ForEach(videoApplications) { application in
                         Text(L10n.t("prefs.recording.afterCapture.openWith", application.name))
                             .tag(RecordingAfterCaptureAction.application(application.bundleIdentifier))

@@ -36,6 +36,8 @@
 	<string>To capture the screen and system audio when you record.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>To record your voice on a separate audio track.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>To create a transcript from a recording when you explicitly request it. ScreenCap requires the on-device recognition path.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>To capture system audio while you record the screen.</string>
 	<key>NSAppleEventsUsageDescription</key>
@@ -100,6 +102,20 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.image</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Screen recording</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.movie</string>
+				<string>com.apple.quicktime-movie</string>
+				<string>public.mpeg-4</string>
 			</array>
 		</dict>
 	</array>
