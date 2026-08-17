@@ -47,6 +47,20 @@ after-recording action opened a destination. Authorization is requested lazily w
 there is no server, APNs registration, sound or badge. Notification actions resolve a bounded
 local target identifier to a file path, so raw paths are not placed in notification payloads.
 
+Recording finalization is crash-safe by design. The writer records into a sibling
+`*.partial.mov`, creates an atomic JSON session marker with PID/boot identity, display geometry,
+heartbeat and processing stage, and promotes the partial to the requested `.mov` only after a
+clean finish. Known recording folders are bounded and persisted locally so a remounted external
+volume can be scanned on a later launch. Startup recovery validates the original, partial,
+composite, repaired and recovered candidates; when a fragmented container is readable but its
+index is incomplete, a passthrough AVFoundation repair is attempted. Recovery never moves a
+marker owned by a live process, and it never deletes a candidate merely because a volume is
+temporarily unavailable. A recovered playable file is presented in a local dialog with Open,
+Show in Finder and Discard; there is intentionally no Try Again action. Closing the dialog keeps
+the recovered file. Display removal/change, sleep, session interruption, capture-stream stop and
+recording-volume unmount are converted into a graceful stop with a warning when a playable part
+exists; the configured after-recording action still receives the actual path.
+
 The post-recording action is intentionally unconfigured on a fresh installation. After the first
 successful recording, the recorder presents a native choice pop-up; a selected action is persisted
 and applied to later recordings. Choosing Later or closing the pop-up leaves the setting unconfigured,
@@ -133,7 +147,7 @@ The current source tree maps to these responsibilities:
 | Domain model | `Annotations/Annotation.swift`, `OverlayTypes.swift` | Tools, styles, shapes, output actions, geometry and annotation ordering. |
 | Rendering | `AnnotationRenderer`, `AnnotationLayer`, `ObfuscationSource` | One drawing path for live preview and final export; raster layer for erasing. |
 | Output | `Output` | Clipboard, PNG/JPEG encoding, save panel, filename expansion, printing, feedback. |
-| Recording | `Sources/ScreenCap/Recorder` | macOS 15+ ScreenCaptureKit stream, independent audio tracks, PTS normalization and QuickTime output. |
+| Recording | `Sources/ScreenCap/Recorder` | macOS 15+ ScreenCaptureKit stream, independent audio tracks, PTS normalization, QuickTime output, crash recovery and repair. |
 | Player | `Sources/ScreenCap/Player` | Playlist/library, AVPlayer playback, synchronized Track Editor, non-destructive trim/audio edits, staged export and transcription. |
 | Persistence/localization | `Support/Settings.swift`, `L10n.swift`, `Resources/l10n` | User defaults, recent colors, hotkeys, language selection and fallback. |
 
@@ -341,6 +355,12 @@ The minimum automated checks for every platform implementation are:
   path, and reports denied/unsupported/no-audio/cancelled cases without network access;
 - verify a second process cannot recover/move a movie whose marker PID is still alive, while a
   stale marker can be recovered after the owner exits;
+- verify a partial sibling and a remounted known recording folder remain discoverable after an
+  interrupted session, and that no recovery dialog offers Try Again;
+- verify display removal/change, sleep, session interruption, capture-stream stop and volume
+  unmount stop the active session without leaving the controller stuck in `stopping`;
+- verify a fragmented-but-readable candidate is repaired through a passthrough export before it
+  is classified as unavailable, while a non-video or zero-duration candidate remains unrecovered;
 - verify finalization can select a playable source, temporary or recovered sibling after optional
   composite-audio/strict-validation failure, reports a warning, and passes the selected URL to the
   after-recording action;

@@ -25,6 +25,7 @@ actor RecordingSession {
     var onProcessingStage: (@Sendable (RecorderProcessingStage) -> Void)?
     var onDiskSpaceLow: (@Sendable () -> Void)?
     var onMicrophoneUnavailable: (@Sendable () -> Void)?
+    var onInterruptionResult: (@Sendable (RecorderInterruptionOutcome) -> Void)?
 
     var outputURL: URL { writer.outputURL }
 
@@ -63,7 +64,12 @@ actor RecordingSession {
                 break
             case .dropped:
                 Log.error("recorder sample queue overflow; stopping before a timeline gap is created")
-                Task { await self?.fail(RecorderError.writerFailed("recording pipeline overloaded")) }
+                Task {
+                    await self?.requestInterruption(
+                        reason: .writerFailure,
+                        detail: "recording pipeline overloaded"
+                    )
+                }
             case .terminated:
                 break
             @unknown default:
@@ -71,7 +77,12 @@ actor RecordingSession {
             }
         }
         engine.onFailure = { [weak self] error in
-            Task { await self?.fail(error) }
+            Task {
+                await self?.requestInterruption(
+                    reason: .captureStreamStopped,
+                    detail: error.localizedDescription
+                )
+            }
         }
     }
 
@@ -92,7 +103,7 @@ actor RecordingSession {
                 await self?.startWithAvailableTracksIfNeeded()
             }
         } catch {
-            writer.cancel()
+            writer.cancel(preserveMarker: false)
             setState(.failed(error.localizedDescription))
             throw error
         }
@@ -132,7 +143,7 @@ actor RecordingSession {
         writer.setSystemAudioEnabled(enabled)
     }
 
-    func cancel() async {
+    func cancel(preserveMarker: Bool = false) async {
         guard state != .idle else { return }
         healthTask?.cancel()
         healthTask = nil
@@ -140,7 +151,7 @@ actor RecordingSession {
         sampleContinuation.finish()
         await sampleConsumer?.value
         sampleConsumer = nil
-        writer.cancel()
+        writer.cancel(preserveMarker: preserveMarker)
         setState(.idle)
     }
 
@@ -150,22 +161,48 @@ actor RecordingSession {
         guard !hasFailed, state == .recording || state == .preparing else { return }
         await writer.append(sampleBuffer, type: type)
         if let failure = writer.failure {
-            fail(failure)
+            Task {
+                await requestInterruption(
+                    reason: .writerFailure,
+                    detail: failure.localizedDescription
+                )
+            }
         }
     }
 
-    private func fail(_ error: Error) {
-        guard !hasFailed, state != .stopping, state != .idle else { return }
+    func requestInterruption(
+        reason: RecorderInterruptionReason,
+        detail: String
+    ) async {
+        guard !hasFailed, state == .recording || state == .preparing else { return }
         hasFailed = true
         healthTask?.cancel()
         healthTask = nil
-        Log.error("recorder session failed: \(error.localizedDescription)")
-        sampleContinuation.finish()
-        writer.cancel()
-        Task { [weak self] in
-            try? await self?.engine.stop()
+        Log.error("recorder session interrupted: reason=\(reason.rawValue) detail=\(detail)")
+        do {
+            let result = try await stop()
+            let outcome = RecorderInterruptionOutcome(
+                reason: reason,
+                detail: detail,
+                result: result,
+                error: nil
+            )
+            let handler = onInterruptionResult
+            DispatchQueue.main.async {
+                handler?(outcome)
+            }
+        } catch {
+            let outcome = RecorderInterruptionOutcome(
+                reason: reason,
+                detail: detail,
+                result: nil,
+                error: error.localizedDescription
+            )
+            let handler = onInterruptionResult
+            DispatchQueue.main.async {
+                handler?(outcome)
+            }
         }
-        setState(.failed(error.localizedDescription))
     }
 
     private func startWithAvailableTracksIfNeeded() async {
@@ -183,7 +220,12 @@ actor RecordingSession {
             }
         }
         if let failure = writer.failure {
-            fail(failure)
+            Task {
+                await requestInterruption(
+                    reason: .writerFailure,
+                    detail: failure.localizedDescription
+                )
+            }
         }
     }
 
@@ -200,6 +242,7 @@ actor RecordingSession {
     }
 
     private func setProcessingStage(_ stage: RecorderProcessingStage) {
+        RecorderRecovery.updateMarker(for: writer.outputURL, stage: stage)
         let handler = onProcessingStage
         DispatchQueue.main.async {
             handler?(stage)
@@ -218,6 +261,10 @@ actor RecordingSession {
         onProcessingStage = handler
     }
 
+    func setInterruptionResultHandler(_ handler: @escaping @Sendable (RecorderInterruptionOutcome) -> Void) {
+        onInterruptionResult = handler
+    }
+
     private func startHealthMonitoring() {
         healthTask?.cancel()
         healthTask = Task { [weak self] in
@@ -231,6 +278,7 @@ actor RecordingSession {
 
     private func reportHealth() {
         guard state == .recording || state == .preparing else { return }
+        RecorderRecovery.touchMarker(for: writer.outputURL)
         guard let free = RecorderDiskSpace.freeBytes(at: writer.outputURL) else {
             logHealth(label: "periodic", freeBytes: nil)
             return

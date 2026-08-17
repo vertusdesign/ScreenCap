@@ -161,8 +161,13 @@ final class PlayerLibraryStore: ObservableObject {
         Self.movieExtensions.contains(url.pathExtension.lowercased())
     }
 
+    private func isTemporaryRecording(_ url: URL) -> Bool {
+        let name = url.lastPathComponent.lowercased()
+        return name.hasSuffix(".partial.mov") || name.hasSuffix(".composite.mov")
+    }
+
     private func isPlayableVideo(_ url: URL) -> Bool {
-        guard isMovie(url) else { return false }
+        guard isMovie(url), !isTemporaryRecording(url) else { return false }
         return PlayerMediaInspector.inspect(url: url).map { $0.duration > 0.01 } ?? false
     }
 

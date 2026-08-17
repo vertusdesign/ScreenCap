@@ -262,12 +262,13 @@ collapses into a single undo step.
 - **Audio-device recovery and performance validation remain platform-dependent.** The recorder
   falls back to video/system audio when a microphone is unavailable, monitors input-route
   changes, keeps a bounded local diagnostic log, validates the finished movie, and stops safely
-  when disk space is low. Recovery markers now carry the active writer PID so a second ScreenCap
-  process will not move a live recording. Broader Bluetooth disconnect/reconnect, crash-recovery,
-  Intel and macOS 15 matrix coverage remains limited. Finalization now keeps a playable raw or
-  recovered movie when optional audio processing or strict validation fails, reports the degraded
-  result as “saved with warning” or “recovered”, and continues the configured after-recording action
-  with the actual playable path.
+  when disk space is low. Crash-safe partial files, PID/boot-aware recovery markers, known-folder
+  rescans, passthrough container repair, and graceful display/sleep/session/volume interruption
+  handling are implemented. Finalization keeps a playable raw, repaired or recovered movie when
+  optional audio processing or strict validation fails, reports the degraded result as “saved with
+  warning” or “recovered”, and continues the configured after-recording action with the actual
+  playable path. Recovery is local-only; it does not upload diagnostics and its dialog has Open,
+  Show in Finder and Discard, not Try Again.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.

@@ -351,6 +351,21 @@ enum SelfTest {
                 failures.append("обработка уровня микрофона")
                 print("  ✗ обработка уровня микрофона")
             }
+
+            // Recovery path smoke checks are deliberately structural: they do
+            // not simulate kill -9, sleep, display loss or disk exhaustion and
+            // they never touch a user's recording directory.
+            let recoveryProbe = outputDirectory.appendingPathComponent("recovery-probe.mov")
+            let probeFile = RecorderFile(url: recoveryProbe, width: 1280, height: 720)
+            let related = RecorderRecovery.relatedRecordingURLs(for: recoveryProbe)
+            if probeFile.partialURL.lastPathComponent == "recovery-probe.partial.mov",
+               RecorderRecovery.markerURL(for: recoveryProbe).pathExtension == "screencap-recording",
+               related.contains(where: { $0.standardizedFileURL == probeFile.partialURL.standardizedFileURL }) {
+                print("  ✓ recovery marker и partial-файл используют стабильные sibling-пути")
+            } else {
+                failures.append("пути recovery marker/partial")
+                print("  ✗ пути recovery marker/partial")
+            }
         }
 
         // 8. Real capture, if the system allows it.

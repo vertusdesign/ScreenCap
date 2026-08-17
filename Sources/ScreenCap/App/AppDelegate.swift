@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
+    private var systemObservers: [NSObjectProtocol] = []
+    private var workspaceNotificationCenter: NotificationCenter?
 
     /// Set from `--capture <mode>` so the app can be driven from a script.
     var launchAction: HotkeyAction?
@@ -39,11 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if #available(macOS 15.0, *) {
-            Task {
-                await RecorderRecovery.recoverStaleRecordings(
-                    in: Settings.shared.recordingDirectory
-                )
-            }
+            RecorderRecoveryCoordinator.shared.recoverAtLaunch()
+            installRecordingInterruptionObservers()
         }
 
         statusItem = StatusItemController()
@@ -99,6 +98,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        systemObservers.forEach {
+            NotificationCenter.default.removeObserver($0)
+            workspaceNotificationCenter?.removeObserver($0)
+        }
+        systemObservers.removeAll()
+        workspaceNotificationCenter = nil
         HotkeyManager.shared.unregisterAll()
     }
 
@@ -181,6 +186,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(
             withTitle: L10n.t("menu.about", AppInfo.menuName),
             action: #selector(showAbout),
+            keyEquivalent: ""
+        ).target = self
+        appMenu.addItem(.separator())
+        appMenu.addItem(
+            withTitle: L10n.t("menu.recoverRecordings"),
+            action: #selector(recoverRecordingsFromMainMenu),
             keyEquivalent: ""
         ).target = self
         appMenu.addItem(.separator())
@@ -300,6 +311,90 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             PlayerWindowController.shared.show()
         }
+    }
+
+    @MainActor @objc private func recoverRecordingsFromMainMenu() {
+        if #available(macOS 15.0, *) {
+            RecorderRecoveryCoordinator.shared.scanAndPresent()
+        }
+    }
+
+    @available(macOS 15.0, *)
+    private func installRecordingInterruptionObservers() {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        workspaceNotificationCenter = workspaceCenter
+        systemObservers.append(
+            NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    RecorderController.shared.handleScreenConfigurationChange()
+                }
+            }
+        )
+        systemObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.willSleepNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    RecorderController.shared.handleSystemSleep()
+                }
+            }
+        )
+        systemObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    // Sleep normally stops the session before wake. Recheck
+                    // the display graph as a defensive fallback for systems
+                    // that deliver display changes only after wake.
+                    RecorderController.shared.handleScreenConfigurationChange()
+                }
+            }
+        )
+        systemObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.sessionDidResignActiveNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    RecorderController.shared.handleSessionInterruption()
+                }
+            }
+        )
+        systemObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.sessionDidBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    RecorderController.shared.handleScreenConfigurationChange()
+                }
+            }
+        )
+        systemObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.didUnmountNotification,
+                object: nil,
+                queue: .main
+            ) { notification in
+                let volumeURL = (notification.object as? URL)
+                    ?? (notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL)
+                guard let volumeURL else { return }
+                Task { @MainActor in
+                    RecorderController.shared.handleUnmountedVolume(volumeURL)
+                }
+            }
+        )
     }
 
     @objc private func openSupport() {

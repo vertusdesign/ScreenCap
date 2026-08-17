@@ -20,6 +20,7 @@ final class RecorderWriterService: @unchecked Sendable {
     private var systemAudioEnabled = true
     private let microphoneProcessor: MicrophoneAudioProcessor
     private var silentSampleFailureLogged = Set<RecorderOutputType>()
+    private let sessionID: String
 
     private(set) var droppedVideoFrames = 0
     private(set) var failure: Error?
@@ -36,7 +37,8 @@ final class RecorderWriterService: @unchecked Sendable {
         captureSystemAudio: Bool,
         captureMicrophone: Bool,
         noiseSuppression: Bool,
-        videoCodecPreference: RecordingVideoCodec
+        videoCodecPreference: RecordingVideoCodec,
+        displayID: CGDirectDisplayID? = nil
     ) throws {
         self.file = file
         self.captureSystemAudio = captureSystemAudio
@@ -58,11 +60,17 @@ final class RecorderWriterService: @unchecked Sendable {
                 + "noiseSuppression=\(noiseSuppression)"
         )
         do {
-            writer = try AVAssetWriter(outputURL: file.url, fileType: .mov)
+            writer = try AVAssetWriter(outputURL: file.partialURL, fileType: .mov)
         } catch {
             throw RecorderError.writerFailed(error.localizedDescription)
         }
-        try RecorderRecovery.markInProgress(for: file.url)
+        sessionID = try RecorderRecovery.markInProgress(
+            for: file.url,
+            displayID: displayID,
+            width: file.width,
+            height: file.height
+        )
+        Log.diagnostic("recorder session created id=\(sessionID) output=\(file.url.lastPathComponent)")
         writer.movieFragmentInterval = CMTime(seconds: 5, preferredTimescale: 1_000)
     }
 
@@ -126,9 +134,10 @@ final class RecorderWriterService: @unchecked Sendable {
         microphoneProcessor.finish()
         hasFinished = true
 
+        var writerWarning: String?
         if let failure {
-            writer.cancelWriting()
-            throw failure
+            writerWarning = failure.localizedDescription
+            Log.error("recorder writer reported an interruption; preserving playable candidates: \(failure.localizedDescription)")
         }
 
         if !hasStarted {
@@ -141,6 +150,8 @@ final class RecorderWriterService: @unchecked Sendable {
                     "(screen=\(screenCount), systemAudio=\(systemAudioCount), microphone=\(microphoneCount))"
                 )
                 writer.cancelWriting()
+                RecorderRecovery.clearMarker(for: file.url)
+                try? FileManager.default.removeItem(at: file.partialURL)
                 return nil
             }
             // A silent output route may not emit a system-audio sample at all.
@@ -156,38 +167,64 @@ final class RecorderWriterService: @unchecked Sendable {
         guard hasStarted else {
             Log.error("recorder writer could not start during finish")
             writer.cancelWriting()
+            RecorderRecovery.clearMarker(for: file.url)
+            try? FileManager.default.removeItem(at: file.partialURL)
             return nil
         }
 
-        inputs.values.forEach { $0.markAsFinished() }
-        var writerWarning: String?
-        do {
-            try await withCheckedThrowingContinuation { continuation in
-                writer.finishWriting {
-                    if self.writer.status == .completed {
-                        continuation.resume(returning: ())
-                    } else {
-                        let reason = self.writer.error?.localizedDescription ?? "unknown writer error"
-                        continuation.resume(throwing: RecorderError.writerFailed(reason))
+        if writer.status == .writing || writer.status == .unknown {
+            inputs.values.forEach { $0.markAsFinished() }
+            do {
+                try await withCheckedThrowingContinuation { continuation in
+                    writer.finishWriting {
+                        if self.writer.status == .completed {
+                            continuation.resume(returning: ())
+                        } else {
+                            let reason = self.writer.error?.localizedDescription ?? "unknown writer error"
+                            continuation.resume(throwing: RecorderError.writerFailed(reason))
+                        }
                     }
                 }
+            } catch {
+                // A fragmented MOV may still be playable after AVAssetWriter
+                // reports a finish error. Keep searching candidates below before
+                // classifying the recording as a total failure.
+                writerWarning = [writerWarning, error.localizedDescription]
+                    .compactMap { $0 }
+                    .joined(separator: "; ")
+                Log.error("recorder writer finish failed; checking playable fallback: \(error.localizedDescription)")
             }
-        } catch {
-            // A fragmented MOV may still be playable after AVAssetWriter
-            // reports a finish error. Keep searching candidates below before
-            // classifying the recording as a total failure.
-            writerWarning = error.localizedDescription
-            let reason = writerWarning ?? "unknown error"
-            Log.error("recorder writer finish failed; checking playable fallback: \(reason)")
+        } else if writer.status != .completed {
+            writerWarning = [writerWarning, "writer status=\(writer.status.rawValue)"]
+                .compactMap { $0 }
+                .joined(separator: "; ")
+        }
+
+        var sourceURL = file.url
+        if !FileManager.default.fileExists(atPath: sourceURL.path),
+           FileManager.default.fileExists(atPath: file.partialURL.path)
+        {
+            do {
+                try FileManager.default.moveItem(at: file.partialURL, to: file.url)
+            } catch {
+                writerWarning = [writerWarning, "could not promote partial movie: \(error.localizedDescription)"]
+                    .compactMap { $0 }
+                    .joined(separator: "; ")
+                sourceURL = file.partialURL
+            }
+        }
+        if !FileManager.default.fileExists(atPath: sourceURL.path) {
+            sourceURL = file.partialURL
         }
         let composite = await RecorderPostProcessor.addCompositeAudioTrack(
-            to: file.url,
+            to: sourceURL,
             onProcessingStage: onProcessingStage
         )
         await onProcessingStage?(.checking)
 
         var selected: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
         var playableFallback: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
+        var repairedCandidates: [URL] = []
         for candidate in RecorderRecovery.relatedRecordingURLs(for: file.url)
             where FileManager.default.fileExists(atPath: candidate.path)
         {
@@ -203,13 +240,43 @@ final class RecorderWriterService: @unchecked Sendable {
             }
         }
 
+        if selected == nil {
+            for candidate in RecorderRecovery.relatedRecordingURLs(for: file.url)
+                where FileManager.default.fileExists(atPath: candidate.path)
+            {
+                guard let repaired = await RecorderRepairService.repair(candidate) else { continue }
+                repairedCandidates.append(repaired)
+                let validation = await RecorderPostProcessor.validateFinalRecording(at: repaired)
+                if validation.isValid {
+                    selected = (repaired, validation)
+                    break
+                }
+                if playableFallback == nil,
+                   await RecorderPostProcessor.isPlayableRecording(at: repaired)
+                {
+                    playableFallback = (repaired, validation)
+                }
+            }
+        }
+
         let chosen: (url: URL, validation: RecorderPostProcessor.ValidationResult)
         if let selected {
             chosen = selected
         } else if let playableFallback {
             chosen = playableFallback
         } else {
-            RecorderRecovery.clearMarker(for: file.url)
+            // Keep the marker and any media candidates for a later launch.
+            // A container may become repairable after a volume remount or
+            // after AVFoundation has flushed its last fragment asynchronously.
+            for candidate in [
+                file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
+                file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
+            ] {
+                try? FileManager.default.removeItem(at: candidate)
+            }
+            for candidate in repairedCandidates {
+                try? FileManager.default.removeItem(at: candidate)
+            }
             throw RecorderError.writerFailed(
                 "final recording failed container validation or no playable file was found"
             )
@@ -219,11 +286,14 @@ final class RecorderWriterService: @unchecked Sendable {
         // movie beside a valid source. Do not let that implementation detail
         // become a duplicate recording in the Player library; preserve it only
         // when it is the candidate we are actually returning.
-        let temporaryCompositeURL = file.url
-            .deletingPathExtension()
-            .appendingPathExtension("composite.mov")
-        if temporaryCompositeURL.standardizedFileURL != chosen.url.standardizedFileURL {
-            try? FileManager.default.removeItem(at: temporaryCompositeURL)
+        for candidate in [
+            file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
+            file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
+        ] where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
+            try? FileManager.default.removeItem(at: candidate)
+        }
+        for candidate in repairedCandidates where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
+            try? FileManager.default.removeItem(at: candidate)
         }
 
         var warnings: [String] = []
@@ -244,6 +314,11 @@ final class RecorderWriterService: @unchecked Sendable {
                     + "\(chosen.url.lastPathComponent) instead of \(file.url.lastPathComponent)"
             )
         }
+        if chosen.url.pathExtension.lowercased() == "mov",
+           chosen.url.lastPathComponent.lowercased().contains("repaired")
+        {
+            warnings.append("container repaired during finalization")
+        }
         RecorderRecovery.clearMarker(for: file.url)
         RecorderRecovery.clearMarker(for: chosen.url)
         return RecorderFinalizationResult(
@@ -253,10 +328,14 @@ final class RecorderWriterService: @unchecked Sendable {
         )
     }
 
-    func cancel() {
+    func cancel(preserveMarker: Bool = true) {
         guard !hasFinished else { return }
         hasFinished = true
         writer.cancelWriting()
+        if !preserveMarker {
+            RecorderRecovery.clearMarker(for: file.url)
+            try? FileManager.default.removeItem(at: file.partialURL)
+        }
     }
 
     func startWithAvailableTracksIfNeeded() async {

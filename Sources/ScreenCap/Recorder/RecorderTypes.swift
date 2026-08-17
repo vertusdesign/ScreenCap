@@ -37,6 +37,25 @@ struct RecorderFinalizationResult: Sendable {
 }
 
 @available(macOS 15.0, *)
+enum RecorderInterruptionReason: String, Sendable {
+    case captureStreamStopped
+    case displayDisconnected
+    case displayChanged
+    case systemSleep
+    case sessionInterrupted
+    case volumeUnavailable
+    case writerFailure
+}
+
+@available(macOS 15.0, *)
+struct RecorderInterruptionOutcome: Sendable {
+    let reason: RecorderInterruptionReason
+    let detail: String
+    let result: RecorderFinalizationResult?
+    let error: String?
+}
+
+@available(macOS 15.0, *)
 enum RecorderStartMode {
     case displayUnderPointer
     case displayPicker
@@ -117,6 +136,13 @@ struct RecorderFile {
     let url: URL
     let width: Int
     let height: Int
+
+    /// The writer uses a separate sibling so a clean completion can promote
+    /// it atomically to `url`. If the process disappears, the marker still
+    /// points at the stable final basename and recovery can find this file.
+    var partialURL: URL {
+        url.deletingPathExtension().appendingPathExtension("partial.mov")
+    }
 }
 
 @available(macOS 15.0, *)
@@ -127,6 +153,7 @@ enum RecorderFileNaming {
             at: directory,
             withIntermediateDirectories: true
         )
+        RecorderRecovery.registerDirectory(directory)
 
         let now = Date()
         let dateFormatter = DateFormatter()
@@ -150,7 +177,7 @@ enum RecorderFileNaming {
 
         var url = directory.appendingPathComponent(name).appendingPathExtension("mov")
         var counter = 2
-        while FileManager.default.fileExists(atPath: url.path) {
+        while isOccupied(url) {
             url = directory
                 .appendingPathComponent("\(name) (\(counter))")
                 .appendingPathExtension("mov")
@@ -169,6 +196,22 @@ enum RecorderFileNaming {
             at: directory,
             withIntermediateDirectories: true
         )
-        return RecorderFile(url: url, width: width, height: height)
+        RecorderRecovery.registerDirectory(directory)
+        var safeURL = url
+        let baseName = url.deletingPathExtension().lastPathComponent
+        var counter = 2
+        while isOccupied(safeURL) {
+            safeURL = directory
+                .appendingPathComponent("\(baseName) (\(counter))")
+                .appendingPathExtension("mov")
+            counter += 1
+        }
+        return RecorderFile(url: safeURL, width: width, height: height)
+    }
+
+    private static func isOccupied(_ url: URL) -> Bool {
+        FileManager.default.fileExists(atPath: url.path)
+            || FileManager.default.fileExists(atPath: RecorderRecovery.partialURL(for: url).path)
+            || FileManager.default.fileExists(atPath: RecorderRecovery.markerURL(for: url).path)
     }
 }

@@ -29,6 +29,15 @@ All notable changes are recorded here. This project follows
   item cannot leave a stale player selection.
 - **Recovery race guard**: recording markers identify the active writer process; a second app
   instance no longer moves a live movie into a recovered filename during finalization.
+- **Crash-safe recording recovery**: the writer uses atomic `*.partial.mov` output plus a local
+  session manifest/heartbeat. Startup and the manual Recovery command scan configured and recently
+  used recording folders, preserve candidates across a temporarily unavailable volume, repair a
+  fragmented MOV through passthrough AVFoundation export when possible, and present a local
+  Open/Finder/Discard dialog without a Try Again action.
+- **Interruption handling**: display disconnect/change, system sleep, session deactivation,
+  capture-stream failure and recording-volume unmount now stop through the same finalization path;
+  a playable partial is reported as saved with warning and still receives the configured
+  after-recording action.
 - **Resilient finalization**: long recordings expose persistent background stages, retain playable
   raw/temporary/recovered files when optional processing or strict validation fails, show “saved
   with warning” or “recovered”, and still run the configured after-recording action on the actual file.

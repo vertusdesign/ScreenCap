@@ -38,9 +38,13 @@ final class RecorderController {
     private var startRequestID = UUID()
     private var stopRequested = false
     private var terminationCompletions: [() -> Void] = []
+    private var terminationTimeoutTask: Task<Void, Never>?
     private var processingStartedAt: Date?
     private var processingFileName: String?
     private var didPostFailureNotification = false
+    private var activeDisplay: RecorderDisplay?
+    private var activeOutputURL: URL?
+    private var pendingInterruption: RecorderInterruptionOutcome?
 
     private init() {}
 
@@ -87,7 +91,10 @@ final class RecorderController {
             return
         }
         terminationCompletions.append(completion)
-        if case .stopping = state { return }
+        if case .stopping = state {
+            scheduleTerminationTimeout()
+            return
+        }
         // During the asynchronous preparation window there may be no session
         // yet (especially while the display picker is open). Cancel that
         // preparation so termination is not left waiting forever.
@@ -96,6 +103,7 @@ final class RecorderController {
             return
         }
         stop()
+        scheduleTerminationTimeout()
     }
 
     func toggle(startMode: RecorderStartMode = .displayUnderPointer) {
@@ -282,7 +290,8 @@ final class RecorderController {
                     captureSystemAudio: captureSystemAudio,
                     captureMicrophone: microphone,
                     noiseSuppression: options.noiseSuppression,
-                    videoCodecPreference: Settings.shared.recordingVideoCodec
+                    videoCodecPreference: Settings.shared.recordingVideoCodec,
+                    displayID: display.displayID
                 )
                 let session = RecordingSession(
                     engine: engine,
@@ -294,6 +303,8 @@ final class RecorderController {
                     return
                 }
                 await self.install(session: session)
+                self.activeDisplay = display
+                self.activeOutputURL = file.url
                 await session.setMicrophoneEnabled(self.microphoneEnabled)
                 await session.setSystemAudioEnabled(self.systemAudioEnabled)
                 try await session.start()
@@ -371,6 +382,8 @@ final class RecorderController {
         clearProcessingStage()
         processingStartedAt = nil
         processingFileName = nil
+        activeDisplay = nil
+        activeOutputURL = nil
         state = .idle
         completeTerminationRequests()
     }
@@ -470,6 +483,8 @@ final class RecorderController {
                 self.state = newState
                 if case .failed(let reason) = newState {
                     self.session = nil
+                    self.activeDisplay = nil
+                    self.activeOutputURL = nil
                     Feedback.flash(message: L10n.t("recording.failed"), subtitle: reason)
                     self.postFailureNotificationIfNeeded(reason: reason)
                 }
@@ -478,6 +493,11 @@ final class RecorderController {
         await session.setProcessingStageHandler { [weak self] stage in
             Task { @MainActor [weak self] in
                 self?.updateProcessingStage(stage)
+            }
+        }
+        await session.setInterruptionResultHandler { [weak self] outcome in
+            Task { @MainActor [weak self] in
+                self?.handleInterruption(outcome)
             }
         }
         await session.setDiskSpaceLowHandler { [weak self] in
@@ -504,6 +524,8 @@ final class RecorderController {
             self.stopRequested = false
             self.displayPicker = nil
             self.session = nil
+            self.activeDisplay = nil
+            self.activeOutputURL = nil
             self.state = .failed(error.localizedDescription)
             self.completeTerminationRequests()
             if case RecorderError.permissionDenied = error {
@@ -516,8 +538,12 @@ final class RecorderController {
 
     private func finish(result: RecorderFinalizationResult?) async {
         await MainActor.run {
+            let interruption = self.pendingInterruption
+            self.pendingInterruption = nil
             self.stopRequested = false
             self.session = nil
+            self.activeDisplay = nil
+            self.activeOutputURL = nil
             self.state = .idle
             self.clearProcessingStage()
             self.processingStartedAt = nil
@@ -532,21 +558,22 @@ final class RecorderController {
             Feedback.shutter()
             let message = result.usedRecoveredFile
                 ? L10n.t("recording.recovered")
-                : (result.warning == nil
+                : (result.warning == nil && interruption == nil
                     ? L10n.t("recording.saved")
                     : L10n.t("recording.saved.warning"))
-            let detail = result.warning == nil
-                ? result.url.deletingLastPathComponent().lastPathComponent + "/" + result.url.lastPathComponent
-                : L10n.t(
-                    result.usedRecoveredFile
-                        ? "recording.recovered.detail"
-                        : "recording.saved.warning.detail"
-                )
+            let detail = interruption?.detail
+                ?? (result.warning == nil
+                    ? result.url.deletingLastPathComponent().lastPathComponent + "/" + result.url.lastPathComponent
+                    : L10n.t(
+                        result.usedRecoveredFile
+                            ? "recording.recovered.detail"
+                            : "recording.saved.warning.detail"
+                    ))
             Feedback.flash(message: message, subtitle: detail)
             let destinationWasOpened = self.performAfterCaptureAction(for: result.url)
             SystemNotificationCoordinator.shared.postRecordingResult(
                 url: result.url,
-                warning: result.warning != nil,
+                warning: result.warning != nil || interruption != nil,
                 recovered: result.usedRecoveredFile,
                 destinationWasOpened: destinationWasOpened
             )
@@ -561,6 +588,80 @@ final class RecorderController {
             message: processingTitle(stage),
             subtitle: processingDetail()
         )
+    }
+
+    private func handleInterruption(_ outcome: RecorderInterruptionOutcome) {
+        pendingInterruption = outcome
+        if let result = outcome.result {
+            Task { await finish(result: result) }
+        } else {
+            let message = outcome.error ?? outcome.detail
+            Task { await failStop(message: message) }
+        }
+    }
+
+    func handleScreenConfigurationChange() {
+        guard let activeDisplay else { return }
+        let matchingScreen = NSScreen.screens.first { screen in
+            let key = NSDeviceDescriptionKey("NSScreenNumber")
+            return (screen.deviceDescription[key] as? NSNumber)?.uint32Value == activeDisplay.displayID
+        }
+        guard let matchingScreen else {
+            interrupt(
+                reason: .displayDisconnected,
+                detail: L10n.t("recording.interrupted.displayDisconnected")
+            )
+            return
+        }
+        let current = RecorderDisplay(
+            screen: matchingScreen,
+            logicalSize: Settings.shared.recordingAtLogicalSize
+        )
+        guard current?.width == activeDisplay.width,
+              current?.height == activeDisplay.height
+        else {
+            interrupt(
+                reason: .displayChanged,
+                detail: L10n.t("recording.interrupted.displayChanged")
+            )
+            return
+        }
+    }
+
+    func handleSystemSleep() {
+        interrupt(
+            reason: .systemSleep,
+            detail: L10n.t("recording.interrupted.systemSleep")
+        )
+    }
+
+    func handleSessionInterruption() {
+        interrupt(
+            reason: .sessionInterrupted,
+            detail: L10n.t("recording.interrupted.session")
+        )
+    }
+
+    func handleUnmountedVolume(_ volumeURL: URL) {
+        guard let activeOutputURL else { return }
+        let volumePath = volumeURL.standardizedFileURL.path
+        let outputPath = activeOutputURL.standardizedFileURL.path
+        guard outputPath == volumePath || outputPath.hasPrefix(volumePath + "/") else { return }
+        interrupt(
+            reason: .volumeUnavailable,
+            detail: L10n.t("recording.interrupted.volumeUnavailable")
+        )
+    }
+
+    private func interrupt(reason: RecorderInterruptionReason, detail: String) {
+        guard let session, isActive, state != .stopping else { return }
+        stopRequested = false
+        processingStartedAt = processingStartedAt ?? Date()
+        updateProcessingStage(.stopping)
+        state = .stopping
+        Task {
+            await session.requestInterruption(reason: reason, detail: detail)
+        }
     }
 
     private func setProcessingFileName(_ fileName: String) {
@@ -840,17 +941,24 @@ final class RecorderController {
     }
 
     private func failStop(_ error: Error) async {
+        await failStop(message: error.localizedDescription)
+    }
+
+    private func failStop(message: String) async {
         await MainActor.run {
+            self.pendingInterruption = nil
             self.stopRequested = false
-            Log.error("recorder stop failed: \(error.localizedDescription)")
+            Log.error("recorder stop failed: \(message)")
             self.session = nil
+            self.activeDisplay = nil
+            self.activeOutputURL = nil
             self.clearProcessingStage()
             self.processingStartedAt = nil
             self.processingFileName = nil
             Feedback.dismissProgress()
-            self.state = .failed(error.localizedDescription)
-            Feedback.flash(message: L10n.t("recording.failed"), subtitle: error.localizedDescription)
-            self.postFailureNotificationIfNeeded(reason: error.localizedDescription)
+            self.state = .failed(message)
+            Feedback.flash(message: L10n.t("recording.failed"), subtitle: message)
+            self.postFailureNotificationIfNeeded(reason: message)
             self.completeTerminationRequests()
         }
     }
@@ -862,9 +970,49 @@ final class RecorderController {
     }
 
     private func completeTerminationRequests() {
+        terminationTimeoutTask?.cancel()
+        terminationTimeoutTask = nil
         let completions = terminationCompletions
         terminationCompletions.removeAll(keepingCapacity: true)
         completions.forEach { $0() }
+    }
+
+    /// AppKit waits for the termination reply while a recording is being
+    /// finalized. If a damaged container or an unavailable volume prevents
+    /// AVFoundation from returning in time, reply after a bounded grace period
+    /// and preserve the marker/partial sibling for next-launch recovery rather
+    /// than leaving Quit hung indefinitely.
+    private func scheduleTerminationTimeout() {
+        guard !terminationCompletions.isEmpty, terminationTimeoutTask == nil else { return }
+        terminationTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.forceTerminationPreservingRecovery()
+            }
+        }
+    }
+
+    private func forceTerminationPreservingRecovery() {
+        guard !terminationCompletions.isEmpty, state == .stopping else { return }
+        Log.error("recorder termination timeout; preserving marker and partial output for recovery")
+        let session = self.session
+        self.session = nil
+        self.activeDisplay = nil
+        self.activeOutputURL = nil
+        self.pendingInterruption = nil
+        clearProcessingStage()
+        processingStartedAt = nil
+        processingFileName = nil
+        Feedback.dismissProgress()
+        state = .idle
+        terminationTimeoutTask = nil
+        if let session {
+            Task {
+                await session.cancel(preserveMarker: true)
+            }
+        }
+        completeTerminationRequests()
     }
 
     private func hasTerminationRequests() -> Bool {
