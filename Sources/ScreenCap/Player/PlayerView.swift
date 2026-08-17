@@ -188,13 +188,6 @@ struct PlayerView: View {
                     Label(L10n.t("player.export"), systemImage: "square.and.arrow.up")
                 }
                 .menuStyle(.borderlessButton)
-                Button {
-                    viewModel.isTrackEditorVisible.toggle()
-                } label: {
-                    Image(systemName: viewModel.isTrackEditorVisible ? "rectangle.bottomhalf.inset.filled" : "rectangle.bottomhalf.inset.filled")
-                }
-                .buttonStyle(.borderless)
-                .help(L10n.t("player.track.toggle"))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -223,8 +216,8 @@ struct PlayerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if !viewModel.isTrackEditorVisible {
-                HStack(spacing: 10) {
+            HStack(spacing: 10) {
+                if !viewModel.isTrackEditorVisible {
                     Text(viewModel.currentTimeText).monospacedDigit().font(.caption)
                     Slider(value: Binding(
                         get: { viewModel.progress },
@@ -232,9 +225,18 @@ struct PlayerView: View {
                     ), in: 0...1)
                     Text(viewModel.durationText).monospacedDigit().font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                Spacer(minLength: 0)
+                Button {
+                    viewModel.isTrackEditorVisible.toggle()
+                } label: {
+                    Image(systemName: "timeline.selection")
+                        .foregroundStyle(viewModel.isTrackEditorVisible ? Color.accentColor : Color.primary)
+                }
+                .buttonStyle(.borderless)
+                .help(L10n.t("player.track.toggle"))
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
 
             if viewModel.isTrackEditorVisible {
                 TrackEditorView(viewModel: viewModel)

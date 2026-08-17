@@ -113,6 +113,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        let player = NSMenuItem(
+            title: L10n.t("menu.player"),
+            action: #selector(openPlayer),
+            keyEquivalent: ""
+        )
+        player.target = self
+        player.image = symbol("play.rectangle")
+        menu.addItem(player)
+
+        menu.addItem(.separator())
+
         let language = NSMenuItem(title: L10n.t("menu.language"), action: nil, keyEquivalent: "")
         language.image = symbol("globe")
         language.submenu = buildLanguageMenu()
@@ -135,17 +146,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         preferences.target = self
         preferences.image = symbol("gearshape")
         menu.addItem(preferences)
-
-        menu.addItem(.separator())
-
-        let player = NSMenuItem(
-            title: L10n.t("menu.player"),
-            action: #selector(openPlayer),
-            keyEquivalent: ""
-        )
-        player.target = self
-        player.image = symbol("play.rectangle")
-        menu.addItem(player)
 
         let about = NSMenuItem(
             title: L10n.t("menu.about", AppInfo.name),

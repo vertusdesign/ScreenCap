@@ -10,7 +10,7 @@ final class PlayerViewModel: ObservableObject {
 
     @Published private(set) var selectedRecording: PlayerRecording?
     @Published private(set) var tracks: [PlayerTrackDescriptor] = []
-    @Published var isTrackEditorVisible = true
+    @Published var isTrackEditorVisible = false
     @Published var trimStart: Double = 0
     @Published var trimEnd: Double = 0
     @Published private(set) var isDirty = false
