@@ -303,24 +303,26 @@ make install     # build and copy to /Applications
 make dmg         # DMG + SHA-256 file in dist/
 ```
 
-`make app` uses the default `VERSION`, `CHANNEL` and `BUILD` values from the Makefile. For a
-specific stable release, pass them explicitly, for example:
+`make app` and the other packaging targets allocate a new monotonically increasing `CFBundleVersion`
+automatically. The value is shown in About as `(build N)` and is stored only in the ignored local
+`.screencap-build-number` state file. For CI or a reproducible release, pass an explicit unique `BUILD`
+value; never reuse a build number for a different app artifact. For a specific stable release:
 
 ```bash
-make dmg VERSION=3.0.0 CHANNEL= BUILD=1
+make dmg VERSION=3.0.0 CHANNEL=
 ```
 
 The public repository builds the base product by default:
 
 ```bash
-make app BUILD_FLAVOR=base VERSION=3.0.0 BUILD=1
+make app BUILD_FLAVOR=base VERSION=3.0.0
 # dist/ScreenCap 3.app
 ```
 
 The private Pro source directory can be supplied as a sibling directory and built separately:
 
 ```bash
-make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUILD=1
+make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0
 # dist/ScreenCap 3 Pro.app — launch from dist; never install this flavor
 ```
 

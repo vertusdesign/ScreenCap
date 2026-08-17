@@ -362,6 +362,8 @@ The minimum automated checks for every platform implementation are:
   degraded success, cancellation and fatal failure;
 - build both `base` and `pro` flavors and inspect their bundle IDs, URL schemes and resource
   registration; verify the base bundle has no movie document type or speech-recognition usage key.
+- package each flavor with a distinct monotonically increasing `CFBundleVersion`, and verify that
+  the About window reports the same build number as the bundle's `CFBundleVersion`.
 
 The current executable exposes these checks through:
 
@@ -383,6 +385,10 @@ layout.
 - `Resources/Info.plist` is the public base template; bundle identity, URL scheme, version, build
   and channel are substituted by `make`. Pro uses the private `Info-Pro.plist` template and
   private Pro/resource overlays.
+- `Scripts/next-build-number.sh` allocates the default local build number. A packaged artifact
+  must never reuse a `CFBundleVersion`; explicit `BUILD` values are reserved for CI or deliberately
+  reproducible builds and must be unique. `AppInfo.versionLine` is the About-window source for
+  the displayed version/build pair.
 - `.github/workflows/ci.yml` is the canonical CI check list.
 - `.github/workflows/release.yml` builds the universal DMG from a `v*` tag and publishes the
   DMG plus checksum.

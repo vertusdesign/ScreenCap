@@ -1,4 +1,5 @@
 .build/
+.screencap-build-number
 dist/
 .DS_Store
 *.xcuserdatad

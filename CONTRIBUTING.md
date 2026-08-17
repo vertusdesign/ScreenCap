@@ -71,17 +71,22 @@ the build must complete successfully, while new warnings should still be reviewe
 fixed or documented. Translation CI treats English as the source catalog and allows a locale
 to omit a key temporarily because runtime lookup falls back to English.
 
-For a release-shaped local check, also run `make dmg BUILD_FLAVOR=base VERSION=3.0.0 CHANNEL= BUILD=1` and
+For a release-shaped local check, also run `make dmg BUILD_FLAVOR=base VERSION=3.0.0 CHANNEL=` and
 verify the result with `lipo -archs "dist/ScreenCap 3.app/Contents/MacOS/ScreenCap"`, the version
-keys in `dist/ScreenCap 3.app/Contents/Info.plist`, and
+and build keys in `dist/ScreenCap 3.app/Contents/Info.plist`, and
 `(cd dist && shasum -a 256 -c ScreenCap-3-3.0.0.dmg.sha256)`. The CI workflow is the canonical
 copy of these checks.
+
+Every packaged app must receive a new monotonically increasing `CFBundleVersion` (`BUILD`). Local
+Makefile packaging allocates it automatically through `Scripts/next-build-number.sh`, and About
+must show the same value as `(build N)`. CI or a reproducible build may pass an explicit unique
+`BUILD`; reusing a build number for a different artifact is not allowed.
 
 The public checkout deliberately contains only ScreenCap 3. To build the private Pro flavor,
 place its private source directory at `../ScreenCap-Pro-Private` (or pass `PRIVATE_DIR` explicitly):
 
 ```bash
-make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUILD=1
+make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0
 open "dist/ScreenCap 3 Pro.app"
 ```
 

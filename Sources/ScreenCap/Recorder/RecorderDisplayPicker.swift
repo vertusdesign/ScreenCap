@@ -589,7 +589,12 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
         systemAudioButton.state = options.systemAudio ? .on : .off
         microphoneButton.state = options.microphone ? .on : .off
         noiseSuppressionButton.state = options.noiseSuppression ? .on : .off
-        noiseSuppressionButton.isEnabled = options.microphone
+        // Keep this control available even when the microphone is currently
+        // off. The setting belongs to the microphone DSP pipeline and is
+        // safely ignored by the writer when no microphone track is captured;
+        // disabling it here makes the one-off recording choices needlessly
+        // dependent on the order in which the user toggles options.
+        noiseSuppressionButton.isEnabled = true
         showMouseClicksButton.state = options.showMouseClicks ? .on : .off
     }
 

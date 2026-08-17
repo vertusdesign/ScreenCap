@@ -35,7 +35,13 @@ PRODUCT_LABEL   := ScreenCap-3
 endif
 
 CHANNEL     ?=
-BUILD       ?= 1
+# Every packaging invocation gets a unique local CFBundleVersion unless a
+# caller explicitly supplies BUILD (for example CI's run number). The number
+# is shown in About and must never be reused for a different app build.
+BUILD_STATE ?= .screencap-build-number
+ifndef BUILD
+BUILD       := $(shell Scripts/next-build-number.sh "$(BUILD_STATE)")
+endif
 FULLVERSION := $(VERSION)$(if $(CHANNEL),-$(CHANNEL),)
 
 DIST        := dist
