@@ -34,6 +34,12 @@ image output pipeline. The fast path uses the display under the pointer; the alt
 ScreenCap's own display chooser with a clear selected display and a transparent full-screen hit
 layer, rather than Apple's content-sharing picker.
 
+Finalization reports visible non-blocking stages (`Saving`, `Processing audio`, `Finalizing video`,
+and `Checking recording`) through the menu-bar HUD. Optional composite-audio or strict-validation
+failures do not discard a playable raw movie. The writer checks the original, temporary and
+recovered sibling URLs, classifies a usable fallback as a warning/recovery result, and passes that
+actual URL to the configured after-recording action; only a missing or unplayable movie is fatal.
+
 The post-recording action is intentionally unconfigured on a fresh installation. After the first
 successful recording, the recorder presents a native choice pop-up; a selected action is persisted
 and applied to later recordings. Choosing Later or closing the pop-up leaves the setting unconfigured,
@@ -328,6 +334,11 @@ The minimum automated checks for every platform implementation are:
   path, and reports denied/unsupported/no-audio/cancelled cases without network access;
 - verify a second process cannot recover/move a movie whose marker PID is still alive, while a
   stale marker can be recovered after the owner exits;
+- verify finalization can select a playable source, temporary or recovered sibling after optional
+  composite-audio/strict-validation failure, reports a warning, and passes the selected URL to the
+  after-recording action;
+- verify stopping exposes persistent stage updates and dismisses the progress HUD on success,
+  degraded success, cancellation and fatal failure;
 - build both `production` and `parallel` flavors and inspect their bundle IDs and URL schemes.
 
 The current executable exposes these checks through:

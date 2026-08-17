@@ -257,8 +257,10 @@ collapses into a single undo step.
   changes, keeps a bounded local diagnostic log, validates the finished movie, and stops safely
   when disk space is low. Recovery markers now carry the active writer PID so a second ScreenCap
   process will not move a live recording. Broader Bluetooth disconnect/reconnect, crash-recovery,
-  Intel and macOS 15 matrix coverage remains limited; post-processing failures still need the
-  richer “saved with warning” classification described in the incident specification.
+  Intel and macOS 15 matrix coverage remains limited. Finalization now keeps a playable raw or
+  recovered movie when optional audio processing or strict validation fails, reports the degraded
+  result as “saved with warning” or “recovered”, and continues the configured after-recording action
+  with the actual playable path.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.

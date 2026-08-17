@@ -19,6 +19,24 @@ enum RecorderState: Equatable, Sendable {
 }
 
 @available(macOS 15.0, *)
+enum RecorderProcessingStage: String, Equatable, Sendable {
+    case stopping
+    case saving
+    case processingAudio
+    case finalizingVideo
+    case checking
+}
+
+@available(macOS 15.0, *)
+struct RecorderFinalizationResult: Sendable {
+    let url: URL
+    /// A non-nil warning means the movie is usable, but one of the optional
+    /// post-processing or validation steps did not complete normally.
+    let warning: String?
+    let usedRecoveredFile: Bool
+}
+
+@available(macOS 15.0, *)
 enum RecorderStartMode {
     case displayUnderPointer
     case displayPicker

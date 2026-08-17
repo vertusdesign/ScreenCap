@@ -22,6 +22,11 @@ enum RecorderPostProcessor {
         let summary: String
     }
 
+    struct CompositeResult: Sendable {
+        let succeeded: Bool
+        let warning: String?
+    }
+
     static func validateFinalRecording(at url: URL) async -> ValidationResult {
         do {
             let asset = AVURLAsset(url: url)
@@ -92,23 +97,59 @@ enum RecorderPostProcessor {
         }
     }
 
+    /// A deliberately smaller check used only as a fallback after strict
+    /// validation fails. A fragmented or partially rewritten movie can still
+    /// be useful to the user even when timeline inspection cannot complete.
+    static func isPlayableRecording(at url: URL) async -> Bool {
+        do {
+            let asset = AVURLAsset(url: url)
+            guard try await asset.load(.isPlayable) else { return false }
+            let tracks = try await asset.load(.tracks)
+            guard let video = tracks.first(where: { $0.mediaType == .video }) else {
+                return false
+            }
+            let duration = try await video.load(.timeRange).duration.seconds
+            return duration.isFinite && duration > 0
+        } catch {
+            Log.debug(
+                "recorder playable fallback check failed for \(url.lastPathComponent): "
+                    + error.localizedDescription
+            )
+            return false
+        }
+    }
+
     /// Adds one mixed audio track before the original system-audio and
     /// microphone tracks. The source movie is otherwise passed through.
     ///
     /// This is deliberately a best-effort enhancement: if a finished capture
     /// cannot be rewritten, the original valid movie remains in place.
-    static func addCompositeAudioTrack(to url: URL) async -> URL {
+    static func addCompositeAudioTrack(
+        to url: URL,
+        onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
+    ) async -> CompositeResult {
+        await onProcessingStage?(.processingAudio)
         do {
-            try await rewriteWithCompositeAudio(at: url)
+            try await rewriteWithCompositeAudio(
+                at: url,
+                onProcessingStage: onProcessingStage
+            )
+            return CompositeResult(succeeded: true, warning: nil)
         } catch {
             Log.error(
                 "recorder composite audio track failed: " + error.localizedDescription
             )
+            return CompositeResult(
+                succeeded: false,
+                warning: error.localizedDescription
+            )
         }
-        return url
     }
 
-    private static func rewriteWithCompositeAudio(at url: URL) async throws {
+    private static func rewriteWithCompositeAudio(
+        at url: URL,
+        onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
+    ) async throws {
         let asset = AVURLAsset(url: url)
         let tracks = try await asset.load(.tracks)
         guard let videoTrack = tracks.first(where: { $0.mediaType == .video }) else {
@@ -297,6 +338,7 @@ enum RecorderPostProcessor {
             try await group.waitForAll()
         }
 
+        await onProcessingStage?(.finalizingVideo)
         try await finish(writer: writer)
         _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
     }

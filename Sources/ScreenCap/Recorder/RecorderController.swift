@@ -15,6 +15,12 @@ final class RecorderController {
         }
     }
 
+    private(set) var processingStage: RecorderProcessingStage? {
+        didSet {
+            NotificationCenter.default.post(name: .recorderProcessingChanged, object: nil)
+        }
+    }
+
     private(set) var microphoneEnabled = true {
         didSet {
             NotificationCenter.default.post(name: .recorderMicrophoneChanged, object: nil)
@@ -32,6 +38,8 @@ final class RecorderController {
     private var startRequestID = UUID()
     private var stopRequested = false
     private var terminationCompletions: [() -> Void] = []
+    private var processingStartedAt: Date?
+    private var processingFileName: String?
 
     private init() {}
 
@@ -39,7 +47,8 @@ final class RecorderController {
         switch state {
         case .recording: return L10n.t("recording.stop")
         case .preparing: return L10n.t("recording.preparing")
-        case .stopping: return L10n.t("recording.stopping")
+        case .stopping:
+            return processingStage.map(processingTitle) ?? L10n.t("recording.stopping")
         default: return L10n.t("recording.start")
         }
     }
@@ -117,6 +126,9 @@ final class RecorderController {
 
     private func start(mode: RecorderStartMode) {
         guard state == .idle || isFailed else { return }
+        processingStage = nil
+        processingStartedAt = nil
+        processingFileName = nil
         state = .preparing
         let savedOptions = RecordingCaptureOptions.current
         microphoneEnabled = savedOptions.microphone
@@ -330,12 +342,17 @@ final class RecorderController {
             return
         }
         stopRequested = false
+        processingStartedAt = Date()
+        processingFileName = nil
+        updateProcessingStage(.stopping)
         state = .stopping
 
         Task { [weak self] in
             do {
-                let url = try await session.stop()
-                await self?.finish(url: url)
+                let fileName = await session.outputURL.lastPathComponent
+                self?.setProcessingFileName(fileName)
+                let result = try await session.stop()
+                await self?.finish(result: result)
             } catch {
                 await self?.failStop(error)
             }
@@ -349,6 +366,9 @@ final class RecorderController {
         displayPicker = nil
         picker?.cancel()
         session = nil
+        clearProcessingStage()
+        processingStartedAt = nil
+        processingFileName = nil
         state = .idle
         completeTerminationRequests()
     }
@@ -452,6 +472,11 @@ final class RecorderController {
                 }
             }
         }
+        await session.setProcessingStageHandler { [weak self] stage in
+            Task { @MainActor [weak self] in
+                self?.updateProcessingStage(stage)
+            }
+        }
         await session.setDiskSpaceLowHandler { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -486,23 +511,83 @@ final class RecorderController {
         }
     }
 
-    private func finish(url: URL?) async {
+    private func finish(result: RecorderFinalizationResult?) async {
         await MainActor.run {
             self.stopRequested = false
             self.session = nil
             self.state = .idle
-            guard let url else {
+            self.clearProcessingStage()
+            self.processingStartedAt = nil
+            self.processingFileName = nil
+            Feedback.dismissProgress()
+            guard let result else {
                 Feedback.flash(message: L10n.t("recording.failed"))
                 self.completeTerminationRequests()
                 return
             }
             Feedback.shutter()
-            Feedback.flash(
-                message: L10n.t("recording.saved"),
-                subtitle: url.deletingLastPathComponent().lastPathComponent + "/" + url.lastPathComponent
-            )
-            self.performAfterCaptureAction(for: url)
+            let message = result.usedRecoveredFile
+                ? L10n.t("recording.recovered")
+                : (result.warning == nil
+                    ? L10n.t("recording.saved")
+                    : L10n.t("recording.saved.warning"))
+            let detail = result.warning == nil
+                ? result.url.deletingLastPathComponent().lastPathComponent + "/" + result.url.lastPathComponent
+                : L10n.t(
+                    result.usedRecoveredFile
+                        ? "recording.recovered.detail"
+                        : "recording.saved.warning.detail"
+                )
+            Feedback.flash(message: message, subtitle: detail)
+            self.performAfterCaptureAction(for: result.url)
             self.completeTerminationRequests()
+        }
+    }
+
+    private func updateProcessingStage(_ stage: RecorderProcessingStage) {
+        guard state == .stopping else { return }
+        processingStage = stage
+        Feedback.progress(
+            message: processingTitle(stage),
+            subtitle: processingDetail()
+        )
+    }
+
+    private func setProcessingFileName(_ fileName: String) {
+        guard state == .stopping else { return }
+        processingFileName = fileName
+        if let stage = processingStage {
+            updateProcessingStage(stage)
+        }
+    }
+
+    private func processingDetail() -> String {
+        var details = [L10n.t("recording.processing.detail")]
+        if let processingFileName {
+            details.append(processingFileName)
+        }
+        if let processingStartedAt {
+            let elapsed = max(0, Int(Date().timeIntervalSince(processingStartedAt)))
+            let minutes = elapsed / 60
+            let seconds = elapsed % 60
+            details.append(
+                L10n.t("recording.processing.elapsed", String(format: "%02d:%02d", minutes, seconds))
+            )
+        }
+        return details.joined(separator: " · ")
+    }
+
+    private func clearProcessingStage() {
+        processingStage = nil
+    }
+
+    private func processingTitle(_ stage: RecorderProcessingStage) -> String {
+        switch stage {
+        case .stopping: return L10n.t("recording.stopping")
+        case .saving: return L10n.t("recording.saving")
+        case .processingAudio: return L10n.t("recording.processingAudio")
+        case .finalizingVideo: return L10n.t("recording.finalizingVideo")
+        case .checking: return L10n.t("recording.checking")
         }
     }
 
@@ -745,6 +830,10 @@ final class RecorderController {
             self.stopRequested = false
             Log.error("recorder stop failed: \(error.localizedDescription)")
             self.session = nil
+            self.clearProcessingStage()
+            self.processingStartedAt = nil
+            self.processingFileName = nil
+            Feedback.dismissProgress()
             self.state = .failed(error.localizedDescription)
             Feedback.flash(message: L10n.t("recording.failed"), subtitle: error.localizedDescription)
             self.completeTerminationRequests()
@@ -771,6 +860,7 @@ private extension RecordingSession {
 
 extension Notification.Name {
     static let recorderStateChanged = Notification.Name("ScreenCap.recorderStateChanged")
+    static let recorderProcessingChanged = Notification.Name("ScreenCap.recorderProcessingChanged")
     static let recorderMicrophoneChanged = Notification.Name("ScreenCap.recorderMicrophoneChanged")
     static let recorderSystemAudioChanged = Notification.Name("ScreenCap.recorderSystemAudioChanged")
 }

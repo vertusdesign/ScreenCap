@@ -72,6 +72,46 @@ enum RecorderRecovery {
         movieURL.appendingPathExtension(markerExtension)
     }
 
+    /// Returns the source movie plus temporary/recovered siblings that may
+    /// represent the same recording after an interrupted finalization. The
+    /// writer keeps its original file descriptor across a rename, so the URL
+    /// supplied to the writer is not necessarily the URL that is playable at
+    /// stop time. Keep this lookup narrowly scoped to the source basename;
+    /// unrelated recordings in the same folder must never be opened instead.
+    static func relatedRecordingURLs(for movieURL: URL) -> [URL] {
+        let directory = movieURL.deletingLastPathComponent()
+        let stem = movieURL.deletingPathExtension().lastPathComponent
+        var urls = [movieURL]
+
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return urls
+        }
+
+        let siblings = entries.filter { candidate in
+            guard candidate.pathExtension.lowercased() == "mov" else { return false }
+            let name = candidate.deletingPathExtension().lastPathComponent
+            return name == "\(stem).composite"
+                || name.hasPrefix("\(stem).recovered")
+                || name.hasPrefix("\(stem) (") && name.hasSuffix(").recovered")
+        }
+        .sorted { lhs, rhs in
+            recoveryRank(for: lhs, stem: stem) < recoveryRank(for: rhs, stem: stem)
+        }
+        urls.append(contentsOf: siblings)
+
+        var unique: [URL] = []
+        var seen = Set<String>()
+        for url in urls {
+            let key = url.standardizedFileURL.path
+            if seen.insert(key).inserted { unique.append(url) }
+        }
+        return unique
+    }
+
     static func markInProgress(for movieURL: URL) throws {
         let marker = markerURL(for: movieURL)
         let markerText =
@@ -152,6 +192,13 @@ enum RecorderRecovery {
             counter += 1
         }
         return candidate
+    }
+
+    private static func recoveryRank(for url: URL, stem: String) -> Int {
+        let name = url.deletingPathExtension().lastPathComponent
+        if name == "\(stem).composite" { return 0 }
+        if name.hasPrefix("\(stem).recovered") { return 1 }
+        return 2
     }
 
     private static func activeOwner(for marker: URL, movie: URL) -> Bool {

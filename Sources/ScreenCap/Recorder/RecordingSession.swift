@@ -22,8 +22,11 @@ actor RecordingSession {
     private var sampleConsumer: Task<Void, Never>?
 
     var onStateChange: (@Sendable (RecorderState) -> Void)?
+    var onProcessingStage: (@Sendable (RecorderProcessingStage) -> Void)?
     var onDiskSpaceLow: (@Sendable () -> Void)?
     var onMicrophoneUnavailable: (@Sendable () -> Void)?
+
+    var outputURL: URL { writer.outputURL }
 
     init(engine: RecorderCaptureEngine, writer: RecorderWriterService) {
         self.engine = engine
@@ -95,9 +98,10 @@ actor RecordingSession {
         }
     }
 
-    func stop() async throws -> URL? {
+    func stop() async throws -> RecorderFinalizationResult? {
         guard state == .recording || state == .preparing else { return nil }
         setState(.stopping)
+        setProcessingStage(.stopping)
         healthTask?.cancel()
         healthTask = nil
 
@@ -112,7 +116,10 @@ actor RecordingSession {
         sampleConsumer = nil
 
         logHealth(label: "final")
-        let result = try await writer.finish()
+        setProcessingStage(.saving)
+        let result = try await writer.finish { [weak self] stage in
+            await self?.reportProcessingStage(stage)
+        }
         setState(.idle)
         return result
     }
@@ -188,12 +195,27 @@ actor RecordingSession {
         }
     }
 
+    private func reportProcessingStage(_ stage: RecorderProcessingStage) {
+        setProcessingStage(stage)
+    }
+
+    private func setProcessingStage(_ stage: RecorderProcessingStage) {
+        let handler = onProcessingStage
+        DispatchQueue.main.async {
+            handler?(stage)
+        }
+    }
+
     func setDiskSpaceLowHandler(_ handler: @escaping @Sendable () -> Void) {
         onDiskSpaceLow = handler
     }
 
     func setMicrophoneUnavailableHandler(_ handler: @escaping @Sendable () -> Void) {
         onMicrophoneUnavailable = handler
+    }
+
+    func setProcessingStageHandler(_ handler: @escaping @Sendable (RecorderProcessingStage) -> Void) {
+        onProcessingStage = handler
     }
 
     private func startHealthMonitoring() {

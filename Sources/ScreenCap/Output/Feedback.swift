@@ -13,6 +13,19 @@ enum Feedback {
         DispatchQueue.main.async { present(message: message, subtitle: subtitle) }
     }
 
+    /// A persistent, non-blocking HUD used while long recordings are being
+    /// finalized. It deliberately has no fake percentage: container rewrite
+    /// and validation time depend heavily on duration, codec and disk speed.
+    static func progress(message: String, subtitle: String? = nil) {
+        DispatchQueue.main.async {
+            present(message: message, subtitle: subtitle, persistent: true)
+        }
+    }
+
+    static func dismissProgress() {
+        DispatchQueue.main.async { dismissPersistentHUD() }
+    }
+
     static func shutter() {
         guard Settings.shared.playShutterSound else { return }
         shutterSound?.play()
@@ -32,7 +45,11 @@ enum Feedback {
         return NSSound(named: "Tink")
     }()
 
-    private static func present(message: String, subtitle: String?) {
+    private static func present(
+        message: String,
+        subtitle: String?,
+        persistent: Bool = false
+    ) {
         dismissTimer?.invalidate()
         hud?.orderOut(nil)
 
@@ -57,6 +74,15 @@ enum Feedback {
         stack.spacing = 2
         stack.edgeInsets = NSEdgeInsets(top: 12, left: 18, bottom: 12, right: 18)
         stack.translatesAutoresizingMaskIntoConstraints = false
+
+        if persistent {
+            let indicator = NSProgressIndicator()
+            indicator.style = .spinning
+            indicator.controlSize = .small
+            indicator.isIndeterminate = true
+            indicator.startAnimation(nil)
+            stack.addArrangedSubview(indicator)
+        }
 
         if let subtitle {
             let detail = NSTextField(labelWithString: subtitle)
@@ -111,14 +137,30 @@ enum Feedback {
         }
 
         hud = window
+        guard !persistent else { return }
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 1.6, repeats: false) { _ in
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.25
-                window.animator().alphaValue = 0
-            }, completionHandler: {
+            Task { @MainActor in
+                dismiss(window: window)
+            }
+        }
+    }
+
+    private static func dismissPersistentHUD() {
+        guard let window = hud else { return }
+        dismissTimer?.invalidate()
+        dismissTimer = nil
+        dismiss(window: window)
+    }
+
+    private static func dismiss(window: NSWindow) {
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.25
+            window.animator().alphaValue = 0
+        }, completionHandler: {
+            Task { @MainActor in
                 window.orderOut(nil)
                 if hud === window { hud = nil }
-            })
-        }
+            }
+        })
     }
 }

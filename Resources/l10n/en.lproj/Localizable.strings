@@ -165,7 +165,17 @@
 "recording.stop" = "Stop recording";
 "recording.preparing" = "Preparing recording…";
 "recording.stopping" = "Finishing recording…";
+"recording.saving" = "Saving recording…";
+"recording.processingAudio" = "Processing audio…";
+"recording.finalizingVideo" = "Finalizing video…";
+"recording.checking" = "Checking recording…";
+"recording.processing.detail" = "ScreenCap is finishing the recording. Long recordings can take a few minutes.";
+"recording.processing.elapsed" = "Elapsed %@";
 "recording.saved" = "Recording saved";
+"recording.saved.warning" = "Recording saved with warning";
+"recording.saved.warning.detail" = "The video is playable, but additional processing could not be completed.";
+"recording.recovered" = "Recording recovered";
+"recording.recovered.detail" = "A playable recording was found after finalization was interrupted.";
 "recording.afterCapture.choose.title" = "What should happen after recording?";
 "recording.afterCapture.choose.message" = "Choose a default action. You can change it later in Recording settings.";
 "recording.afterCapture.choose.save" = "Use this action";

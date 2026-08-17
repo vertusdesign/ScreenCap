@@ -119,8 +119,10 @@ final class RecorderWriterService: @unchecked Sendable {
 
     /// If a microphone is unavailable, finish with video + system audio rather
     /// than discarding an otherwise valid recording.
-    func finish() async throws -> URL? {
-        guard !hasFinished else { return file.url }
+    func finish(
+        onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
+    ) async throws -> RecorderFinalizationResult? {
+        guard !hasFinished else { return nil }
         microphoneProcessor.finish()
         hasFinished = true
 
@@ -158,26 +160,97 @@ final class RecorderWriterService: @unchecked Sendable {
         }
 
         inputs.values.forEach { $0.markAsFinished() }
-        try await withCheckedThrowingContinuation { continuation in
-            writer.finishWriting {
-                if self.writer.status == .completed {
-                    continuation.resume(returning: ())
-                } else {
-                    let reason = self.writer.error?.localizedDescription ?? "unknown writer error"
-                    continuation.resume(throwing: RecorderError.writerFailed(reason))
+        var writerWarning: String?
+        do {
+            try await withCheckedThrowingContinuation { continuation in
+                writer.finishWriting {
+                    if self.writer.status == .completed {
+                        continuation.resume(returning: ())
+                    } else {
+                        let reason = self.writer.error?.localizedDescription ?? "unknown writer error"
+                        continuation.resume(throwing: RecorderError.writerFailed(reason))
+                    }
                 }
             }
+        } catch {
+            // A fragmented MOV may still be playable after AVAssetWriter
+            // reports a finish error. Keep searching candidates below before
+            // classifying the recording as a total failure.
+            writerWarning = error.localizedDescription
+            let reason = writerWarning ?? "unknown error"
+            Log.error("recorder writer finish failed; checking playable fallback: \(reason)")
         }
-        let outputURL = await RecorderPostProcessor.addCompositeAudioTrack(to: file.url)
-        let validation = await RecorderPostProcessor.validateFinalRecording(at: outputURL)
-        guard validation.isValid else {
+        let composite = await RecorderPostProcessor.addCompositeAudioTrack(
+            to: file.url,
+            onProcessingStage: onProcessingStage
+        )
+        await onProcessingStage?(.checking)
+
+        var selected: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
+        var playableFallback: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
+        for candidate in RecorderRecovery.relatedRecordingURLs(for: file.url)
+            where FileManager.default.fileExists(atPath: candidate.path)
+        {
+            let validation = await RecorderPostProcessor.validateFinalRecording(at: candidate)
+            if validation.isValid {
+                selected = (candidate, validation)
+                break
+            }
+            if playableFallback == nil,
+               await RecorderPostProcessor.isPlayableRecording(at: candidate)
+            {
+                playableFallback = (candidate, validation)
+            }
+        }
+
+        let chosen: (url: URL, validation: RecorderPostProcessor.ValidationResult)
+        if let selected {
+            chosen = selected
+        } else if let playableFallback {
+            chosen = playableFallback
+        } else {
             RecorderRecovery.clearMarker(for: file.url)
             throw RecorderError.writerFailed(
-                "final recording failed container validation: \(validation.summary)"
+                "final recording failed container validation or no playable file was found"
+            )
+        }
+
+        // A failed atomic replace can leave a completed temporary composite
+        // movie beside a valid source. Do not let that implementation detail
+        // become a duplicate recording in the Player library; preserve it only
+        // when it is the candidate we are actually returning.
+        let temporaryCompositeURL = file.url
+            .deletingPathExtension()
+            .appendingPathExtension("composite.mov")
+        if temporaryCompositeURL.standardizedFileURL != chosen.url.standardizedFileURL {
+            try? FileManager.default.removeItem(at: temporaryCompositeURL)
+        }
+
+        var warnings: [String] = []
+        if let writerWarning {
+            warnings.append("writer finish: \(writerWarning)")
+        }
+        if let compositeWarning = composite.warning {
+            warnings.append("composite audio: \(compositeWarning)")
+        }
+        if !chosen.validation.isValid {
+            warnings.append("validation: \(chosen.validation.summary)")
+        }
+        let usedRecoveredFile = chosen.url.standardizedFileURL != file.url.standardizedFileURL
+        if usedRecoveredFile {
+            warnings.append("recording path changed during finalization")
+            Log.error(
+                "recorder finalization selected fallback file "
+                    + "\(chosen.url.lastPathComponent) instead of \(file.url.lastPathComponent)"
             )
         }
         RecorderRecovery.clearMarker(for: file.url)
-        return outputURL
+        RecorderRecovery.clearMarker(for: chosen.url)
+        return RecorderFinalizationResult(
+            url: chosen.url,
+            warning: warnings.isEmpty ? nil : warnings.joined(separator: "; "),
+            usedRecoveredFile: usedRecoveredFile
+        )
     }
 
     func cancel() {

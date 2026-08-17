@@ -29,6 +29,9 @@ All notable changes are recorded here. This project follows
   item cannot leave a stale player selection.
 - **Recovery race guard**: recording markers identify the active writer process; a second app
   instance no longer moves a live movie into a recovered filename during finalization.
+- **Resilient finalization**: long recordings expose persistent background stages, retain playable
+  raw/temporary/recovered files when optional processing or strict validation fails, show “saved
+  with warning” or “recovered”, and still run the configured after-recording action on the actual file.
 
 ### Compatibility
 
