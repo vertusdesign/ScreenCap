@@ -11,7 +11,11 @@ struct TrackEditorView: View {
         VStack(spacing: 0) {
             header
             Divider()
-            ScrollView(.horizontal, showsIndicators: true) {
+            // The timeline can be taller than the compact window (for example
+            // when a recording has many audio tracks). Scroll vertically
+            // inside the editor instead of allowing its bottom controls to be
+            // clipped by the window edge.
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 ZStack(alignment: .topLeading) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 0) {
@@ -45,7 +49,8 @@ struct TrackEditorView: View {
                     .allowsHitTesting(false)
                 }
             }
-            .frame(minHeight: 142, maxHeight: 210)
+            .frame(minHeight: 72, maxHeight: .infinity)
+            .layoutPriority(1)
 
             Divider()
             TrimRangeControl(

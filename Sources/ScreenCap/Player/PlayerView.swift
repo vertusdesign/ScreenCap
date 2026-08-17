@@ -16,7 +16,9 @@ struct PlayerView: View {
             playerStage
                 .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 1050, minHeight: 680)
+        // AppKit's minSize includes the title bar. Keep the content minimum
+        // below it so the toolbar and bottom navigation retain their padding.
+        .frame(minWidth: 1050, minHeight: 330)
         .alert(
             L10n.t("player.track.remove.confirm.title"),
             isPresented: Binding(
@@ -191,6 +193,7 @@ struct PlayerView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .fixedSize(horizontal: false, vertical: true)
 
             Divider()
             if showTranscript {
@@ -199,7 +202,7 @@ struct PlayerView: View {
                     coordinator: viewModel.transcription,
                     onStart: { viewModel.transcribeSelected() }
                 )
-                    .frame(height: 104)
+                    .frame(minHeight: 0, idealHeight: 104, maxHeight: 104)
             }
 
             ZStack(alignment: .bottom) {
@@ -237,6 +240,7 @@ struct PlayerView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
+            .fixedSize(horizontal: false, vertical: true)
 
             if viewModel.isTrackEditorVisible {
                 TrackEditorView(viewModel: viewModel)

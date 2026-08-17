@@ -32,7 +32,10 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
             newWindow.isRestorable = false
             newWindow.tabbingMode = .disallowed
             newWindow.collectionBehavior = [.managed, .fullScreenPrimary]
-            newWindow.minSize = NSSize(width: 1050, height: 680)
+            // Keep enough room for the title bar while allowing a compact
+            // player window. The SwiftUI content uses a slightly smaller
+            // minimum so AppKit's title bar never clips its top or bottom rows.
+            newWindow.minSize = NSSize(width: 1050, height: 360)
             newWindow.center()
             window = newWindow
         }
