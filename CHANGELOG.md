@@ -32,6 +32,10 @@ All notable changes are recorded here. This project follows
 - **Resilient finalization**: long recordings expose persistent background stages, retain playable
   raw/temporary/recovered files when optional processing or strict validation fails, show “saved
   with warning” or “recovered”, and still run the configured after-recording action on the actual file.
+- **Hybrid recording notifications**: the HUD remains the progress surface, while local system
+  notifications report terminal warnings, recoveries and failures (and ordinary success only when
+  ScreenCap is inactive). Permission is requested lazily; Open and Show in Finder actions never
+  send recording paths to a server.
 
 ### Compatibility
 

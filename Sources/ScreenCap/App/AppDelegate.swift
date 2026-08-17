@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         L10n.reload()
+        SystemNotificationCoordinator.shared.configure()
         Task { @MainActor [weak self] in
             self?.installMainMenu(playerVisible: false)
         }
@@ -59,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                SystemNotificationCoordinator.shared.configure()
                 self.installMainMenu(playerVisible: PlayerWindowController.shared.isVisible)
             }
         }

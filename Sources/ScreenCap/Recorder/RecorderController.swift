@@ -40,6 +40,7 @@ final class RecorderController {
     private var terminationCompletions: [() -> Void] = []
     private var processingStartedAt: Date?
     private var processingFileName: String?
+    private var didPostFailureNotification = false
 
     private init() {}
 
@@ -126,6 +127,7 @@ final class RecorderController {
 
     private func start(mode: RecorderStartMode) {
         guard state == .idle || isFailed else { return }
+        didPostFailureNotification = false
         processingStage = nil
         processingStartedAt = nil
         processingFileName = nil
@@ -469,6 +471,7 @@ final class RecorderController {
                 if case .failed(let reason) = newState {
                     self.session = nil
                     Feedback.flash(message: L10n.t("recording.failed"), subtitle: reason)
+                    self.postFailureNotificationIfNeeded(reason: reason)
                 }
             }
         }
@@ -522,6 +525,7 @@ final class RecorderController {
             Feedback.dismissProgress()
             guard let result else {
                 Feedback.flash(message: L10n.t("recording.failed"))
+                self.postFailureNotificationIfNeeded(reason: nil)
                 self.completeTerminationRequests()
                 return
             }
@@ -539,7 +543,13 @@ final class RecorderController {
                         : "recording.saved.warning.detail"
                 )
             Feedback.flash(message: message, subtitle: detail)
-            self.performAfterCaptureAction(for: result.url)
+            let destinationWasOpened = self.performAfterCaptureAction(for: result.url)
+            SystemNotificationCoordinator.shared.postRecordingResult(
+                url: result.url,
+                warning: result.warning != nil,
+                recovered: result.usedRecoveredFile,
+                destinationWasOpened: destinationWasOpened
+            )
             self.completeTerminationRequests()
         }
     }
@@ -591,18 +601,20 @@ final class RecorderController {
         }
     }
 
-    private func performAfterCaptureAction(for url: URL) {
+    @discardableResult
+    private func performAfterCaptureAction(for url: URL) -> Bool {
         guard let action = Settings.shared.recordingAfterCaptureAction else {
-            promptForAfterCaptureAction(for: url)
-            return
+            return promptForAfterCaptureAction(for: url)
         }
         switch action {
         case RecordingAfterCaptureAction.nothing:
-            break
+            return false
         case RecordingAfterCaptureAction.showInFolder:
             NSWorkspace.shared.activateFileViewerSelecting([url])
+            return true
         case RecordingAfterCaptureAction.openInPlayer:
             DispatchQueue.main.async { PlayerWindowController.shared.show(url: url) }
+            return true
         default:
             guard let bundleIdentifier = RecordingAfterCaptureAction.bundleIdentifier(from: action),
                   let applicationURL = NSWorkspace.shared
@@ -610,12 +622,12 @@ final class RecorderController {
                     .first(where: { Bundle(url: $0)?.bundleIdentifier == bundleIdentifier })
             else {
                 NSWorkspace.shared.open(url)
-                return
+                return true
             }
 
             if bundleIdentifier == "org.videolan.vlc" {
                 openWithVLC(url, applicationURL: applicationURL)
-                return
+                return true
             }
 
             NSWorkspace.shared.open(
@@ -624,6 +636,7 @@ final class RecorderController {
                 configuration: NSWorkspace.OpenConfiguration(),
                 completionHandler: nil
             )
+            return true
         }
     }
 
@@ -637,7 +650,8 @@ final class RecorderController {
     /// imposed. Choosing an action applies it to this recording and persists
     /// it for subsequent recordings; closing or choosing Later leaves the
     /// setting unconfigured and asks again next time.
-    private func promptForAfterCaptureAction(for url: URL) {
+    @discardableResult
+    private func promptForAfterCaptureAction(for url: URL) -> Bool {
         let choices = afterCaptureChoices()
         let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 340, height: 26))
         for choice in choices {
@@ -657,10 +671,10 @@ final class RecorderController {
         guard alert.runModal() == .alertFirstButtonReturn,
               let selected = popup.selectedItem?.representedObject as? String,
               selected != RecordingAfterCaptureAction.notConfigured
-        else { return }
+        else { return false }
 
         Settings.shared.recordingAfterCaptureAction = selected
-        performAfterCaptureAction(for: url)
+        return performAfterCaptureAction(for: url)
     }
 
     private func afterCaptureChoices() -> [AfterCaptureChoice] {
@@ -836,8 +850,15 @@ final class RecorderController {
             Feedback.dismissProgress()
             self.state = .failed(error.localizedDescription)
             Feedback.flash(message: L10n.t("recording.failed"), subtitle: error.localizedDescription)
+            self.postFailureNotificationIfNeeded(reason: error.localizedDescription)
             self.completeTerminationRequests()
         }
+    }
+
+    private func postFailureNotificationIfNeeded(reason: String?) {
+        guard !didPostFailureNotification else { return }
+        didPostFailureNotification = true
+        SystemNotificationCoordinator.shared.postRecordingFailure(reason: reason)
     }
 
     private func completeTerminationRequests() {

@@ -139,6 +139,13 @@ open "screencap://record"
 .build/debug/ScreenCap --capture record
 ```
 
+The in-app HUD remains the source of truth while a recording is being finalized and continues
+to work when notifications are disabled. At the terminal state, ScreenCap may also show a
+local system notification: warnings, recovered recordings and failures are always eligible;
+ordinary success is notified only when ScreenCap is inactive and no after-recording action has
+already opened a destination. The notification permission is requested lazily, with no sound,
+badge or network service. Its actions can open the recording in the Player or reveal it in Finder.
+
 ## Player
 
 Open **ScreenCap Pro 3 → Open Player**. The Player is a separate regular macOS window while it

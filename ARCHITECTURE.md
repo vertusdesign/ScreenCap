@@ -40,6 +40,13 @@ failures do not discard a playable raw movie. The writer checks the original, te
 recovered sibling URLs, classifies a usable fallback as a warning/recovery result, and passes that
 actual URL to the configured after-recording action; only a missing or unplayable movie is fatal.
 
+The HUD remains the progress and fallback surface. Terminal results additionally go through the
+local `SystemNotificationCoordinator`: warning/recovered/failure results are eligible even when
+ScreenCap is frontmost, while an ordinary success is posted only when the app is inactive and no
+after-recording action opened a destination. Authorization is requested lazily with alerts only;
+there is no server, APNs registration, sound or badge. Notification actions resolve a bounded
+local target identifier to a file path, so raw paths are not placed in notification payloads.
+
 The post-recording action is intentionally unconfigured on a fresh installation. After the first
 successful recording, the recorder presents a native choice pop-up; a selected action is persisted
 and applied to later recordings. Choosing Later or closing the pop-up leaves the setting unconfigured,

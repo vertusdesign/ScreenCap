@@ -207,6 +207,18 @@
 "recording.selection.showMouseClicks" = "Show clicks";
 "recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 
+"notification.action.open" = "Open";
+"notification.action.showInFinder" = "Show in Finder";
+"notification.recording.saved.title" = "Recording saved";
+"notification.recording.saved.body" = "%@ is ready.";
+"notification.recording.warning.title" = "Recording saved with warning";
+"notification.recording.warning.body" = "%@ is playable, but additional processing could not be completed.";
+"notification.recording.recovered.title" = "Recording recovered";
+"notification.recording.recovered.body" = "A playable version of %@ was found after finalization was interrupted.";
+"notification.recording.failed.title" = "Recording failed";
+"notification.recording.failed.body" = "ScreenCap could not create a playable recording.";
+"notification.recording.unavailable" = "The recording is no longer available.";
+
 "error.permissionDenied" = "No Screen Recording permission.";
 "error.noDisplays" = "No displays found.";
 "error.captureFailed" = "Capture failed: %@";
