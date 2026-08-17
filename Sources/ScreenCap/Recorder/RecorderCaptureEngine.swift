@@ -55,7 +55,8 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     static func make(
         display: RecorderDisplay,
         captureSystemAudio: Bool,
-        captureMicrophone: Bool
+        captureMicrophone: Bool,
+        showMouseClicks: Bool
     ) async throws -> RecorderCaptureEngine {
         let content: SCShareableContent
         do {
@@ -88,7 +89,8 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
             width: display.width,
             height: display.height,
             captureSystemAudio: captureSystemAudio,
-            captureMicrophone: captureMicrophone
+            captureMicrophone: captureMicrophone,
+            showMouseClicks: showMouseClicks
         )
     }
 
@@ -97,7 +99,8 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         width: Int,
         height: Int,
         captureSystemAudio: Bool,
-        captureMicrophone: Bool
+        captureMicrophone: Bool,
+        showMouseClicks: Bool
     ) throws -> RecorderCaptureEngine {
         guard width >= 2, height >= 2 else {
             throw RecorderError.noDisplay
@@ -112,7 +115,12 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         // writes. BGRA forces an additional conversion at Retina dimensions
         // and has caused VideoToolbox to reject otherwise valid frames on
         // long captures (AVFoundation -11800 / OSStatus -16122).
-        configuration.pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+        // ScreenCaptureKit's native click indicator is composited only for
+        // BGRA streams. Keep the lower-cost 4:2:0 path for normal recordings,
+        // and switch formats only when the user explicitly requests clicks.
+        configuration.pixelFormat = showMouseClicks
+            ? kCVPixelFormatType_32BGRA
+            : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
         configuration.colorSpaceName = CGColorSpace.sRGB
         configuration.captureResolution = .best
         // Keep the recorder's output deterministic across display capabilities.
@@ -120,6 +128,7 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         configuration.captureDynamicRange = SCCaptureDynamicRange(rawValue: 0)!
         configuration.scalesToFit = false
         configuration.showsCursor = true
+        configuration.showMouseClicks = showMouseClicks
         configuration.capturesAudio = captureSystemAudio
         configuration.excludesCurrentProcessAudio = true
         configuration.sampleRate = 48_000
@@ -136,8 +145,9 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         Log.diagnostic(
             "recorder configuration os=\(ProcessInfo.processInfo.operatingSystemVersionString) "
                 + "arch=\(Self.machineArchitecture) display=\(width)x\(height) "
-                + "fps=60 queueDepth=5 pixelFormat=420v dynamicRange=SDR "
+                + "fps=60 queueDepth=5 pixelFormat=\(showMouseClicks ? "BGRA" : "420v") dynamicRange=SDR "
                 + "systemAudio=\(captureSystemAudio) microphone=\(captureMicrophone) "
+                + "showMouseClicks=\(showMouseClicks) "
                 + "sampleRate=48000 channels=2"
         )
 

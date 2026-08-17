@@ -421,6 +421,7 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
     private let systemAudioButton: NSButton
     private let microphoneButton: NSButton
     private let noiseSuppressionButton: NSButton
+    private let showMouseClicksButton: NSButton
     private let cancelButton: NSButton
     private let startButton: NSButton
 
@@ -458,6 +459,11 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
             target: nil,
             action: nil
         )
+        showMouseClicksButton = NSButton(
+            checkboxWithTitle: L10n.t("recording.selection.showMouseClicks"),
+            target: nil,
+            action: nil
+        )
         cancelButton = NSButton(title: L10n.t("recording.selection.cancel"), target: nil, action: nil)
         startButton = NSButton(title: L10n.t("recording.selection.start"), target: nil, action: nil)
 
@@ -479,7 +485,7 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
         hintField.textColor = .secondaryLabelColor
         hintField.lineBreakMode = .byTruncatingTail
 
-        for button in [systemAudioButton, microphoneButton, noiseSuppressionButton] {
+        for button in [systemAudioButton, microphoneButton, noiseSuppressionButton, showMouseClicksButton] {
             button.controlSize = .small
             button.setContentHuggingPriority(.required, for: .horizontal)
             button.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -511,6 +517,8 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
         microphoneButton.action = #selector(microphoneChanged(_:))
         noiseSuppressionButton.target = self
         noiseSuppressionButton.action = #selector(noiseSuppressionChanged(_:))
+        showMouseClicksButton.target = self
+        showMouseClicksButton.action = #selector(showMouseClicksChanged(_:))
         cancelButton.target = self
         cancelButton.action = #selector(cancelPressed(_:))
         startButton.target = self
@@ -525,7 +533,9 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
         optionsLabel.font = .systemFont(ofSize: 11, weight: .medium)
         optionsLabel.textColor = .secondaryLabelColor
 
-        let optionsStack = NSStackView(views: [optionsLabel, systemAudioButton, microphoneButton, noiseSuppressionButton])
+        let optionsStack = NSStackView(
+            views: [optionsLabel, systemAudioButton, microphoneButton, noiseSuppressionButton, showMouseClicksButton]
+        )
         optionsStack.orientation = .horizontal
         optionsStack.alignment = .centerY
         optionsStack.spacing = 14
@@ -578,6 +588,7 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
         microphoneButton.state = options.microphone ? .on : .off
         noiseSuppressionButton.state = options.noiseSuppression ? .on : .off
         noiseSuppressionButton.isEnabled = options.microphone
+        showMouseClicksButton.state = options.showMouseClicks ? .on : .off
     }
 
     @objc private func systemAudioChanged(_ sender: NSButton) {
@@ -593,6 +604,11 @@ private final class RecorderDisplayPickerFooterView: NSVisualEffectView {
 
     @objc private func noiseSuppressionChanged(_ sender: NSButton) {
         options.noiseSuppression = sender.state == .on
+        onOptionsChanged(options)
+    }
+
+    @objc private func showMouseClicksChanged(_ sender: NSButton) {
+        options.showMouseClicks = sender.state == .on
         onOptionsChanged(options)
     }
 

@@ -215,6 +215,7 @@ final class RecorderController {
             guard let self else { return }
             guard self.startRequestID == requestID else { return }
             let captureSystemAudio = options.systemAudio
+            let showMouseClicks = options.showMouseClicks
             var microphone = options.microphone
                 ? await self.microphoneAvailability()
                 : false
@@ -237,7 +238,8 @@ final class RecorderController {
                     engine = try await RecorderCaptureEngine.make(
                         display: display,
                         captureSystemAudio: captureSystemAudio,
-                        captureMicrophone: microphone
+                        captureMicrophone: microphone,
+                        showMouseClicks: showMouseClicks
                     )
                 } catch {
                     guard microphone else { throw error }
@@ -256,7 +258,8 @@ final class RecorderController {
                     engine = try await RecorderCaptureEngine.make(
                         display: display,
                         captureSystemAudio: captureSystemAudio,
-                        captureMicrophone: false
+                        captureMicrophone: false,
+                        showMouseClicks: showMouseClicks
                     )
                 }
                 let writer = try RecorderWriterService(

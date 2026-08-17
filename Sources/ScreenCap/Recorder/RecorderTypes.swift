@@ -29,6 +29,7 @@ struct RecordingCaptureOptions: Equatable {
     var systemAudio: Bool
     var microphone: Bool
     var noiseSuppression: Bool
+    var showMouseClicks: Bool
 
     /// The picker starts from the saved recording preferences, then lets the
     /// user make a one-off choice for this recording without changing them.
@@ -36,7 +37,8 @@ struct RecordingCaptureOptions: Equatable {
         Self(
             systemAudio: !Settings.shared.recordingSkipSystemAudio,
             microphone: !Settings.shared.recordingSkipMicrophone,
-            noiseSuppression: Settings.shared.recordingNoiseSuppression
+            noiseSuppression: Settings.shared.recordingNoiseSuppression,
+            showMouseClicks: Settings.shared.recordingShowMouseClicks
         )
     }
 }

@@ -315,9 +315,14 @@ private struct TranscriptPanel: View {
                         .font(.caption2)
                         .foregroundStyle(.red)
                 }
-                if coordinator.state == .transcribing {
-                    ProgressView()
-                        .controlSize(.small)
+                if let progressMessage = coordinator.state.progressMessage {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(progressMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             Spacer()

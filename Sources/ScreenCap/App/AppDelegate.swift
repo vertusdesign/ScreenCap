@@ -32,7 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         L10n.reload()
-        installMainMenu()
+        Task { @MainActor [weak self] in
+            self?.installMainMenu(playerVisible: false)
+        }
 
         if #available(macOS 15.0, *) {
             Task {
@@ -54,7 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.installMainMenu()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.installMainMenu(playerVisible: PlayerWindowController.shared.isVisible)
+            }
         }
 
         // Ask through macOS itself when access is missing. The app-owned fallback
@@ -146,12 +151,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
-    /// An accessory app has no menu bar of its own, but the standard Edit menu is
-    /// still needed for copy/paste inside the text tool and Preferences.
-    private func installMainMenu() {
+    /// Switches the process between its normal menu-bar utility role and the
+    /// regular application role used while the Player window is open. A regular
+    /// activation policy is what makes the Player appear beside Apple in the
+    /// menu bar, in Cmd-Tab, and in Mission Control/Fn-F3.
+    @MainActor
+    func setPlayerWindowVisible(_ visible: Bool) {
+        if visible {
+            _ = NSApp.setActivationPolicy(.regular)
+            installMainMenu(playerVisible: true)
+        } else {
+            installMainMenu(playerVisible: false)
+            _ = NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    /// The permanent status item remains the entry point while ScreenCap is an
+    /// accessory app. When Player is visible this becomes a conventional macOS
+    /// application menu with File/Edit/View/Window/Help sections.
+    @MainActor
+    private func installMainMenu(playerVisible: Bool) {
         let mainMenu = NSMenu()
 
-        let appMenuItem = NSMenuItem()
+        let appMenuItem = NSMenuItem(title: AppInfo.name, action: nil, keyEquivalent: "")
         let appMenu = NSMenu()
         appMenu.addItem(
             withTitle: L10n.t("menu.about", AppInfo.name),
@@ -165,6 +187,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ","
         )
         appMenu.addItem(.separator())
+        let openPlayer = appMenu.addItem(
+            withTitle: L10n.t("menu.player"),
+            action: #selector(openPlayerFromMainMenu),
+            keyEquivalent: ""
+        )
+        openPlayer.target = self
+        if playerVisible {
+            openPlayer.isHidden = true
+        }
+        appMenu.addItem(.separator())
         appMenu.addItem(
             withTitle: L10n.t("menu.quit", AppInfo.name),
             action: #selector(NSApplication.terminate(_:)),
@@ -172,6 +204,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
+
+        if playerVisible {
+            let fileMenuItem = NSMenuItem(title: L10n.t("menu.file"), action: nil, keyEquivalent: "")
+            let fileMenu = NSMenu(title: L10n.t("menu.file"))
+            let openVideo = fileMenu.addItem(
+                withTitle: L10n.t("menu.openVideo"),
+                action: #selector(PlayerWindowController.openVideoFromMenu(_:)),
+                keyEquivalent: "o"
+            )
+            openVideo.target = PlayerWindowController.shared
+            let openFolder = fileMenu.addItem(
+                withTitle: L10n.t("menu.openFolder"),
+                action: #selector(PlayerWindowController.openFolderFromMenu(_:)),
+                keyEquivalent: ""
+            )
+            openFolder.target = PlayerWindowController.shared
+            fileMenu.addItem(.separator())
+            fileMenu.addItem(
+                withTitle: L10n.t("menu.closeWindow"),
+                action: #selector(NSWindow.performClose(_:)),
+                keyEquivalent: "w"
+            )
+            fileMenuItem.submenu = fileMenu
+            mainMenu.addItem(fileMenuItem)
+        }
 
         let editMenuItem = NSMenuItem()
         let editMenu = NSMenu(title: L10n.t("menu.edit"))
@@ -185,7 +242,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 
+        if playerVisible {
+            let viewMenuItem = NSMenuItem(title: L10n.t("menu.view"), action: nil, keyEquivalent: "")
+            let viewMenu = NSMenu(title: L10n.t("menu.view"))
+            let showPlayer = viewMenu.addItem(
+                withTitle: L10n.t("menu.player"),
+                action: #selector(openPlayerFromMainMenu),
+                keyEquivalent: ""
+            )
+            showPlayer.target = self
+            viewMenuItem.submenu = viewMenu
+            mainMenu.addItem(viewMenuItem)
+
+            let windowMenuItem = NSMenuItem(title: L10n.t("menu.window"), action: nil, keyEquivalent: "")
+            let windowMenu = NSMenu(title: L10n.t("menu.window"))
+            windowMenu.addItem(
+                withTitle: L10n.t("menu.minimize"),
+                action: #selector(NSWindow.performMiniaturize(_:)),
+                keyEquivalent: "m"
+            )
+            windowMenu.addItem(
+                withTitle: L10n.t("menu.zoom"),
+                action: #selector(NSWindow.performZoom(_:)),
+                keyEquivalent: ""
+            )
+            windowMenu.addItem(.separator())
+            windowMenu.addItem(
+                withTitle: L10n.t("menu.bringAllToFront"),
+                action: #selector(NSApplication.arrangeInFront(_:)),
+                keyEquivalent: ""
+            )
+            windowMenuItem.submenu = windowMenu
+            mainMenu.addItem(windowMenuItem)
+            NSApp.windowsMenu = windowMenu
+        } else {
+            NSApp.windowsMenu = nil
+        }
+
+        let helpMenuItem = NSMenuItem(title: L10n.t("menu.help"), action: nil, keyEquivalent: "")
+        let helpMenu = NSMenu(title: L10n.t("menu.help"))
+        let support = helpMenu.addItem(
+            withTitle: L10n.t("menu.support"),
+            action: #selector(openSupport),
+            keyEquivalent: ""
+        )
+        support.target = self
+        helpMenuItem.submenu = helpMenu
+        mainMenu.addItem(helpMenuItem)
+
         NSApp.mainMenu = mainMenu
+    }
+
+    @MainActor @objc private func openPlayerFromMainMenu() {
+        Task { @MainActor in
+            PlayerWindowController.shared.show()
+        }
+    }
+
+    @objc private func openSupport() {
+        NSWorkspace.shared.open(AppInfo.supportURL)
     }
 
     @objc private func showAbout() {

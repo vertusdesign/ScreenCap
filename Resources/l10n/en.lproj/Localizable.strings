@@ -89,6 +89,17 @@
 "menu.checkForUpdates" = "Check for Updates…";
 "menu.quit" = "Quit %@";
 "menu.edit" = "Edit";
+"menu.file" = "File";
+"menu.view" = "View";
+"menu.window" = "Window";
+"menu.help" = "Help";
+"menu.openVideo" = "Open Video…";
+"menu.openFolder" = "Open Folder…";
+"menu.closeWindow" = "Close Window";
+"menu.minimize" = "Minimize";
+"menu.zoom" = "Zoom";
+"menu.bringAllToFront" = "Bring All to Front";
+"menu.support" = "ScreenCap Support";
 
 "prefs.title" = "%@ Settings";
 "prefs.tab.shortcuts" = "Shortcuts";
@@ -117,6 +128,8 @@
 "prefs.resetCapture" = "Reset capture settings to defaults";
 "prefs.recording.logicalSize" = "Record at logical size (no Retina ×2)";
 "prefs.recording.logicalSize.help" = "Uses the display's logical resolution instead of recording every Retina pixel. This reduces the video dimensions and file size.";
+"prefs.recording.showMouseClicks" = "Show mouse clicks";
+"prefs.recording.showMouseClicks.help" = "Draws a native macOS click indicator around the pointer in the recording. This is rendered locally and does not change the desktop.";
 "prefs.recording.skipSystemAudio" = "Do not record system audio";
 "prefs.recording.skipMicrophone" = "Do not record microphone";
 "prefs.recording.noiseSuppression" = "Noise suppression";
@@ -177,6 +190,7 @@
 "recording.selection.systemAudio" = "System audio";
 "recording.selection.microphone" = "Microphone";
 "recording.selection.noiseSuppression" = "Noise suppression";
+"recording.selection.showMouseClicks" = "Show clicks";
 "recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 
 "error.permissionDenied" = "No Screen Recording permission.";
@@ -261,3 +275,10 @@
 "player.transcript.automatic.message" = "When enabled, ScreenCap can prepare a local transcript after recording while the Mac is idle.";
 "player.transcript.ondemand.message" = "Transcription is started only when you ask for it. Audio is processed locally when the selected model supports it.";
 "player.transcript.start" = "Transcribe";
+"player.transcript.started" = "Transcription started";
+"player.transcript.finished" = "Transcription complete";
+"player.transcript.failed" = "Transcription failed";
+"player.transcript.noSelection" = "Select a recording before transcribing";
+"player.transcript.requestingPermission" = "Requesting Speech Recognition permission…";
+"player.transcript.extractingAudio" = "Preparing audio locally…";
+"player.transcript.transcribing" = "Recognizing speech on this Mac…";

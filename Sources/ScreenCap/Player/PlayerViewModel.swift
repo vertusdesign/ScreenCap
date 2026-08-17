@@ -166,7 +166,11 @@ final class PlayerViewModel: ObservableObject {
     }
 
     func transcribeSelected() {
-        guard let selectedRecording else { return }
+        guard let selectedRecording else {
+            Feedback.flash(message: L10n.t("player.transcript.noSelection"))
+            return
+        }
+        guard !transcription.state.isBusy else { return }
         transcription.transcribe(url: selectedRecording.url)
     }
 

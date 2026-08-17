@@ -380,6 +380,15 @@ private struct RecordingTab: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Toggle(L10n.t("prefs.recording.showMouseClicks"), isOn: Binding(
+                get: { settings.recordingShowMouseClicks },
+                set: { settings.recordingShowMouseClicks = $0 }
+            ))
+            Text(L10n.t("prefs.recording.showMouseClicks.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             HStack {
                 Text(L10n.t("prefs.recording.codec"))
                 Spacer()

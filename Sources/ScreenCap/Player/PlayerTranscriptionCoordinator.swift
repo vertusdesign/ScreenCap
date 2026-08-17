@@ -19,6 +19,15 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
             default: return false
             }
         }
+
+        var progressMessage: String? {
+            switch self {
+            case .requestingPermission: return L10n.t("player.transcript.requestingPermission")
+            case .extractingAudio: return L10n.t("player.transcript.extractingAudio")
+            case .transcribing: return L10n.t("player.transcript.transcribing")
+            default: return nil
+            }
+        }
     }
 
     @Published private(set) var state: State = .idle
@@ -27,6 +36,7 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
 
     private var recognitionTask: SFSpeechRecognitionTask?
     private var temporaryAudioURL: URL?
+    private var operationID = UUID()
 
     deinit {
         recognitionTask?.cancel()
@@ -34,29 +44,54 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
     }
 
     func transcribe(url: URL, locale: Locale = .current) {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            let error = TranscriptionError.recordingUnavailable
+            state = .failed(error.localizedDescription)
+            Feedback.flash(
+                message: L10n.t("player.transcript.failed"),
+                subtitle: error.localizedDescription
+            )
+            return
+        }
+
+        let currentOperationID = UUID()
+        operationID = currentOperationID
         recognitionTask?.cancel()
         cleanupTemporaryAudio()
         text = ""
         localeIdentifier = locale.identifier
         state = .requestingPermission
+        Feedback.flash(message: L10n.t("player.transcript.started"))
 
         Task { [weak self] in
             guard let self else { return }
             do {
                 try await self.requestSpeechAuthorization()
+                guard self.operationID == currentOperationID else { return }
                 state = .extractingAudio
                 let audioURL = try await self.extractAudio(from: url)
+                guard self.operationID == currentOperationID else {
+                    try? FileManager.default.removeItem(at: audioURL)
+                    return
+                }
                 temporaryAudioURL = audioURL
                 state = .transcribing
                 try await self.runRecognition(audioURL: audioURL, locale: locale)
+                guard self.operationID == currentOperationID else { return }
             } catch {
+                guard self.operationID == currentOperationID else { return }
                 state = .failed(error.localizedDescription)
                 cleanupTemporaryAudio()
+                Feedback.flash(
+                    message: L10n.t("player.transcript.failed"),
+                    subtitle: error.localizedDescription
+                )
             }
         }
     }
 
     func cancel() {
+        operationID = UUID()
         recognitionTask?.cancel()
         recognitionTask = nil
         cleanupTemporaryAudio()
@@ -76,6 +111,10 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
 
     private func extractAudio(from url: URL) async throws -> URL {
         let asset = AVURLAsset(url: url)
+        let tracks = try await asset.load(.tracks)
+        guard tracks.contains(where: { $0.mediaType == .audio }) else {
+            throw TranscriptionError.audioExtractionUnavailable
+        }
         guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
             throw TranscriptionError.audioExtractionUnavailable
         }
@@ -101,8 +140,15 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
     }
 
     private func runRecognition(audioURL: URL, locale: Locale) async throws {
-        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
+        guard let supportedLocale = Self.bestSupportedLocale(for: locale),
+              let recognizer = SFSpeechRecognizer(locale: supportedLocale),
+              recognizer.isAvailable
+        else {
             throw TranscriptionError.recognizerUnavailable
+        }
+        localeIdentifier = supportedLocale.identifier
+        guard recognizer.supportsOnDeviceRecognition else {
+            throw TranscriptionError.onDeviceRecognitionUnavailable
         }
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
         // Apple Speech exposes this switch on macOS. We deliberately require the
@@ -111,23 +157,37 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
         request.shouldReportPartialResults = true
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            var didFinish = false
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
                 Task { @MainActor in
                     if let result {
                         self?.text = result.bestTranscription.formattedString
                     }
+                    guard !didFinish else { return }
                     if let error {
+                        didFinish = true
                         self?.recognitionTask = nil
                         continuation.resume(throwing: error)
                     } else if result?.isFinal == true {
+                        didFinish = true
                         self?.recognitionTask = nil
                         self?.state = .finished
                         self?.cleanupTemporaryAudio()
+                        Feedback.flash(message: L10n.t("player.transcript.finished"))
                         continuation.resume()
                     }
                 }
             }
         }
+    }
+
+    private static func bestSupportedLocale(for requested: Locale) -> Locale? {
+        let supported = SFSpeechRecognizer.supportedLocales()
+        if let exact = supported.first(where: { $0.identifier == requested.identifier }) {
+            return exact
+        }
+        guard let language = requested.language.languageCode?.identifier else { return nil }
+        return supported.first(where: { $0.language.languageCode?.identifier == language })
     }
 
     private func cleanupTemporaryAudio() {
@@ -141,8 +201,10 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
 enum TranscriptionError: LocalizedError {
     case permissionDenied
     case recognizerUnavailable
+    case onDeviceRecognitionUnavailable
     case audioExtractionUnavailable
     case audioExtractionFailed
+    case recordingUnavailable
     case cancelled
 
     var errorDescription: String? {
@@ -151,10 +213,14 @@ enum TranscriptionError: LocalizedError {
             return "Speech Recognition permission was not granted."
         case .recognizerUnavailable:
             return "On-device speech recognition is unavailable for this language on this Mac."
+        case .onDeviceRecognitionUnavailable:
+            return "This language is not available for on-device speech recognition on this Mac."
         case .audioExtractionUnavailable:
             return "The recording does not contain an audio stream that can be transcribed."
         case .audioExtractionFailed:
             return "Audio could not be prepared for transcription."
+        case .recordingUnavailable:
+            return "The selected recording is no longer available."
         case .cancelled:
             return "Transcription was cancelled."
         }

@@ -85,6 +85,7 @@ final class Settings: ObservableObject {
         static let recordingNoiseSuppression = "recordingNoiseSuppression"
         static let recordingAtLogicalSize = "recordingAtLogicalSize"
         static let recordingVideoCodec = "recordingVideoCodec"
+        static let recordingShowMouseClicks = "recordingShowMouseClicks"
         static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
         static let playerTranscriptionMode = "playerTranscriptionMode"
     }
@@ -131,6 +132,7 @@ final class Settings: ObservableObject {
         Key.recordingNoiseSuppression: false,
         Key.recordingAtLogicalSize: false,
         Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
+        Key.recordingShowMouseClicks: false,
         Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.openInPlayer,
         Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
     ]
@@ -399,6 +401,14 @@ final class Settings: ObservableObject {
             ) ?? .automatic
         }
         set { set(newValue.rawValue, Key.recordingVideoCodec) }
+    }
+
+    /// Draws macOS's native click indicator into the recorded display stream.
+    /// The setting is independent from cursor visibility and can be overridden
+    /// for an individual capture in the display picker.
+    var recordingShowMouseClicks: Bool {
+        get { defaults.bool(forKey: Key.recordingShowMouseClicks) }
+        set { set(newValue, Key.recordingShowMouseClicks) }
     }
 
     var recordingAfterCaptureAction: String {
