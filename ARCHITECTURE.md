@@ -319,7 +319,10 @@ repository. The Makefile fails closed when that directory is absent; it never re
 code from the public tree. `ScreenCap-Pro-Private` is also a separate private Git worktree, with
 its own private remote and independent commit history; `make private-sync-check` is the handoff
 gate for a clean, synchronized Pro checkout. The public repository must never contain a Pro
-source copy, submodule, subtree or private remote URL.
+source copy, submodule, subtree or private remote URL. The detailed Pro transcription reliability
+contract is maintained privately at `ScreenCap-Pro-Private/docs/transcription-reliability.md`;
+the public tree records only the product boundary and must not become a source of Pro code or
+private implementation details.
 The current direct-download targets do not enable App Sandbox; App Store submission remains a
 separate entitlement and security-scoped-resource work item.
 
