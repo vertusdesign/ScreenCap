@@ -129,9 +129,15 @@ final class CaptureController {
         Task { @MainActor in
             do {
                 let snapshots = try await ScreenCapture.snapshotAllDisplays()
-                var targets: [WindowTarget] = []
-                if case .window = mode {
+                // Keep window metadata available even for Area sessions: holding
+                // Command can switch the still-unselected overlay to the window
+                // picker without starting a second shareable-content request.
+                let targets: [WindowTarget]
+                switch mode {
+                case .area, .window:
                     targets = (try? await ScreenCapture.onScreenWindows()) ?? []
+                case .preselected, .openedImage:
+                    targets = []
                 }
                 presentOverlay(snapshots: snapshots, mode: mode, targets: targets)
             } catch {

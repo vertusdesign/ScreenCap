@@ -55,7 +55,11 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     private let snapshot: DisplaySnapshot
     private let obfuscation: ObfuscationSource
-    private let mode: CaptureMode
+    /// The mode requested when the session started. Command switching is
+    /// momentary and always derives from this value rather than toggling the
+    /// current variant repeatedly.
+    private let baseCaptureMode: CaptureMode
+    private var mode: CaptureMode
     private var windowTargets: [WindowTarget] = []
 
     private var phase: Phase = .idle
@@ -149,6 +153,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     init(snapshot: DisplaySnapshot, mode: CaptureMode, windows: [WindowTarget]) {
         self.snapshot = snapshot
+        self.baseCaptureMode = mode
         self.mode = mode
         self.obfuscation = ObfuscationSource(
             source: snapshot.image,
@@ -357,6 +362,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     private func updatePointer(with event: NSEvent) {
         cursorPoint = convert(event.locationInWindow, from: nil)
         activeModifiers = normalized(event.modifierFlags)
+        updateCommandCaptureMode(for: activeModifiers)
 
         if case .window = mode, selection == nil {
             let previous = hoveredWindow?.windowID
@@ -394,6 +400,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         let updated = normalized(event.modifierFlags)
         guard updated != activeModifiers else { return }
         activeModifiers = updated
+        updateCommandCaptureMode(for: updated)
         // ⌃ swaps what the current tool draws; the strip shows that immediately so
         // the alternate is discoverable without committing to a drag.
         toolStrip.setAlternate(activeModifiers.contains(.control), style: style)
@@ -401,6 +408,25 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             draft = makeDraft(from: origin, to: cursorPoint)
             rebuildErasePreviewLayers()
         }
+        needsDisplay = true
+    }
+
+    /// Command is a temporary mode switch only while the overlay is waiting for
+    /// its first selection. It is deliberately not Control: Control already
+    /// changes drawing-tool variants and is also used for the secondary-drag
+    /// path. Command therefore has no conflict with annotation behavior before
+    /// selection, while the existing ⌘S/⌘Z/⌘P actions remain available after a
+    /// selection exists.
+    private func updateCommandCaptureMode(for modifiers: NSEvent.ModifierFlags) {
+        guard selection == nil, baseCaptureMode.supportsCommandCaptureToggle else { return }
+        let next = baseCaptureMode.commandVariant(commandHeld: modifiers.contains(.command))
+        guard next.isWindowCapture != mode.isWindowCapture else { return }
+        mode = next
+        hoveredWindow = nil
+        if mode.isWindowCapture {
+            hoveredWindow = windowTargets.first { $0.frame.contains(cursorPoint) }
+        }
+        updateCursor()
         needsDisplay = true
     }
 
@@ -944,6 +970,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         let point = convert(event.locationInWindow, from: nil)
         cursorPoint = point
         activeModifiers = normalized(event.modifierFlags)
+        updateCommandCaptureMode(for: activeModifiers)
 
         if eyedropperActive {
             if let color = sampleColor(at: point) {
@@ -2343,11 +2370,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     private func drawHint() {
         guard pointerInside else { return }
-        if case .window = mode {
-            drawCenteredHint(L10n.t("overlay.hint.window"))
-        } else {
-            drawCenteredHint(L10n.t("overlay.hint.area"))
-        }
+        let modeHint = mode.isWindowCapture
+            ? L10n.t("overlay.hint.window")
+            : L10n.t("overlay.hint.area")
+        let toggleHint = baseCaptureMode.supportsCommandCaptureToggle
+            ? " · " + L10n.t("overlay.hint.commandToggle")
+            : ""
+        drawCenteredHint(modeHint + toggleHint)
     }
 
     private func drawCenteredHint(_ text: String) {

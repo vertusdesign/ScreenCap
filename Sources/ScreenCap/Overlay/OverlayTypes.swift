@@ -13,6 +13,34 @@ enum CaptureMode {
     case openedImage
 }
 
+extension CaptureMode {
+    /// Whether this mode can be switched by holding Command before a
+    /// selection is made. Preselected and opened-image sessions are already
+    /// committed to a canvas and must not change meaning mid-session.
+    var supportsCommandCaptureToggle: Bool {
+        switch self {
+        case .area, .window: return true
+        case .preselected, .openedImage: return false
+        }
+    }
+
+    var isWindowCapture: Bool {
+        if case .window = self { return true }
+        return false
+    }
+
+    /// Returns the momentary Command variant of the mode. The caller should
+    /// always apply this to the session's original mode, not to the current
+    /// variant, so repeated flagsChanged events cannot toggle it twice.
+    func commandVariant(commandHeld: Bool) -> CaptureMode {
+        switch self {
+        case .area: return commandHeld ? .window : .area
+        case .window: return commandHeld ? .area : .window
+        case .preselected, .openedImage: return self
+        }
+    }
+}
+
 /// What to do with the finished capture.
 enum OutputAction {
     case copy

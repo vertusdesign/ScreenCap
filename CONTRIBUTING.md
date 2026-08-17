@@ -43,7 +43,7 @@ developer command-line tools. There are no third-party Swift package dependencie
 clean checkout:
 
 ```bash
-swift build
+make debug BUILD_FLAVOR=base
 SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap
 ```
 

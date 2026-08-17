@@ -76,6 +76,7 @@
 
 "overlay.hint.area" = "Drag to select an area · Esc to cancel";
 "overlay.hint.window" = "Point at a window and click · Esc to cancel";
+"overlay.hint.commandToggle" = "Hold ⌘ to switch between area and window capture";
 
 "toast.copied" = "Copied to clipboard";
 "toast.textCopied" = "Text copied to clipboard";

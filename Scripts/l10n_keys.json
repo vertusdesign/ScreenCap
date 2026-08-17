@@ -62,6 +62,7 @@
 "text.moveHandle",
 "overlay.hint.area",
 "overlay.hint.window",
+"overlay.hint.commandToggle",
 "toast.copied",
 "toast.saved",
 "toast.color.copied",

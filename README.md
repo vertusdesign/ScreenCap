@@ -101,6 +101,11 @@ The screen is captured the instant the shortcut fires and the still is what you 
 from. An open menu, a hover tooltip, a drag in progress — all of it stays exactly where it
 was while you take your time framing the shot.
 
+Before selecting anything, hold **⌘ Command** to temporarily switch between area capture and
+window-under-cursor capture. Releasing Command returns to the mode that started the session.
+Command is used here because Control already has drawing-tool alternate behavior and the
+secondary-drag path; the normal ⌘S/⌘Z/⌘P editor shortcuts remain unchanged after selection.
+
 If another application already owns a shortcut, macOS gives it to that application and
 ScreenCap's registration silently fails. Settings marks such a shortcut with a warning
 triangle instead of leaving you guessing.
@@ -135,7 +140,7 @@ system-audio toggle to **⌥⇧⌘S**. All are configurable. The equivalent URL 
 
 ```bash
 open "screencap://record"
-.build/debug/ScreenCap --capture record
+SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap --capture record
 ```
 
 The in-app HUD remains the source of truth while a recording is being finalized and continues
@@ -246,6 +251,9 @@ should be considered only after 3.0:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
+- **Area screen recording.** Add a recorder mode that lets the user select a rectangular
+  screen region before starting the ScreenCaptureKit recording, with the same display,
+  permission, audio, recovery and finalization guarantees as full-display recording.
 
 ## Automation
 
@@ -273,7 +281,7 @@ macOS `hdiutil` and `codesign` tools. No third-party Swift package dependencies 
 git clone https://github.com/vertusdesign/ScreenCap.git
 cd ScreenCap
 swift --version
-swift build
+make debug BUILD_FLAVOR=base
 SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 

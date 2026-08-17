@@ -229,6 +229,16 @@ enum SelfTest {
             print("  ✗ распознавание текста не стоит вторым инструментом")
         }
 
+        if CaptureMode.area.commandVariant(commandHeld: true).isWindowCapture,
+           !CaptureMode.area.commandVariant(commandHeld: false).isWindowCapture,
+           !CaptureMode.window.commandVariant(commandHeld: true).isWindowCapture,
+           CaptureMode.window.commandVariant(commandHeld: false).isWindowCapture {
+            print("  ✓ ⌘ переключает режим области и окна до выбора")
+        } else {
+            failures.append("переключение режима ⌘")
+            print("  ✗ ⌘ переключение режима области/окна")
+        }
+
         let scrollProbe = CGSize(width: 12, height: -8)
         let reversedScroll = SystemScrollDirection.contentDelta(scrollProbe, naturalScrolling: false)
         if reversedScroll == CGSize(width: -12, height: 8) {

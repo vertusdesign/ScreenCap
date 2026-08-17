@@ -19,6 +19,12 @@ never uploads anything. A screenshot capture session follows this sequence:
 4. Render the screenshot and annotations into one final image.
 5. Copy, save, or print the image, then close the session.
 
+While the overlay has no selection, holding Command is a momentary mode switch: an Area
+session becomes Window-under-cursor and a Window session becomes Area. Releasing Command
+restores the mode that started the session. This is intentionally scoped to the preselection
+phase so the editor's ⌘S/⌘Z/⌘P actions are not shadowed; Control remains reserved for drawing
+alternates and the secondary-drag path.
+
 An image can also enter the same editor through Finder. ScreenCap loads the image as a
 preselected editing canvas, preserves its pixel dimensions for export, and leaves the
 original file untouched. The second toolbar tool activates macOS VisionKit text analysis
@@ -78,6 +84,10 @@ The supported entry points are:
 | URL | `screencap://area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, or `about`. |
 | Global hotkey | Configurable per action; defaults are documented in the README. |
 | CLI | `--capture <mode>` including `record`, `--window <about\|preferences>`, and `--selftest <dir>`. |
+
+The product backlog includes area screen recording: a future recorder flow must select a
+rectangular region before creating the ScreenCaptureKit stream and preserve the existing
+permission, audio, recovery and finalization invariants.
 
 Current intentional boundaries:
 

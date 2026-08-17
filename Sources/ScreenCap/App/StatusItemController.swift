@@ -152,6 +152,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         preferences.target = self
         preferences.image = symbol("gearshape")
         menu.addItem(preferences)
+        menu.addItem(.separator())
 
         let about = NSMenuItem(
             title: L10n.t("menu.about", AppInfo.name),
