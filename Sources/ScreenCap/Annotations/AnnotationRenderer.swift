@@ -51,6 +51,12 @@ enum AnnotationRenderer {
             style.color.withAlphaComponent(0.4).setStroke()
             strokePath(smoothPath(through: points), width: max(style.lineWidth * 4, 12))
 
+        case .markerRect(let rect):
+            drawMarkerRegion(NSBezierPath(rect: rect), style: style)
+
+        case .markerEllipse(let rect):
+            drawMarkerRegion(NSBezierPath(ovalIn: rect), style: style)
+
         case .line(let from, let to):
             style.color.setStroke()
             let path = NSBezierPath()
@@ -167,6 +173,15 @@ enum AnnotationRenderer {
             style.color.setStroke()
             strokePath(path, width: style.lineWidth)
         }
+    }
+
+    /// Region highlighters use the same multiply/alpha treatment as the brush,
+    /// but fill a closed shape so the screenshot remains visible underneath.
+    private static func drawMarkerRegion(_ path: NSBezierPath, style: ToolStyle) {
+        guard let context = NSGraphicsContext.current else { return }
+        context.compositingOperation = .multiply
+        style.color.withAlphaComponent(0.4).setFill()
+        path.fill()
     }
 
     private static func strokePath(_ path: NSBezierPath, width: CGFloat) {

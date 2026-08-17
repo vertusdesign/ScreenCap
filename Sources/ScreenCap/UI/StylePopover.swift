@@ -125,6 +125,8 @@ final class StylePopover: OverlayPanel {
     private let obfuscationStyleSegments = TooltipSegmentedControl()
     private let obfuscationShapeRow = NSStackView()
     private let obfuscationShapeSegments = TooltipSegmentedControl()
+    private let markerShapeRow = NSStackView()
+    private let markerShapeSegments = TooltipSegmentedControl()
     private let brushRow = NSStackView()
     private let brushSlider = NSSlider()
     private let brushValue = NSTextField(labelWithString: "")
@@ -226,6 +228,7 @@ final class StylePopover: OverlayPanel {
         buildBackdropColorSection()
         buildShapeStyleRow()
         buildArrowStyleRow()
+        buildMarkerShapeRow()
         buildObfuscationRows()
         buildEraserModeRow()
         buildEraserShapeRow()
@@ -240,7 +243,7 @@ final class StylePopover: OverlayPanel {
         // read as tuning an already-chosen mode, not the other way round.
         for row in [shapeStyleRow, arrowStyleRow, backdropRow, backdropColorSection,
                     widthRow, counterArrowWidthRow, fontRow,
-                    obfuscationStyleRow, obfuscationShapeRow, brushRow, intensityRow,
+                    markerShapeRow, obfuscationStyleRow, obfuscationShapeRow, brushRow, intensityRow,
                     eraserModeRow, eraserShapeRow, eraserRow] {
             root.addArrangedSubview(row)
         }
@@ -441,6 +444,28 @@ final class StylePopover: OverlayPanel {
         arrowStyleRow.addArrangedSubview(arrowStyleSegments)
     }
 
+    private func buildMarkerShapeRow() {
+        markerShapeRow.orientation = .horizontal
+        markerShapeRow.spacing = 6
+        markerShapeRow.alignment = .centerY
+        markerShapeSegments.segmentCount = MarkerShape.allCases.count
+        markerShapeSegments.focusRingType = .none
+        markerShapeSegments.translatesAutoresizingMaskIntoConstraints = false
+        markerShapeSegments.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        for (index, item) in MarkerShape.allCases.enumerated() {
+            markerShapeSegments.setImage(
+                NSImage.freshSystemSymbol(item.symbolName, accessibilityDescription: item.title),
+                forSegment: index
+            )
+            markerShapeSegments.setWidth(62, forSegment: index)
+            markerShapeSegments.setToolTip(item.title, forSegment: index)
+        }
+        markerShapeSegments.setSegmentTooltips(MarkerShape.allCases.map(\.title))
+        markerShapeSegments.target = self
+        markerShapeSegments.action = #selector(markerShapeChanged)
+        markerShapeRow.addArrangedSubview(markerShapeSegments)
+    }
+
     private func buildEraserShapeRow() {
         eraserShapeRow.orientation = .horizontal
         eraserShapeRow.spacing = 6
@@ -566,6 +591,8 @@ final class StylePopover: OverlayPanel {
         backdropSegments.selectedSegment = TextBackdrop.allCases.firstIndex(of: style.textBackdrop) ?? 0
         shapeStyleSegments.selectedSegment = style.filled ? 1 : 0
         arrowStyleSegments.selectedSegment = style.arrowDoubleHeaded ? 1 : 0
+        markerShapeSegments.selectedSegment =
+            MarkerShape.allCases.firstIndex(of: style.markerShape) ?? 0
         obfuscationStyleSegments.selectedSegment =
             ObfuscationStyle.allCases.firstIndex(of: style.obfuscation.style) ?? 0
         obfuscationShapeSegments.selectedSegment =
@@ -585,13 +612,18 @@ final class StylePopover: OverlayPanel {
     }
 
     private func applyRowVisibility() {
+        // Region highlighters are sized by the rubber-band rectangle. Keep the
+        // thickness control available for brush mode, but avoid presenting a
+        // setting that has no effect for rectangular/oval modes.
         widthRow.isHidden = !tool.supportsLineWidth && tool != .counter
+            || (tool == .marker && style.markerShape != .brush)
         counterArrowWidthRow.isHidden = tool != .counter
         fontRow.isHidden = tool != .text
         backdropRow.isHidden = tool != .text
         backdropColorSection.isHidden = tool != .text || !style.textBackdrop.usesBackdropColor
         shapeStyleRow.isHidden = tool != .rectangle && tool != .ellipse
         arrowStyleRow.isHidden = tool != .arrow
+        markerShapeRow.isHidden = tool != .marker
         obfuscationStyleRow.isHidden = tool != .obfuscate
         obfuscationShapeRow.isHidden = tool != .obfuscate
         intensityRow.isHidden = tool != .obfuscate
@@ -604,7 +636,7 @@ final class StylePopover: OverlayPanel {
 
         let anyOption = [widthRow, fontRow, backdropRow, shapeStyleRow, arrowStyleRow,
                          backdropColorSection, counterArrowWidthRow, obfuscationStyleRow,
-                         obfuscationShapeRow, brushRow, intensityRow, eraserModeRow,
+                         markerShapeRow, obfuscationShapeRow, brushRow, intensityRow, eraserModeRow,
                          eraserShapeRow, eraserRow]
             .contains { !$0.isHidden }
         optionsSeparator.isHidden = !anyOption
@@ -896,6 +928,15 @@ final class StylePopover: OverlayPanel {
     @objc private func arrowStyleChanged() {
         style.arrowDoubleHeaded = arrowStyleSegments.selectedSegment == 1
         emit()
+    }
+
+    @objc private func markerShapeChanged() {
+        let index = markerShapeSegments.selectedSegment
+        guard index >= 0, index < MarkerShape.allCases.count else { return }
+        style.markerShape = MarkerShape.allCases[index]
+        applyRowVisibility()
+        emit()
+        onContentChanged?()
     }
 
     @objc private func obfuscationStyleChanged() {

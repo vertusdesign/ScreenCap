@@ -29,6 +29,9 @@
 "obfuscation.shape.rectangle" = "Rectangle";
 "obfuscation.shape.ellipse" = "Ellipse";
 "obfuscation.shape.brush" = "Brush";
+"marker.shape.rectangle" = "Rectangle highlighter";
+"marker.shape.ellipse" = "Oval highlighter";
+"marker.shape.brush" = "Brush highlighter";
 
 "text.backdrop.none" = "No backdrop";
 "text.backdrop.solid" = "Solid background";

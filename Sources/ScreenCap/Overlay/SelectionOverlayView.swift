@@ -750,6 +750,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             Settings.shared.textBackdrop = newStyle.textBackdrop
             Settings.shared.textBackdropColor = newStyle.backdropColor
             Settings.shared.obfuscation = newStyle.obfuscation
+            Settings.shared.markerShape = newStyle.markerShape
             Settings.shared.eraserRadius = newStyle.eraserRadius
             Settings.shared.eraserShape = newStyle.eraserShape
             Settings.shared.eraserMode = newStyle.eraserMode
@@ -1372,19 +1373,38 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         let style = draftStyle
 
         switch tool {
-        case .pen, .marker:
+        case .pen:
             var points: [CGPoint]
-            switch draft?.shape {
-            case .pen(let existing), .marker(let existing):
+            if case .pen(let existing) = draft?.shape {
                 points = existing
                 points.append(point)
-            default:
+            } else {
                 points = [origin, point]
             }
-            return Annotation(
-                shape: tool == .pen ? .pen(points: points) : .marker(points: points),
-                style: style
-            )
+            return Annotation(shape: .pen(points: points), style: style)
+
+        case .marker:
+            switch style.markerShape {
+            case .rectangle:
+                return Annotation(
+                    shape: .markerRect(rubberBandRect(origin: origin, current: point)),
+                    style: style
+                )
+            case .ellipse:
+                return Annotation(
+                    shape: .markerEllipse(rubberBandRect(origin: origin, current: point)),
+                    style: style
+                )
+            case .brush:
+                var points: [CGPoint]
+                if case .marker(let existing) = draft?.shape {
+                    points = existing
+                    points.append(point)
+                } else {
+                    points = [origin, point]
+                }
+                return Annotation(shape: .marker(points: points), style: style)
+            }
 
         case .line, .arrow:
             var (from, to) = endpoints(origin: origin, current: point)
@@ -1476,6 +1496,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         case .line(let a, let b), .arrow(let a, let b, _):
             return a.distance(to: b) > 3
         case .rectangle(let rect), .ellipse(let rect),
+             .markerRect(let rect), .markerEllipse(let rect),
              .obfuscateRect(let rect), .obfuscateEllipse(let rect),
              .eraseRect(let rect), .eraseEllipse(let rect):
             return rect.width > 3 && rect.height > 3
@@ -2019,7 +2040,9 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             switch tool {
             case .move: NSCursor.openHand.set()
             case .text: NSCursor.iBeam.set()
-            case .pen, .marker:
+        case .pen:
+            Self.transparentBrushCursor.set()
+            case .marker where style.markerShape == .brush:
                 Self.transparentBrushCursor.set()
             case .obfuscate where brushCursorDiameter != nil,
                  .eraser where brushCursorDiameter != nil:
@@ -2147,7 +2170,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         switch annotation.shape {
         case .eraseRect, .eraseEllipse:
             return true
-        case .obfuscateRect, .obfuscateEllipse:
+        case .markerRect, .markerEllipse, .obfuscateRect, .obfuscateEllipse:
             return true
         default:
             return false
@@ -2159,8 +2182,8 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         switch annotation.shape {
         case .eraseRect(let rect): path = NSBezierPath(rect: rect)
         case .eraseEllipse(let rect): path = NSBezierPath(ovalIn: rect)
-        case .obfuscateRect(let rect): path = NSBezierPath(rect: rect)
-        case .obfuscateEllipse(let rect): path = NSBezierPath(ovalIn: rect)
+        case .markerRect(let rect), .obfuscateRect(let rect): path = NSBezierPath(rect: rect)
+        case .markerEllipse(let rect), .obfuscateEllipse(let rect): path = NSBezierPath(ovalIn: rect)
         default: return
         }
         guard let context = NSGraphicsContext.current else { return }
@@ -2208,7 +2231,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         switch tool {
         case .pen:
             return style.lineWidth
-        case .marker:
+        case .marker where style.markerShape == .brush:
             return max(style.lineWidth * 4, 12)
         case .obfuscate where style.obfuscation.shape == .brush:
             return style.obfuscation.brushSize

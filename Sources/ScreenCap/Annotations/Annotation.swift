@@ -158,6 +158,25 @@ enum ObfuscationShape: String, CaseIterable, Codable {
     }
 }
 
+/// Geometry used by the highlighter. Brush remains the default so existing
+/// captures behave exactly as before; rectangle and ellipse are rubber-band
+/// regions that use the same ⇧ square and ⌥ centre modifiers as shape tools.
+enum MarkerShape: String, CaseIterable, Codable {
+    case brush
+    case rectangle
+    case ellipse
+
+    var title: String { L10n.t("marker.shape.\(rawValue)") }
+
+    var symbolName: String {
+        switch self {
+        case .rectangle: return "rectangle"
+        case .ellipse: return "oval"
+        case .brush: return "paintbrush.pointed"
+        }
+    }
+}
+
 /// How the Eraser tool acts on a click. Pixel erasing keeps the existing
 /// brush/rectangle/ellipse behaviour; object deletion removes one complete
 /// annotation instead of punching a hole in the rendered layer.
@@ -226,6 +245,7 @@ struct ToolStyle: Equatable {
     var textBackdrop: TextBackdrop
     var backdropColor: NSColor
     var obfuscation: ObfuscationSettings
+    var markerShape: MarkerShape
     var eraserRadius: CGFloat
     var eraserShape: ObfuscationShape
     var eraserMode: EraserMode
@@ -245,6 +265,7 @@ struct ToolStyle: Equatable {
             textBackdrop: settings.textBackdrop,
             backdropColor: settings.textBackdropColor,
             obfuscation: settings.obfuscation,
+            markerShape: settings.markerShape,
             eraserRadius: settings.eraserRadius,
             eraserShape: settings.eraserShape,
             eraserMode: settings.eraserMode,
@@ -261,6 +282,8 @@ struct ToolStyle: Equatable {
 enum AnnotationShape {
     case pen(points: [CGPoint])
     case marker(points: [CGPoint])
+    case markerRect(CGRect)
+    case markerEllipse(CGRect)
     case line(from: CGPoint, to: CGPoint)
     case arrow(from: CGPoint, to: CGPoint, doubleHeaded: Bool)
     case rectangle(CGRect)
@@ -306,6 +329,8 @@ struct Annotation: Identifiable {
         switch shape {
         case .pen(let points), .marker(let points):
             return Self.box(of: points)
+        case .markerRect(let rect), .markerEllipse(let rect):
+            return rect
         case .obfuscateBrush(let points):
             return Self.box(of: points).insetBy(dx: -style.obfuscation.brushSize, dy: -style.obfuscation.brushSize)
         case .erase(let points, let width):

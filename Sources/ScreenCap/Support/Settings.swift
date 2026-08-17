@@ -72,6 +72,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let obfuscationShape = "obfuscationShape"
         static let obfuscationBrushSize = "obfuscationBrushSize"
         static let obfuscationIntensity = "obfuscationIntensity"
+        static let markerShape = "markerShape"
         static let eraserRadius = "eraserRadius"
         static let eraserShape = "eraserShape"
         static let eraserMode = "eraserMode"
@@ -104,6 +105,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
             Key.obfuscationShape: ObfuscationShape.brush.rawValue,
             Key.obfuscationBrushSize: 40.0,
             Key.obfuscationIntensity: 11.0,
+            Key.markerShape: MarkerShape.brush.rawValue,
             Key.eraserRadius: 24.0,
             Key.eraserShape: ObfuscationShape.brush.rawValue,
             Key.eraserMode: EraserMode.pixels.rawValue,
@@ -311,6 +313,11 @@ final class Settings: ObservableObject, @unchecked Sendable {
     var textBackdropColor: NSColor {
         get { NSColor(hex: defaults.string(forKey: Key.textBackdropColor) ?? "#000000") ?? .black }
         set { set(newValue.hexString, Key.textBackdropColor) }
+    }
+
+    var markerShape: MarkerShape {
+        get { MarkerShape(rawValue: defaults.string(forKey: Key.markerShape) ?? "") ?? .brush }
+        set { set(newValue.rawValue, Key.markerShape) }
     }
 
     var eraserRadius: CGFloat {

@@ -9,6 +9,8 @@ All notable changes are recorded here. This project follows
 
 - **ScreenCap Player module** with a native macOS playback window, recording-library sidebar,
   folder grouping, add-video/add-folder flows and playlist-only removal.
+- **Marker regions**: the highlighter now supports brush, rectangular and oval translucent
+  regions, with the selected mode remembered between captures and constrained by ⇧/⌥ drag modifiers.
 - **Synchronized Track Editor** with a composite audio track, raw system/microphone tracks,
   shared playhead, current/total time, waveform lanes and always-available trim handles.
 - **Per-track gain and composite rebuild**: raise/lower each audio track independently and

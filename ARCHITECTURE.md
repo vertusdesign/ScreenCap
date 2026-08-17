@@ -198,7 +198,7 @@ under the existing transparent annotation pixels.
 
 The annotation shapes are:
 
-- pen and highlighter point paths;
+- pen and highlighter point paths, plus rectangular and elliptical highlighter regions;
 - line and single/double-headed arrow;
 - outlined or filled rectangle and ellipse;
 - pixelation or blur in rectangle, ellipse, or brush form;
@@ -215,7 +215,7 @@ undo/redo, and export.
 
 `ToolStyle` is the complete style snapshot attached to each annotation. It includes stroke
 color and width, shape fill, arrow heads, text size/backdrop/color, obfuscation style/shape/
-intensity, eraser settings, and numbering settings. An annotation must not read current user
+intensity, marker geometry, eraser settings, and numbering settings. An annotation must not read current user
 preferences while rendering: it uses the style captured when it was created.
 
 The popover edits last-used defaults in `Settings`; the active overlay copies those defaults
@@ -338,6 +338,8 @@ The minimum automated checks for every platform implementation are:
   current Swift 6 toolchain and are not treated as product failures);
 - render every annotation type;
 - verify obfuscation preserves annotations beneath it;
+- verify brush, rectangular and elliptical highlighter annotations render and retain
+  their geometry through the export path;
 - verify PNG/JPEG encoding and filename-template expansion;
 - verify coordinate conversions with negative display origins and different scales;
 - verify hotkey serialization and invalid-binding handling;

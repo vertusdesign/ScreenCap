@@ -69,6 +69,7 @@ enum SelfTest {
                 obfuscation: ObfuscationSettings(
                     style: .pixelate, shape: shape, brushSize: 40, intensity: 11
                 ),
+                markerShape: .brush,
                 eraserRadius: 24,
                 eraserShape: eraserShape,
                 eraserMode: eraserMode,
@@ -106,6 +107,14 @@ enum SelfTest {
             Annotation(
                 shape: .marker(points: (0...20).map { CGPoint(x: 60 + Double($0) * 20, y: 120) }),
                 style: makeStyle(color: .systemYellow, filled: false)
+            ),
+            Annotation(
+                shape: .markerRect(CGRect(x: 60, y: 135, width: 120, height: 42)),
+                style: makeStyle(color: .systemGreen, filled: false)
+            ),
+            Annotation(
+                shape: .markerEllipse(CGRect(x: 210, y: 135, width: 120, height: 42)),
+                style: makeStyle(color: .systemOrange, filled: false)
             ),
             Annotation(shape: .obfuscateRect(CGRect(x: 40, y: 40, width: 130, height: 60)), style: style),
             Annotation(shape: .obfuscateEllipse(CGRect(x: 190, y: 40, width: 130, height: 60)), style: blurStyle),

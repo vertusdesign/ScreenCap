@@ -33,7 +33,8 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
 
 - Four capture modes on global shortcuts: area, repeat last area, window under the cursor, full screen
 - The screen freezes the moment you press, so menus and tooltips stay put while you aim
-- Draw on top: pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbering, text
+- Draw on top: pen, highlighter (brush, rectangular or oval region), line, arrow, rectangle,
+  ellipse, redaction, numbering, text
 - Recognize text as a dedicated second toolbar tool, select it with Live Text and copy it
 - Open existing images from Finder and annotate them with the same tools
 - Redaction does pixelation or blur, in a rectangle, an ellipse or a free brush stroke
@@ -194,7 +195,7 @@ save panel instead.
 
 ## Drawing
 
-Pen, highlighter, line, arrow, rectangle, ellipse, redaction, numbered circles, text and an
+Pen, highlighter (brush, rectangular or oval region), line, arrow, rectangle, ellipse, redaction, numbered circles, text and an
 eraser. Every tool has a single-key shortcut, shown in its tooltip.
 
 | Key | Tool | | Key | Tool |
