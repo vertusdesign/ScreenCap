@@ -138,6 +138,7 @@
 "prefs.recording.codec.help" = "Automatic uses the most compatible hardware path. H.264 and HEVC can be selected when supported by the Mac.";
 "prefs.recording.codec.automatic" = "Automatic (recommended)";
 "prefs.recording.afterCapture" = "After recording";
+"prefs.recording.afterCapture.ask" = "Ask after first recording";
 "prefs.recording.afterCapture.nothing" = "Do nothing";
 "prefs.recording.afterCapture.showInFolder" = "Show in Finder";
 "prefs.recording.afterCapture.openInPlayer" = "Open in ScreenCap Player";
@@ -165,6 +166,9 @@
 "recording.preparing" = "Preparing recording…";
 "recording.stopping" = "Finishing recording…";
 "recording.saved" = "Recording saved";
+"recording.afterCapture.choose.title" = "What should happen after recording?";
+"recording.afterCapture.choose.message" = "Choose a default action. You can change it later in Recording settings.";
+"recording.afterCapture.choose.save" = "Use this action";
 "recording.failed" = "Recording failed";
 "recording.unavailable" = "Screen recording requires macOS 15 or newer.";
 "recording.microphoneOff" = "Turn recording microphone off";

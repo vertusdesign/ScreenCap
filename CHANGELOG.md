@@ -18,8 +18,10 @@ All notable changes are recorded here. This project follows
   switching recordings, save-copy and atomic replace-original export paths.
 - **Privacy-first transcription** using Apple's on-device Speech Recognition path when available;
   transcription is on-demand by default and can be explicitly switched to idle-time automatic mode.
-- **After-recording action**: Open in ScreenCap Player is available in Preferences and is the
-  default for new installations when the player module is present.
+- **After-recording action**: Open in ScreenCap Player is available in Preferences. New
+  installations start unconfigured; after the first successful recording, a native prompt asks
+  the user to choose an action and remembers that choice. “Later” keeps asking after the next
+  successful recording.
 - **QA and upgrade safety**: production keeps the existing `com.vertusdesign.ScreenCap` TCC
   identity, while `BUILD_FLAVOR=parallel` creates an explicitly separate local QA bundle and
   URL scheme for side-by-side v2 testing. Failed/cancelled Save Copy operations keep drafts,

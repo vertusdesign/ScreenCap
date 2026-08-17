@@ -507,7 +507,10 @@ final class RecorderController {
     }
 
     private func performAfterCaptureAction(for url: URL) {
-        let action = Settings.shared.recordingAfterCaptureAction
+        guard let action = Settings.shared.recordingAfterCaptureAction else {
+            promptForAfterCaptureAction(for: url)
+            return
+        }
         switch action {
         case RecordingAfterCaptureAction.nothing:
             break
@@ -537,6 +540,87 @@ final class RecorderController {
                 completionHandler: nil
             )
         }
+    }
+
+    private struct AfterCaptureChoice {
+        let value: String
+        let title: String
+    }
+
+    /// The first successful recording is the least surprising moment to ask:
+    /// the user has a real file to act on, and no preference was silently
+    /// imposed. Choosing an action applies it to this recording and persists
+    /// it for subsequent recordings; closing or choosing Later leaves the
+    /// setting unconfigured and asks again next time.
+    private func promptForAfterCaptureAction(for url: URL) {
+        let choices = afterCaptureChoices()
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 340, height: 26))
+        for choice in choices {
+            popup.addItem(withTitle: choice.title)
+            popup.lastItem?.representedObject = choice.value
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = L10n.t("recording.afterCapture.choose.title")
+        alert.informativeText = L10n.t("recording.afterCapture.choose.message")
+        alert.accessoryView = popup
+        alert.addButton(withTitle: L10n.t("recording.afterCapture.choose.save"))
+        alert.addButton(withTitle: L10n.t("common.later"))
+
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn,
+              let selected = popup.selectedItem?.representedObject as? String,
+              selected != RecordingAfterCaptureAction.notConfigured
+        else { return }
+
+        Settings.shared.recordingAfterCaptureAction = selected
+        performAfterCaptureAction(for: url)
+    }
+
+    private func afterCaptureChoices() -> [AfterCaptureChoice] {
+        var choices = [
+            AfterCaptureChoice(
+                value: RecordingAfterCaptureAction.openInPlayer,
+                title: L10n.t("prefs.recording.afterCapture.openInPlayer")
+            ),
+            AfterCaptureChoice(
+                value: RecordingAfterCaptureAction.showInFolder,
+                title: L10n.t("prefs.recording.afterCapture.showInFolder")
+            ),
+            AfterCaptureChoice(
+                value: RecordingAfterCaptureAction.nothing,
+                title: L10n.t("prefs.recording.afterCapture.nothing")
+            )
+        ]
+
+        let applications = NSWorkspace.shared
+            .urlsForApplications(toOpen: .quickTimeMovie)
+            .compactMap { url -> (bundleIdentifier: String, name: String)? in
+                guard let bundle = Bundle(url: url),
+                      let bundleIdentifier = bundle.bundleIdentifier,
+                      bundleIdentifier != AppInfo.bundleIdentifier
+                else { return nil }
+                let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                    ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                    ?? url.deletingPathExtension().lastPathComponent
+                return (bundleIdentifier, name)
+            }
+            .reduce(into: [(bundleIdentifier: String, name: String)]()) { result, application in
+                guard !result.contains(where: { $0.bundleIdentifier == application.bundleIdentifier }) else {
+                    return
+                }
+                result.append(application)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        choices.append(contentsOf: applications.map {
+            AfterCaptureChoice(
+                value: RecordingAfterCaptureAction.application($0.bundleIdentifier),
+                title: L10n.t("prefs.recording.afterCapture.openWith", $0.name)
+            )
+        })
+        return choices
     }
 
     /// VLC 3 on macOS has two separate quirks: starting with

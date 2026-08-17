@@ -143,8 +143,10 @@ open "screencap://record"
 
 Open **ScreenCap Pro 3 → Open Player**. The Player is a separate regular macOS window while it
 is visible, so it appears in the menu bar, Cmd-Tab and Mission Control. It is not opened just
-because the app launched. New recordings open there by default when the Player module is
-available; this can be changed in Recording settings.
+because the app launched. The initial **After recording** setting is unconfigured. After the
+first successful recording, ScreenCap asks what to do with the file; the chosen action is then
+remembered. Choosing **Later** or closing the dialog leaves it unconfigured and asks again after
+the next successful recording. This can also be changed in Recording settings.
 
 Add individual movies or folders with the **+** button. Folder groups are recursive and are
 stored as a playlist, not as a second copy of the files. Removing a video or folder removes

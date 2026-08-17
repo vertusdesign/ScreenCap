@@ -34,6 +34,12 @@ image output pipeline. The fast path uses the display under the pointer; the alt
 ScreenCap's own display chooser with a clear selected display and a transparent full-screen hit
 layer, rather than Apple's content-sharing picker.
 
+The post-recording action is intentionally unconfigured on a fresh installation. After the first
+successful recording, the recorder presents a native choice pop-up; a selected action is persisted
+and applied to later recordings. Choosing Later or closing the pop-up leaves the setting unconfigured,
+so the prompt appears again after the next successful recording. An explicit Do nothing choice is
+persisted and is therefore different from postponing the decision.
+
 The Player is a separate module. It owns a persisted playlist of user-selected video files
 and folders, reads media with AVFoundation/AVKit, and keeps edits in a view-model draft until
 an explicit export. Its Track Editor uses one shared playhead for video thumbnails, composite

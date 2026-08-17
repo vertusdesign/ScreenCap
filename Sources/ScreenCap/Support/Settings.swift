@@ -20,6 +20,9 @@ enum RecordingVideoCodec: String, CaseIterable, Identifiable {
 }
 
 enum RecordingAfterCaptureAction {
+    /// The absence of a value means that the user has not chosen a post-recording action yet.
+    /// It is intentionally different from `nothing`, which is an explicit choice.
+    static let notConfigured = "__askAfterFirstRecording__"
     static let nothing = "nothing"
     static let showInFolder = "showInFolder"
     static let openInPlayer = "openInPlayer"
@@ -138,7 +141,6 @@ final class Settings: ObservableObject, @unchecked Sendable {
             Key.recordingAtLogicalSize: false,
             Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
             Key.recordingShowMouseClicks: false,
-            Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.openInPlayer,
             Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
         ]
     }
@@ -417,12 +419,16 @@ final class Settings: ObservableObject, @unchecked Sendable {
         set { set(newValue, Key.recordingShowMouseClicks) }
     }
 
-    var recordingAfterCaptureAction: String {
-        get {
-            defaults.string(forKey: Key.recordingAfterCaptureAction)
-                ?? RecordingAfterCaptureAction.openInPlayer
+    var recordingAfterCaptureAction: String? {
+        get { defaults.string(forKey: Key.recordingAfterCaptureAction) }
+        set {
+            if let newValue {
+                set(newValue, Key.recordingAfterCaptureAction)
+            } else {
+                defaults.removeObject(forKey: Key.recordingAfterCaptureAction)
+                objectWillChange.send()
+            }
         }
-        set { set(newValue, Key.recordingAfterCaptureAction) }
     }
 
     var playerTranscriptionMode: PlayerTranscriptionMode {
@@ -528,6 +534,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         for (key, value) in Self.recordingDefaults {
             defaults.set(value, forKey: key)
         }
+        defaults.removeObject(forKey: Key.recordingAfterCaptureAction)
         defaults.removeObject(forKey: Key.recordingDirectory)
         defaults.removeObject(forKey: Key.recordingFilenameTemplate)
         objectWillChange.send()

@@ -411,6 +411,8 @@ private struct RecordingTab: View {
                 Text(L10n.t("prefs.recording.afterCapture"))
                 Spacer()
                 Picker("", selection: afterCaptureBinding) {
+                    Text(L10n.t("prefs.recording.afterCapture.ask"))
+                        .tag(RecordingAfterCaptureAction.notConfigured)
                     Text(L10n.t("prefs.recording.afterCapture.nothing"))
                         .tag(RecordingAfterCaptureAction.nothing)
                     Text(L10n.t("prefs.recording.afterCapture.showInFolder"))
@@ -455,8 +457,12 @@ private struct RecordingTab: View {
 
     private var afterCaptureBinding: Binding<String> {
         Binding(
-            get: { settings.recordingAfterCaptureAction },
-            set: { settings.recordingAfterCaptureAction = $0 }
+            get: { settings.recordingAfterCaptureAction ?? RecordingAfterCaptureAction.notConfigured },
+            set: {
+                settings.recordingAfterCaptureAction = $0 == RecordingAfterCaptureAction.notConfigured
+                    ? nil
+                    : $0
+            }
         )
     }
 
@@ -500,7 +506,7 @@ private struct RecordingTab: View {
 
         videoApplications = applications
         if let selected = RecordingAfterCaptureAction.bundleIdentifier(
-            from: settings.recordingAfterCaptureAction
+            from: settings.recordingAfterCaptureAction ?? RecordingAfterCaptureAction.notConfigured
         ), !applications.contains(where: { $0.bundleIdentifier == selected }) {
             settings.recordingAfterCaptureAction = RecordingAfterCaptureAction.nothing
         }
