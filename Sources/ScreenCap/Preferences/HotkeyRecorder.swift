@@ -3,12 +3,13 @@ import Carbon.HIToolbox
 import SwiftUI
 
 /// Click-to-record shortcut field.
+@MainActor
 final class HotkeyRecorderView: NSView {
     var hotkey: Hotkey? { didSet { needsDisplay = true } }
     var onChange: ((Hotkey?) -> Void)?
 
     private var isRecording = false { didSet { needsDisplay = true; updateMonitor() } }
-    private var monitor: Any?
+    nonisolated(unsafe) private var monitor: Any?
 
     override var acceptsFirstResponder: Bool { true }
     override var intrinsicContentSize: NSSize { NSSize(width: 150, height: 24) }

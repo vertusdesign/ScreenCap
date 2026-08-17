@@ -1,6 +1,7 @@
 import AppKit
 
 /// Drives a capture from hotkey press to finished image.
+@MainActor
 final class CaptureController {
     static let shared = CaptureController()
 

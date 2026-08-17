@@ -5,7 +5,7 @@ import CoreAudio
 import ScreenCaptureKit
 
 @available(macOS 15.0, *)
-final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
+final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     private var stream: SCStream?
     private let videoQueue = DispatchQueue(
         label: "com.vertusdesign.ScreenCap.recorder.video",

@@ -4,6 +4,10 @@ import Foundation
 /// check and the release notes never disagree.
 enum AppInfo {
     static let name = "ScreenCap"
+    /// Product label used by the regular macOS application menu. The bundle
+    /// executable and URL identifiers intentionally remain ScreenCap for
+    /// compatibility with existing installs and permissions.
+    static let menuName = "ScreenCap Pro 3"
 
     static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"

@@ -6,6 +6,7 @@ enum ImageOutput {
 
     // MARK: - Clipboard
 
+    @MainActor
     static func copyToClipboard(_ captured: CapturedImage) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -32,6 +33,7 @@ enum ImageOutput {
     /// A caller may provide a preferred directory/name for document editing;
     /// ordinary screenshot saves continue to use the user preferences.
     @discardableResult
+    @MainActor
     static func save(
         _ captured: CapturedImage,
         forcePanel: Bool,
@@ -86,6 +88,7 @@ enum ImageOutput {
         return url
     }
 
+    @MainActor
     private static func saveWithPanel(
         _ captured: CapturedImage,
         suggestedName: String,
@@ -119,6 +122,7 @@ enum ImageOutput {
     }
 
     @discardableResult
+    @MainActor
     private static func write(
         _ captured: CapturedImage,
         to url: URL,
@@ -144,6 +148,7 @@ enum ImageOutput {
 
     // MARK: - Printing
 
+    @MainActor
     static func print(_ captured: CapturedImage) {
         let image = captured.nsImage
         let imageView = NSImageView(frame: CGRect(origin: .zero, size: captured.pointSize))
@@ -234,6 +239,7 @@ enum ImageOutput {
         return candidate
     }
 
+    @MainActor
     private static func presentError(_ message: String, _ error: Error?) {
         NSLog("ScreenCap: \(message) — \(error?.localizedDescription ?? "")")
         let alert = NSAlert()
@@ -250,6 +256,7 @@ enum ImageOutput {
 /// Format chooser shown as the save panel's accessory view, the same way
 /// Preview's own save sheet offers one. Changing it updates both the panel's
 /// allowed type and the suggested extension.
+@MainActor
 private final class SaveFormatAccessoryView: NSView {
     private let onChange: (ImageFormat) -> Void
     private var popup: NSPopUpButton?

@@ -85,9 +85,18 @@ enum ScreenCapture {
     /// A successful ScreenCaptureKit query is more authoritative than the
     /// process-lifetime CGPreflight cache. This also avoids showing a stale
     /// warning after a permission has just been granted in System Settings.
-    private static var confirmedPermission = false
+    private static let permissionLock = NSLock()
+    nonisolated(unsafe) private static var confirmedPermission = false
+
+    private static func markPermissionConfirmed() {
+        permissionLock.lock()
+        confirmedPermission = true
+        permissionLock.unlock()
+    }
 
     static var hasPermission: Bool {
+        permissionLock.lock()
+        defer { permissionLock.unlock() }
         if confirmedPermission { return true }
         let granted = CGPreflightScreenCaptureAccess()
         if granted { confirmedPermission = true }
@@ -97,7 +106,7 @@ enum ScreenCapture {
     /// Triggers the system prompt. Returns immediately; macOS only shows the
     /// prompt once per app signature, afterwards it silently returns false.
     @discardableResult
-    static func requestPermission(completion: ((Bool) -> Void)? = nil) -> Bool {
+    static func requestPermission(completion: (@Sendable (Bool) -> Void)? = nil) -> Bool {
         let requested = CGRequestScreenCaptureAccess()
         guard completion != nil else { return requested }
 
@@ -110,7 +119,7 @@ enum ScreenCapture {
                     false,
                     onScreenWindowsOnly: true
                 )
-                confirmedPermission = true
+                markPermissionConfirmed()
                 completion?(true)
             } catch {
                 completion?(false)

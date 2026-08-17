@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 
+@MainActor
 enum PlayerMediaInspector {
     static func inspect(url: URL) -> PlayerMediaInfo? {
         let asset = AVURLAsset(url: url)
@@ -74,20 +75,15 @@ enum PlayerMediaInspector {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 240, height: 140)
 
-        return await withTaskGroup(of: (Int, NSImage?).self, returning: [NSImage].self) { group in
-            for index in 0..<count {
-                let seconds = duration * (Double(index) / Double(max(count - 1, 1)))
-                group.addTask {
-                    let time = CMTime(seconds: seconds, preferredTimescale: 600)
-                    let image = try? generator.copyCGImage(at: time, actualTime: nil)
-                    return (index, image.map { NSImage(cgImage: $0, size: .zero) })
-                }
+        var images: [NSImage] = []
+        images.reserveCapacity(count)
+        for index in 0..<count {
+            let seconds = duration * (Double(index) / Double(max(count - 1, 1)))
+            let time = CMTime(seconds: seconds, preferredTimescale: 600)
+            if let image = try? generator.copyCGImage(at: time, actualTime: nil) {
+                images.append(NSImage(cgImage: image, size: .zero))
             }
-            var ordered = Array<NSImage?>(repeating: nil, count: count)
-            for await (index, image) in group {
-                ordered[index] = image
-            }
-            return ordered.compactMap { $0 }
         }
+        return images
     }
 }

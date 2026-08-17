@@ -4,6 +4,7 @@ import AppKit
 ///
 /// A menu-bar app has nowhere else to say that something worked, and silently
 /// closing the overlay leaves the user guessing.
+@MainActor
 enum Feedback {
     private static var hud: NSWindow?
     private static var dismissTimer: Timer?

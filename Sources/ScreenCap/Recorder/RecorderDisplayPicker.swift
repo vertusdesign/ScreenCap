@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 private enum RecorderDisplayPickerCursor {
     static let recordingReticle: NSCursor = {
         let size = NSSize(width: 24, height: 24)
@@ -50,6 +51,7 @@ private enum RecorderDisplayPickerCursor {
 /// is covered by a transparent overlay: the display under the pointer stays
 /// clear and all other displays are dimmed.
 @available(macOS 15.0, *)
+@MainActor
 final class RecorderDisplayPicker: NSObject {
     var onSelection: ((RecorderDisplay, RecordingCaptureOptions) -> Void)?
     var onCancel: (() -> Void)?

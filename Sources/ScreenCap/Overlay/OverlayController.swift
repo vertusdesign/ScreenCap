@@ -1,6 +1,7 @@
 import AppKit
 
 /// Owns one overlay window per display for the duration of a capture session.
+@MainActor
 final class OverlayController: NSObject, SelectionOverlayViewDelegate {
 
     var onFinish: ((CapturedImage, OutputAction, CGRect) -> Void)?

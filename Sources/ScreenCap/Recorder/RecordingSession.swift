@@ -2,7 +2,7 @@ import AVFoundation
 import CoreMedia
 
 @available(macOS 15.0, *)
-private struct RecordingSample {
+private struct RecordingSample: @unchecked Sendable {
     let buffer: CMSampleBuffer
     let type: RecorderOutputType
 }
@@ -21,9 +21,9 @@ actor RecordingSession {
     private let sampleContinuation: AsyncStream<RecordingSample>.Continuation
     private var sampleConsumer: Task<Void, Never>?
 
-    var onStateChange: ((RecorderState) -> Void)?
-    var onDiskSpaceLow: (() -> Void)?
-    var onMicrophoneUnavailable: (() -> Void)?
+    var onStateChange: (@Sendable (RecorderState) -> Void)?
+    var onDiskSpaceLow: (@Sendable () -> Void)?
+    var onMicrophoneUnavailable: (@Sendable () -> Void)?
 
     init(engine: RecorderCaptureEngine, writer: RecorderWriterService) {
         self.engine = engine
@@ -50,7 +50,7 @@ actor RecordingSession {
         let stream = sampleStream
         sampleConsumer = Task { [weak self] in
             for await sample in stream {
-                await self?.append(sample.buffer, type: sample.type)
+                await self?.append(sample)
             }
         }
         engine.onSampleBuffer = { [weak self] sampleBuffer, outputType in
@@ -137,7 +137,9 @@ actor RecordingSession {
         setState(.idle)
     }
 
-    private func append(_ sampleBuffer: CMSampleBuffer, type: RecorderOutputType) async {
+    private func append(_ sample: RecordingSample) async {
+        let sampleBuffer = sample.buffer
+        let type = sample.type
         guard !hasFailed, state == .recording || state == .preparing else { return }
         await writer.append(sampleBuffer, type: type)
         if let failure = writer.failure {
@@ -186,11 +188,11 @@ actor RecordingSession {
         }
     }
 
-    func setDiskSpaceLowHandler(_ handler: @escaping () -> Void) {
+    func setDiskSpaceLowHandler(_ handler: @escaping @Sendable () -> Void) {
         onDiskSpaceLow = handler
     }
 
-    func setMicrophoneUnavailableHandler(_ handler: @escaping () -> Void) {
+    func setMicrophoneUnavailableHandler(_ handler: @escaping @Sendable () -> Void) {
         onMicrophoneUnavailable = handler
     }
 

@@ -12,8 +12,8 @@ final class PlayerEngine: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var errorMessage: String?
 
-    private var timeObserver: Any?
-    private var endObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var timeObserver: Any?
+    nonisolated(unsafe) private var endObserver: NSObjectProtocol?
     private var trimStart: Double = 0
     private var trimEnd: Double = .infinity
     private var mutedTracks = Set<PlayerTrackID>()

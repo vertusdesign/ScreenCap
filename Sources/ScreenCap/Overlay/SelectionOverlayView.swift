@@ -2,6 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import VisionKit
 
+@MainActor
 protocol SelectionOverlayViewDelegate: AnyObject {
     /// The pointer entered this display — it should take keyboard focus.
     func overlayWantsKeyFocus(_ view: SelectionOverlayView)
@@ -35,6 +36,7 @@ struct SelectionOverlayState {
 ///
 /// The view's coordinate space is the display in Cocoa points with the origin at
 /// its bottom-left corner, which is also the space every annotation is stored in.
+@MainActor
 final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     private enum Phase {
@@ -112,15 +114,15 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     private var editingTextID: UUID?
     private var textAnalysisOverlay: ImageAnalysisOverlayView?
     private var textAnalysisTask: Task<Void, Never>?
-    private var textRecognitionKeyMonitor: Any?
-    private var overlayKeyMonitor: Any?
+    nonisolated(unsafe) private var textRecognitionKeyMonitor: Any?
+    nonisolated(unsafe) private var overlayKeyMonitor: Any?
     /// The opened-image editor has a larger canvas around the image. Keeping
     /// this separate from `bounds` lets its panels live in that surrounding
     /// space while annotations remain image-local.
     private var chromeBounds: CGRect?
 
     private var trackingAreaRef: NSTrackingArea?
-    private var textEditorFocusObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var textEditorFocusObserver: NSObjectProtocol?
     private let handleRadius: CGFloat = 4.5
     private let handleHitRadius: CGFloat = 9
 
@@ -208,17 +210,11 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self,
-                  let keyWindow = notification.object as? NSWindow,
-                  keyWindow === self.window,
-                  let editor = self.textEditor,
-                  keyWindow.firstResponder !== editor
-            else { return }
-
-            DispatchQueue.main.async { [weak self] in
+            guard let keyWindow = notification.object as? NSWindow else { return }
+            Task { @MainActor [weak self] in
                 guard let self,
+                      keyWindow === self.window,
                       let editor = self.textEditor,
-                      editor.window === keyWindow,
                       keyWindow.firstResponder !== editor
                 else { return }
                 keyWindow.makeFirstResponder(editor)

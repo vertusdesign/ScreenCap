@@ -1,6 +1,7 @@
 import AppKit
 import UniformTypeIdentifiers
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
 
@@ -173,10 +174,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installMainMenu(playerVisible: Bool) {
         let mainMenu = NSMenu()
 
-        let appMenuItem = NSMenuItem(title: AppInfo.name, action: nil, keyEquivalent: "")
+        let appMenuItem = NSMenuItem(title: AppInfo.menuName, action: nil, keyEquivalent: "")
         let appMenu = NSMenu()
         appMenu.addItem(
-            withTitle: L10n.t("menu.about", AppInfo.name),
+            withTitle: L10n.t("menu.about", AppInfo.menuName),
             action: #selector(showAbout),
             keyEquivalent: ""
         ).target = self
@@ -198,7 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         appMenu.addItem(.separator())
         appMenu.addItem(
-            withTitle: L10n.t("menu.quit", AppInfo.name),
+            withTitle: L10n.t("menu.quit", AppInfo.menuName),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

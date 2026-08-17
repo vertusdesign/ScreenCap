@@ -3,14 +3,14 @@ import AVFoundation
 import CoreMedia
 
 @available(macOS 15.0, *)
-enum RecorderOutputType: Hashable {
+enum RecorderOutputType: Hashable, Sendable {
     case screen
     case systemAudio
     case microphone
 }
 
 @available(macOS 15.0, *)
-enum RecorderState: Equatable {
+enum RecorderState: Equatable, Sendable {
     case idle
     case preparing
     case recording

@@ -509,6 +509,7 @@ private struct RecordingTab: View {
 
 /// Bridges the file-name-template field to token-insertion-at-the-caret, since
 /// a plain SwiftUI `TextField` exposes no caret position to insert into.
+@MainActor
 final class FilenameFieldBridge: ObservableObject {
     fileprivate weak var textField: NSTextField?
 

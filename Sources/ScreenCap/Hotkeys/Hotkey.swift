@@ -3,7 +3,7 @@ import Carbon.HIToolbox
 
 /// A global keyboard shortcut, stored in Cocoa terms and translated to Carbon
 /// only at registration time.
-struct Hotkey: Codable, Equatable, Hashable {
+struct Hotkey: Codable, Equatable, Hashable, Sendable {
     var keyCode: UInt16
     /// Raw value of `NSEvent.ModifierFlags`, already masked to the device-independent set.
     var modifierFlags: UInt

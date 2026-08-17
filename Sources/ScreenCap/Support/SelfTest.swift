@@ -7,6 +7,27 @@ import AppKit
 /// CI, where there is no display permission and no one to click a button.
 enum SelfTest {
 
+    /// The self-test is intentionally synchronous because it is also used by
+    /// CI and command-line smoke tests. Swift 6 does not allow a detached task
+    /// to capture mutable local variables, so keep the async result in a small
+    /// lock-protected box instead.
+    private final class CaptureResultBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored: Result<[DisplaySnapshot], Error>?
+
+        func set(_ result: Result<[DisplaySnapshot], Error>) {
+            lock.lock()
+            stored = result
+            lock.unlock()
+        }
+
+        var value: Result<[DisplaySnapshot], Error>? {
+            lock.lock()
+            defer { lock.unlock() }
+            return stored
+        }
+    }
+
     static func run(outputDirectory: URL) -> Int32 {
         var failures: [String] = []
 
@@ -335,41 +356,50 @@ enum SelfTest {
         // 8. Real capture, if the system allows it.
         if ScreenCapture.hasPermission {
             let semaphore = DispatchSemaphore(value: 0)
-            var captureError: Error?
-            var captured: [DisplaySnapshot] = []
+            let resultBox = CaptureResultBox()
             Task {
-                do { captured = try await ScreenCapture.snapshotAllDisplays() } catch { captureError = error }
+                do {
+                    resultBox.set(.success(try await ScreenCapture.snapshotAllDisplays()))
+                } catch {
+                    resultBox.set(.failure(error))
+                }
                 semaphore.signal()
             }
             if semaphore.wait(timeout: .now() + 15) == .timedOut {
                 failures.append("захват экрана: таймаут")
                 print("  ✗ захват экрана: таймаут")
-            } else if let captureError {
-                failures.append("захват экрана: \(captureError.localizedDescription)")
-                print("  ✗ захват экрана: \(captureError.localizedDescription)")
+            } else if let result = resultBox.value {
+                switch result {
+                case .failure(let captureError):
+                    failures.append("захват экрана: \(captureError.localizedDescription)")
+                    print("  ✗ захват экрана: \(captureError.localizedDescription)")
+                case .success(let captured):
+                    for snapshot in captured {
+                        print("  ✓ дисплей \(snapshot.displayID): \(snapshot.image.width)×\(snapshot.image.height) px, масштаб \(snapshot.pixelScale)")
+                    }
+                    if let first = captured.first {
+                        let probe = CGPoint(x: first.cocoaFrame.midX, y: first.cocoaFrame.midY)
+                        if let color = first.color(atGlobalPoint: probe) {
+                            print("  ✓ цвет пикселя в центре: \(color.hexString)")
+                        } else {
+                            failures.append("чтение цвета пикселя")
+                            print("  ✗ чтение цвета пикселя")
+                        }
+                        if let crop = first.crop(toGlobalRect: CGRect(
+                            x: first.cocoaFrame.minX + 100,
+                            y: first.cocoaFrame.minY + 100,
+                            width: 200, height: 120
+                        )) {
+                            print("  ✓ обрезка области: \(crop.width)×\(crop.height) px")
+                        } else {
+                            failures.append("обрезка области")
+                            print("  ✗ обрезка области")
+                        }
+                    }
+                }
             } else {
-                for snapshot in captured {
-                    print("  ✓ дисплей \(snapshot.displayID): \(snapshot.image.width)×\(snapshot.image.height) px, масштаб \(snapshot.pixelScale)")
-                }
-                if let first = captured.first {
-                    let probe = CGPoint(x: first.cocoaFrame.midX, y: first.cocoaFrame.midY)
-                    if let color = first.color(atGlobalPoint: probe) {
-                        print("  ✓ цвет пикселя в центре: \(color.hexString)")
-                    } else {
-                        failures.append("чтение цвета пикселя")
-                        print("  ✗ чтение цвета пикселя")
-                    }
-                    if let crop = first.crop(toGlobalRect: CGRect(
-                        x: first.cocoaFrame.minX + 100,
-                        y: first.cocoaFrame.minY + 100,
-                        width: 200, height: 120
-                    )) {
-                        print("  ✓ обрезка области: \(crop.width)×\(crop.height) px")
-                    } else {
-                        failures.append("обрезка области")
-                        print("  ✗ обрезка области")
-                    }
-                }
+                failures.append("захват экрана: нет результата")
+                print("  ✗ захват экрана: нет результата")
             }
         } else {
             print("  ⚠︎ нет разрешения на запись экрана — реальный захват пропущен")

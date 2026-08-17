@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 
 /// Actions that can be bound to a global shortcut.
-enum HotkeyAction: String, CaseIterable, Codable {
+enum HotkeyAction: String, CaseIterable, Codable, Sendable {
     case captureArea
     case repeatLastArea
     case captureWindow
@@ -63,7 +63,7 @@ enum HotkeyAction: String, CaseIterable, Codable {
 /// Carbon is used deliberately: it is the only route to a global shortcut that does
 /// not require the Accessibility permission, and it is purely event-driven, so the
 /// app burns no CPU while idle.
-final class HotkeyManager {
+final class HotkeyManager: @unchecked Sendable {
     static let shared = HotkeyManager()
 
     private struct Registration {

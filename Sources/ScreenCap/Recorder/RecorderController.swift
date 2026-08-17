@@ -5,6 +5,7 @@ import ScreenCaptureKit
 import UniformTypeIdentifiers
 
 @available(macOS 15.0, *)
+@MainActor
 final class RecorderController {
     static let shared = RecorderController()
 
@@ -442,22 +443,29 @@ final class RecorderController {
     private func install(session: RecordingSession) async {
         self.session = session
         await session.setStateHandler { [weak self] newState in
-            self?.state = newState
-            if case .failed(let reason) = newState {
-                self?.session = nil
-                Feedback.flash(message: L10n.t("recording.failed"), subtitle: reason)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.state = newState
+                if case .failed(let reason) = newState {
+                    self.session = nil
+                    Feedback.flash(message: L10n.t("recording.failed"), subtitle: reason)
+                }
             }
         }
         await session.setDiskSpaceLowHandler { [weak self] in
-            guard let self else { return }
-            guard self.session != nil, self.isActive else { return }
-            Feedback.flash(message: L10n.t("recording.diskSpaceWarning"))
-            self.stopActiveSession()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard self.session != nil, self.isActive else { return }
+                Feedback.flash(message: L10n.t("recording.diskSpaceWarning"))
+                self.stopActiveSession()
+            }
         }
         await session.setMicrophoneUnavailableHandler { [weak self] in
-            guard let self else { return }
-            self.microphoneEnabled = false
-            Feedback.flash(message: L10n.t("recording.noMicrophone"))
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.microphoneEnabled = false
+                Feedback.flash(message: L10n.t("recording.noMicrophone"))
+            }
         }
     }
 
@@ -537,7 +545,8 @@ final class RecorderController {
     /// the movie to its existing playlist, then use VLC's AppleScript command
     /// to toggle the just-opened item to pause after its video output is ready.
     private func openWithVLC(_ url: URL, applicationURL: URL) {
-        let openDocument = { [weak self] in
+        let controller = self
+        let openDocument: @MainActor @Sendable () -> Void = {
             NSWorkspace.shared.open(
                 [url],
                 withApplicationAt: applicationURL,
@@ -546,7 +555,9 @@ final class RecorderController {
                     if let error {
                         Log.error("VLC could not open recording: \(error.localizedDescription)")
                     }
-                    self?.scheduleVLCPlaybackPause(for: url)
+                    Task { @MainActor in
+                        controller.scheduleVLCPlaybackPause(for: url)
+                    }
                 }
             )
         }
@@ -574,7 +585,9 @@ final class RecorderController {
                     return
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    openDocument()
+                    Task { @MainActor in
+                        openDocument()
+                    }
                 }
             }
         }
@@ -603,7 +616,7 @@ final class RecorderController {
         case failed
     }
 
-    private static func pauseVLCPlaybackIfCurrentItemMatches(_ url: URL) -> VLCPauseResult {
+    private nonisolated static func pauseVLCPlaybackIfCurrentItemMatches(_ url: URL) -> VLCPauseResult {
         let path = appleScriptString(url.path)
         let source = """
         tell application id "org.videolan.vlc"
@@ -636,7 +649,7 @@ final class RecorderController {
         return .retry
     }
 
-    private static func appleScriptString(_ value: String) -> String {
+    private nonisolated static func appleScriptString(_ value: String) -> String {
         let escaped = value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
@@ -667,7 +680,7 @@ final class RecorderController {
 
 @available(macOS 15.0, *)
 private extension RecordingSession {
-    func setStateHandler(_ handler: @escaping (RecorderState) -> Void) {
+    func setStateHandler(_ handler: @escaping @Sendable (RecorderState) -> Void) {
         onStateChange = handler
     }
 }

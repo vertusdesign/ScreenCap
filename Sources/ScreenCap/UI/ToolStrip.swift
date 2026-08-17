@@ -4,7 +4,7 @@ import AppKit
 final class ToolStrip: OverlayPanel {
     /// Order shown top-to-bottom; `.move` first so the default state is "adjust
     /// the selection", exactly like Lightshot.
-    static let tools: [ToolKind] = [
+    nonisolated static let tools: [ToolKind] = [
         .move, .recognizeText, .pen, .marker, .line, .arrow,
         .rectangle, .ellipse, .obfuscate, .counter, .text, .eraser
     ]

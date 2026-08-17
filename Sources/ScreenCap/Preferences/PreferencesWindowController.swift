@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 final class PreferencesWindowController: NSWindowController {
     static let shared = PreferencesWindowController()
 
@@ -21,7 +22,9 @@ final class PreferencesWindowController: NSWindowController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.rebuild()
+            Task { @MainActor [weak self] in
+                self?.rebuild()
+            }
         }
     }
 

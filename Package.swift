@@ -1,12 +1,8 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 import PackageDescription
 
-// Tools version 5.10 rather than 6.0 on purpose. Under 6.0 the default language
-// mode is Swift 6, whose strict concurrency checking this AppKit code does not
-// satisfy, and asking for mode 5 with `.swiftLanguageMode(.v5)` writes a bare "5"
-// into SWIFT_VERSION — which the Xcode build system, used for the universal
-// `--arch arm64 --arch x86_64` build, rejects as unsupported. At 5.10 the mode is
-// already 5 and no setting is needed.
+// Swift 6 language mode is intentional: strict concurrency diagnostics are
+// part of the product's build contract, not an opt-in warning pass.
 let package = Package(
     name: "ScreenCap",
     platforms: [.macOS(.v14)],
@@ -22,7 +18,10 @@ let package = Package(
         .executableTarget(
             name: "ScreenCap",
             dependencies: ["RNNoise"],
-            path: "Sources/ScreenCap"
+            path: "Sources/ScreenCap",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
         )
     ]
 )

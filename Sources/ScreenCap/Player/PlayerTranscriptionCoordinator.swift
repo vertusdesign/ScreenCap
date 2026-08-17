@@ -34,7 +34,7 @@ final class PlayerTranscriptionCoordinator: ObservableObject {
     @Published private(set) var text = ""
     @Published private(set) var localeIdentifier: String = Locale.current.identifier
 
-    private var recognitionTask: SFSpeechRecognitionTask?
+    nonisolated(unsafe) private var recognitionTask: SFSpeechRecognitionTask?
     private var temporaryAudioURL: URL?
     private var operationID = UUID()
 

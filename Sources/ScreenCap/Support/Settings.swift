@@ -39,7 +39,7 @@ enum RecordingAfterCaptureAction {
 ///
 /// Everything is a plain value type so the settings object can be observed by
 /// SwiftUI and read synchronously from AppKit drawing code.
-final class Settings: ObservableObject {
+final class Settings: ObservableObject, @unchecked Sendable {
     static let shared = Settings()
 
     private let defaults = UserDefaults.standard
@@ -90,52 +90,58 @@ final class Settings: ObservableObject {
         static let playerTranscriptionMode = "playerTranscriptionMode"
     }
 
-    private static let toolDefaults: [String: Any] = [
-        Key.toolColor: "#FF3B30",
-        Key.strokeWidth: 3.0,
-        Key.fontSize: 24.0,
-        Key.textBackdrop: TextBackdrop.none.rawValue,
-        Key.textBackdropColor: "#000000",
-        Key.obfuscationStyle: ObfuscationStyle.pixelate.rawValue,
-        Key.obfuscationShape: ObfuscationShape.brush.rawValue,
-        Key.obfuscationBrushSize: 40.0,
-        Key.obfuscationIntensity: 11.0,
-        Key.eraserRadius: 24.0,
-        Key.eraserShape: ObfuscationShape.brush.rawValue,
-        Key.eraserMode: EraserMode.pixels.rawValue,
-        Key.counterSize: 3.0,
-        Key.counterArrowWidth: 3.0,
-        Key.shapeFilled: false,
-        Key.arrowDoubleHeaded: false
-    ]
+    private static var toolDefaults: [String: Any] {
+        [
+            Key.toolColor: "#FF3B30",
+            Key.strokeWidth: 3.0,
+            Key.fontSize: 24.0,
+            Key.textBackdrop: TextBackdrop.none.rawValue,
+            Key.textBackdropColor: "#000000",
+            Key.obfuscationStyle: ObfuscationStyle.pixelate.rawValue,
+            Key.obfuscationShape: ObfuscationShape.brush.rawValue,
+            Key.obfuscationBrushSize: 40.0,
+            Key.obfuscationIntensity: 11.0,
+            Key.eraserRadius: 24.0,
+            Key.eraserShape: ObfuscationShape.brush.rawValue,
+            Key.eraserMode: EraserMode.pixels.rawValue,
+            Key.counterSize: 3.0,
+            Key.counterArrowWidth: 3.0,
+            Key.shapeFilled: false,
+            Key.arrowDoubleHeaded: false
+        ]
+    }
 
     /// Registered defaults for every value on the Capture tab, used both to seed
     /// `UserDefaults` and to reset that tab. `saveDirectory` is deliberately
     /// absent: it has no fixed default value, only a computed fallback (see its
     /// getter), so resetting it means removing the key, not writing one.
-    private static let captureDefaults: [String: Any] = [
-        Key.filenameTemplate: "Screenshot_{timestamp}",
-        Key.askWhereToSave: false,
-        Key.copyOnSave: true,
-        Key.dimOpacity: 0.45,
-        Key.showMagnifier: true,
-        Key.showSizeBadge: true,
-        Key.downscaleRetina: false,
-        Key.playShutterSound: true,
-        Key.imageFormat: ImageFormat.png.rawValue
-    ]
+    private static var captureDefaults: [String: Any] {
+        [
+            Key.filenameTemplate: "Screenshot_{timestamp}",
+            Key.askWhereToSave: false,
+            Key.copyOnSave: true,
+            Key.dimOpacity: 0.45,
+            Key.showMagnifier: true,
+            Key.showSizeBadge: true,
+            Key.downscaleRetina: false,
+            Key.playShutterSound: true,
+            Key.imageFormat: ImageFormat.png.rawValue
+        ]
+    }
 
-    private static let recordingDefaults: [String: Any] = [
-        Key.recordingAskWhereToSave: false,
-        Key.recordingSkipSystemAudio: false,
-        Key.recordingSkipMicrophone: false,
-        Key.recordingNoiseSuppression: false,
-        Key.recordingAtLogicalSize: false,
-        Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
-        Key.recordingShowMouseClicks: false,
-        Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.openInPlayer,
-        Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
-    ]
+    private static var recordingDefaults: [String: Any] {
+        [
+            Key.recordingAskWhereToSave: false,
+            Key.recordingSkipSystemAudio: false,
+            Key.recordingSkipMicrophone: false,
+            Key.recordingNoiseSuppression: false,
+            Key.recordingAtLogicalSize: false,
+            Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
+            Key.recordingShowMouseClicks: false,
+            Key.recordingAfterCaptureAction: RecordingAfterCaptureAction.openInPlayer,
+            Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
+        ]
+    }
 
     private init() {
         var registered = Self.captureDefaults

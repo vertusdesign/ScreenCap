@@ -1,10 +1,14 @@
 import AppKit
 
 /// The menu-bar presence: the only permanent UI this app has.
+@MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private var recorderMicrophoneStatusItem: NSStatusItem?
-    private var recorderSystemAudioStatusItem: NSStatusItem?
+    // AppKit status items are legacy non-Sendable references. They are created
+    // and torn down on the main actor; the unsafe marker only lets deinit run
+    // its final AppKit cleanup under Swift 6's stricter deinitialization rules.
+    nonisolated(unsafe) private var recorderMicrophoneStatusItem: NSStatusItem?
+    nonisolated(unsafe) private var recorderSystemAudioStatusItem: NSStatusItem?
 
     override init() {
         super.init()

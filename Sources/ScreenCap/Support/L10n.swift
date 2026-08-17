@@ -58,7 +58,10 @@ enum AppLanguage: String, CaseIterable, Codable {
 enum L10n {
     private static let sentinel = "\u{0}__missing__"
 
-    private static var overrideBundle: Bundle?
+    // Access is serialized by the main-thread language-change flow. The
+    // explicit unsafe marker documents that Bundle is a legacy non-Sendable
+    // reference, rather than hiding the Swift 6 diagnostic with a global flag.
+    nonisolated(unsafe) private static var overrideBundle: Bundle?
 
     /// Where the `.lproj` folders live.
     ///
