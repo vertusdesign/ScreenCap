@@ -15,6 +15,7 @@ final class PlayerViewModel: ObservableObject {
     @Published var trimEnd: Double = 0
     @Published private(set) var isDirty = false
     @Published private(set) var compositeRebuildRequested = false
+    @Published private(set) var pendingPlaylistRemoval: PlayerPlaylistRemoval?
     @Published var transcriptionMode: PlayerTranscriptionMode {
         didSet { Settings.shared.playerTranscriptionMode = transcriptionMode }
     }
@@ -229,14 +230,20 @@ final class PlayerViewModel: ObservableObject {
         redoStack.removeAll()
     }
 
-    func exportEditedCopy() {
-        guard let selectedRecording else { return }
+    func exportEditedCopy(completion: ((Bool) -> Void)? = nil) {
+        guard let selectedRecording else {
+            completion?(false)
+            return
+        }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.quickTimeMovie]
         panel.nameFieldStringValue = selectedRecording.url.deletingPathExtension().lastPathComponent + " Edited.mov"
         panel.directoryURL = selectedRecording.url.deletingLastPathComponent()
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        export(to: destination, replacingOriginal: false)
+        guard panel.runModal() == .OK, let destination = panel.url else {
+            completion?(false)
+            return
+        }
+        export(to: destination, replacingOriginal: false, completion: completion)
     }
 
     func replaceOriginal() {
@@ -277,18 +284,82 @@ final class PlayerViewModel: ObservableObject {
         }
     }
 
-    private func export(to destination: URL, replacingOriginal: Bool) {
+    private func export(
+        to destination: URL,
+        replacingOriginal: Bool,
+        completion: ((Bool) -> Void)? = nil
+    ) {
         engine.exportEdited(to: destination) { [weak self] result in
             switch result {
             case .success:
                 self?.markSaved()
+                completion?(true)
                 Feedback.flash(message: replacingOriginal
                     ? L10n.t("player.export.replaced")
                     : L10n.t("player.export.complete"))
             case .failure(let error):
+                completion?(false)
                 Feedback.flash(message: L10n.t("player.export.failed"), subtitle: error.localizedDescription)
             }
         }
+    }
+
+    func requestRemoveFromPlaylist(_ recording: PlayerRecording) {
+        guard selectedRecording?.id == recording.id, isDirty else {
+            removeFromPlaylist(recording)
+            return
+        }
+        pendingPlaylistRemoval = .recording(recording)
+    }
+
+    func requestRemoveFromPlaylist(_ source: PlayerLibrarySource) {
+        guard selectedRecording?.sourceID == source.id, isDirty else {
+            removeFromPlaylist(source)
+            return
+        }
+        pendingPlaylistRemoval = .source(source)
+    }
+
+    func confirmPlaylistRemoval() {
+        guard let pendingPlaylistRemoval else { return }
+        self.pendingPlaylistRemoval = nil
+        switch pendingPlaylistRemoval {
+        case .recording(let recording): removeFromPlaylist(recording)
+        case .source(let source): removeFromPlaylist(source)
+        }
+    }
+
+    func cancelPlaylistRemoval() {
+        pendingPlaylistRemoval = nil
+    }
+
+    private func removeFromPlaylist(_ recording: PlayerRecording) {
+        if selectedRecording?.id == recording.id { clearSelection() }
+        library.removeRecording(recording)
+    }
+
+    private func removeFromPlaylist(_ source: PlayerLibrarySource) {
+        if selectedRecording?.sourceID == source.id { clearSelection() }
+        library.removeSource(source)
+    }
+
+    private func clearSelection() {
+        transcription.cancel()
+        engine.clear()
+        selectedRecording = nil
+        tracks = []
+        trimStart = 0
+        trimEnd = 0
+        mutedTracks.removeAll()
+        baselineMutedTracks.removeAll()
+        removedTracks.removeAll()
+        volumes.removeAll()
+        baselineVolumes.removeAll()
+        compositeRebuildRequested = false
+        baselineCompositeRebuildRequested = false
+        undoStack.removeAll()
+        redoStack.removeAll()
+        isDirty = false
     }
 
     private var currentSnapshot: PlayerEditSnapshot {

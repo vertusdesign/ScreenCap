@@ -36,20 +36,38 @@ struct PlayerView: View {
         .alert(
             L10n.t("player.unsaved.title"),
             isPresented: Binding(
-                get: { pendingRecording != nil },
-                set: { if !$0 { pendingRecording = nil } }
+                get: { pendingRecording != nil || viewModel.pendingPlaylistRemoval != nil },
+                set: {
+                    if !$0 {
+                        pendingRecording = nil
+                        viewModel.cancelPlaylistRemoval()
+                    }
+                }
             )
         ) {
-            Button(L10n.t("player.unsaved.saveCopy")) {
-                viewModel.exportEditedCopy()
-                if let pendingRecording { viewModel.select(pendingRecording) }
-                pendingRecording = nil
+            if pendingRecording != nil {
+                Button(L10n.t("player.unsaved.saveCopy")) {
+                    let next = pendingRecording
+                    viewModel.exportEditedCopy { success in
+                        guard success, let next else { return }
+                        viewModel.select(next)
+                        pendingRecording = nil
+                    }
+                }
+                Button(L10n.t("player.unsaved.discard"), role: .destructive) {
+                    if let pendingRecording { viewModel.select(pendingRecording) }
+                    pendingRecording = nil
+                }
             }
-            Button(L10n.t("player.unsaved.discard"), role: .destructive) {
-                if let pendingRecording { viewModel.select(pendingRecording) }
-                pendingRecording = nil
+            if viewModel.pendingPlaylistRemoval != nil {
+                Button(L10n.t("player.remove.video"), role: .destructive) {
+                    viewModel.confirmPlaylistRemoval()
+                }
             }
-            Button(L10n.t("action.cancel"), role: .cancel) { pendingRecording = nil }
+            Button(L10n.t("action.cancel"), role: .cancel) {
+                pendingRecording = nil
+                viewModel.cancelPlaylistRemoval()
+            }
         } message: {
             Text(L10n.t("player.unsaved.message"))
         }
@@ -111,7 +129,7 @@ struct PlayerView: View {
                             }
                             .contextMenu {
                                 Button(L10n.t("player.remove.folder"), role: .destructive) {
-                                    viewModel.library.removeSource(group.source)
+                                    viewModel.requestRemoveFromPlaylist(group.source)
                                 }
                             }
                         }
@@ -142,8 +160,7 @@ struct PlayerView: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button(L10n.t("player.remove.video"), role: .destructive) {
-                if viewModel.selectedRecording?.id == recording.id { viewModel.engine.pause() }
-                viewModel.library.removeRecording(recording)
+                viewModel.requestRemoveFromPlaylist(recording)
             }
             Button(L10n.t("player.reveal")) {
                 NSWorkspace.shared.activateFileViewerSelecting([recording.url])

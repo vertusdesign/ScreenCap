@@ -9,6 +9,16 @@ enum AppInfo {
     /// compatibility with existing installs and permissions.
     static let menuName = "ScreenCap Pro 3"
 
+    static var bundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? "com.vertusdesign.ScreenCap"
+    }
+
+    static var urlScheme: String {
+        let types = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]]
+        let schemes = types?.first?["CFBundleURLSchemes"] as? [String]
+        return schemes?.first ?? "screencap"
+    }
+
     static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     }

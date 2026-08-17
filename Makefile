@@ -1,13 +1,30 @@
 APP_NAME    := ScreenCap
-BUNDLE_ID   := com.vertusdesign.ScreenCap
 VERSION     ?= 3.0.0
+# `production` is the App Store/update identity and deliberately keeps the
+# existing TCC bundle ID. `parallel` is a local QA identity, allowing a v3
+# build to coexist with an installed v2 without sharing Screen Recording TCC.
+BUILD_FLAVOR ?= production
+ifneq ($(filter production parallel,$(BUILD_FLAVOR)),$(BUILD_FLAVOR))
+$(error BUILD_FLAVOR must be production or parallel)
+endif
+ifeq ($(BUILD_FLAVOR),parallel)
+BUNDLE_ID   := com.vertusdesign.ScreenCap.Pro3QA
+BUNDLE_NAME := ScreenCap Pro 3 QA
+URL_SCHEME := screencap-pro3
+APP_BUNDLE  := ScreenCap-Pro3-QA.app
+else
+BUNDLE_ID   := com.vertusdesign.ScreenCap
+BUNDLE_NAME := ScreenCap
+URL_SCHEME := screencap
+APP_BUNDLE  := ScreenCap.app
+endif
 # "alpha", "beta", or empty for a stable build.
 CHANNEL     ?=
 BUILD       ?= 1
 FULLVERSION := $(VERSION)$(if $(CHANNEL),-$(CHANNEL),)
 
 DIST        := dist
-APP         := $(DIST)/$(APP_NAME).app
+APP         := $(DIST)/$(APP_BUNDLE)
 CONTENTS    := $(APP)/Contents
 BIN_DIR     := $(CONTENTS)/MacOS
 RES_DIR     := $(CONTENTS)/Resources
@@ -57,7 +74,8 @@ app: universal icon
 	rm -rf "$(APP)"
 	mkdir -p "$(BIN_DIR)" "$(RES_DIR)"
 	cp "$(PRODUCT)" "$(BIN_DIR)/$(APP_NAME)"
-	sed -e 's/__VERSION__/$(VERSION)/' -e 's/__BUILD__/$(BUILD)/' \
+	sed -e 's/__BUNDLE_ID__/$(BUNDLE_ID)/' -e 's/__BUNDLE_NAME__/$(BUNDLE_NAME)/' \
+		-e 's/__URL_SCHEME__/$(URL_SCHEME)/' -e 's/__VERSION__/$(VERSION)/' -e 's/__BUILD__/$(BUILD)/' \
 		-e 's/__CHANNEL__/$(CHANNEL)/' \
 		Resources/Info.plist > "$(CONTENTS)/Info.plist"
 	cp Resources/AppIcon.icns "$(RES_DIR)/AppIcon.icns"
@@ -81,11 +99,12 @@ Resources/AppIcon.icns: Scripts/make-icon.swift
 
 ## Build and launch, replacing any running copy.
 run: app
-	-pkill -x $(APP_NAME) || true
+	@if [ "$(BUILD_FLAVOR)" != "parallel" ]; then pkill -x $(APP_NAME) || true; fi
 	open "$(APP)"
 
 ## Copy into /Applications.
 install: app
+	@if [ "$(BUILD_FLAVOR)" = "parallel" ]; then echo "Refusing to install the parallel QA flavor; use the production flavor for /Applications."; exit 1; fi
 	-pkill -x $(APP_NAME) || true
 	rm -rf "/Applications/$(APP_NAME).app"
 	cp -R "$(APP)" /Applications/

@@ -1,4 +1,8 @@
-ScreenCap 2.2.0 adds text recognition and editing of existing images, while improving the reliability of screen recordings.
+ScreenCap 3.0.0 adds the native Player module, synchronized track editing and privacy-first
+on-device transcription, while retaining the reliable screenshot and screen-recording flows.
+
+The production bundle identity remains compatible with the v2 App Store update path. A separate
+`BUILD_FLAVOR=parallel` bundle is available for local side-by-side permission QA only.
 
 ### New since 2.0.0
 

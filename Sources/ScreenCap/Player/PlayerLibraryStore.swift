@@ -121,7 +121,7 @@ final class PlayerLibraryStore: ObservableObject {
             guard fileManager.fileExists(atPath: url.path) else { continue }
 
             if source.kind == .video {
-                if isMovie(url), !hiddenRecordings.contains(url.path) {
+                if isPlayableVideo(url), !hiddenRecordings.contains(url.path) {
                     result.append(PlayerRecording(url: url, source: source))
                 }
                 continue
@@ -134,7 +134,7 @@ final class PlayerLibraryStore: ObservableObject {
             ) else { continue }
 
             for case let candidate as URL in enumerator {
-                guard isMovie(candidate), !hiddenRecordings.contains(candidate.standardizedFileURL.path) else {
+                guard isPlayableVideo(candidate), !hiddenRecordings.contains(candidate.standardizedFileURL.path) else {
                     continue
                 }
                 if let values = try? candidate.resourceValues(forKeys: [.isRegularFileKey]),
@@ -159,6 +159,11 @@ final class PlayerLibraryStore: ObservableObject {
 
     private func isMovie(_ url: URL) -> Bool {
         Self.movieExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    private func isPlayableVideo(_ url: URL) -> Bool {
+        guard isMovie(url) else { return false }
+        return PlayerMediaInspector.inspect(url: url).map { $0.duration > 0.01 } ?? false
     }
 
     private func persistSources() {

@@ -5,8 +5,9 @@ display with system audio and microphone tracks. A menu-bar screenshot and scree
 recorder for macOS, built because [Lightshot](https://app.prntscr.com/) — the one that did
 this well — is no longer maintained.
 
-**Version 2.2.0 — reliable recording and opened-image editing release.** ScreenCap includes
-a native macOS 15+ recorder, local text recognition and Finder image opening.
+**Version 3.0.0 — recording, playback and privacy-first transcription.** ScreenCap includes
+a native macOS 15+ recorder, a local recording Player with synchronized track editing, and
+on-device speech recognition when the selected language is supported by macOS.
 See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
 The shipped implementation is macOS-only. The product contract and the planned Windows/Linux
@@ -40,6 +41,9 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
 - Pixel loupe with an eyedropper, and a color panel with palette, recents, hex and a screen picker
 - Copy to the clipboard, save as PNG, or print
 - Screen recording on macOS 15+: full-display video with separate system-audio and microphone tracks
+- ScreenCap Player: playlist folders, synchronized video/audio tracks, trim, per-track gain/mute/remove,
+  composite rebuild and safe copy/replace export
+- On-demand transcription through Apple's on-device Speech Recognition path, with an optional automatic mode
 - 24 interface languages
 - No Dock icon, no background polling, no network access of any kind
 
@@ -135,6 +139,40 @@ open "screencap://record"
 .build/debug/ScreenCap --capture record
 ```
 
+## Player
+
+Open **ScreenCap Pro 3 → Open Player**. The Player is a separate regular macOS window while it
+is visible, so it appears in the menu bar, Cmd-Tab and Mission Control. It is not opened just
+because the app launched. New recordings open there by default when the Player module is
+available; this can be changed in Recording settings.
+
+Add individual movies or folders with the **+** button. Folder groups are recursive and are
+stored as a playlist, not as a second copy of the files. Removing a video or folder removes
+only the playlist entry; it never deletes the source. If the selected recording has unsaved
+trim/audio edits, removal asks for confirmation before clearing the draft.
+
+The Track Editor is hidden by default. The timeline button in the bottom navigation opens it
+and replaces the ordinary playback scrubber. Video thumbnails, waveform lanes, one shared
+playhead and current/total time stay synchronized. Audio lanes support independent gain,
+mute and confirmed removal, including removing the final audio stream. **Rebuild Composite**
+renders a new composite from the raw tracks (for example, after raising a quiet microphone)
+without modifying the original until export.
+
+Trim and audio changes are non-destructive drafts with undo/redo. Switching recordings keeps
+the draft open until the user saves a copy, discards it, or cancels. **Replace original** uses
+an atomic staged export; **Save edited copy** keeps the source untouched. Failed or cancelled
+exports leave the draft intact.
+
+### Transcription
+
+Transcription is **On demand** by default. The button requests Speech Recognition permission
+only when used; Automatic mode starts after a recording is opened and can be disabled in the
+Player. The implementation requires Apple's on-device recognizer and never falls back to a
+network service. Unsupported languages, unavailable recognizers, denied permission, videos
+without audio, cancellation and disappeared files are shown as explicit errors rather than
+silently uploading or losing the request. The transcript panel can be opened in the Player
+window above the video while playback continues.
+
 ## Opened images
 
 Images opened from Finder use the same annotation editor without changing the source file.
@@ -206,31 +244,36 @@ collapses into a single undo step.
 - **A selection lives on one display.** You can capture any display, but a single selection
   cannot span two of them.
 - **No scrolling capture**, recorder microphone source picker, pause/resume, countdown, camera
-  overlay, preview/editing window, HDR capture, or click visualization yet. Recording is
-  currently one full display at a time and available on macOS 15+.
+  overlay, preview/editing window or HDR capture. Recording is currently one full display at a
+  time and available on macOS 15+. Click visualization is supported and can be enabled both in
+  Recording settings and in the display picker.
+- The Player currently exports QuickTime `.mov` edits. It does not yet offer a separate
+  transcript DOCX/RTF/PDF exporter or server-backed translation; transcript text remains local.
+  Automatic transcription depends on Apple's on-device language model being available on that Mac.
 - **Audio-device recovery and performance validation remain platform-dependent.** The recorder
   falls back to video/system audio when a microphone is unavailable, monitors input-route
   changes, keeps a bounded local diagnostic log, validates the finished movie, and stops safely
-  when disk space is low. Broader Bluetooth disconnect/reconnect, crash-recovery, Intel and
-  macOS 15 matrix coverage remains limited.
+  when disk space is low. Recovery markers now carry the active writer PID so a second ScreenCap
+  process will not move a live recording. Broader Bluetooth disconnect/reconnect, crash-recovery,
+  Intel and macOS 15 matrix coverage remains limited; post-processing failures still need the
+  richer “saved with warning” classification described in the incident specification.
 - Redaction is applied to the exported pixels, which is what makes it safe — but the eraser
   can take a redaction back off while the overlay is open. Check the result before sharing.
 - Right-to-left languages are translated but the layout is not mirrored.
 - The app has been tested by hand rather than by an automated UI suite. The rendering and
   export paths are covered by `--selftest`.
 
-## Future work after 2.2
+## Future work after 3.0
 
 The following features remain intentionally out of scope for the current stable release and
-should be considered only after 2.2:
+should be considered only after 3.0:
 
 - **Selection across multiple displays.** A single selection should be able to span
   displays, with the overlay and export composing the relevant parts of each screen.
-- **Swift 6 migration before 3.0.0.** First enable complete concurrency checking in CI,
-  isolate AppKit and UI code with `@MainActor`, and resolve shared mutable state plus
-  `AVAssetWriter`/`AVAssetReader` isolation. Only after a clean Swift 5 migration pass
-  should the project switch to Swift 6 language mode. This is a language-mode change, not
-  a reason to raise the current macOS 14 screenshot or macOS 15 recorder requirements.
+- **Transcript export and translation.** Add explicit local export formats and an opt-in
+  provider architecture only if a future release can preserve the current no-network default.
+- **Player performance and format coverage.** Move large-folder enumeration and thumbnail
+  generation off the main actor and expand the export matrix beyond QuickTime `.mov`.
 
 ## Automation
 
@@ -246,7 +289,8 @@ Commands: `area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, `ab
 ## Build from source
 
 The screenshot implementation requires macOS 14 or newer; the recorder requires macOS 15 or
-newer. The project currently uses a Swift 5.10 toolchain. Xcode
+newer. The project uses the Swift 6 language mode and an Xcode toolchain that can emit both
+architectures. Xcode
 Command Line Tools are enough for a debug build; the universal Intel/Apple Silicon build also
 needs an Xcode toolchain that can emit both architectures. `make dmg` additionally needs the
 macOS `hdiutil` and `codesign` tools. No third-party Swift package dependencies are used.
@@ -283,8 +327,21 @@ make dmg         # DMG + SHA-256 file in dist/
 specific stable release, pass them explicitly, for example:
 
 ```bash
-make dmg VERSION=2.2.0 CHANNEL= BUILD=1
+make dmg VERSION=3.0.0 CHANNEL= BUILD=1
 ```
+
+For a side-by-side permission/upgrade QA build, use the separate local identity:
+
+```bash
+make app BUILD_FLAVOR=parallel VERSION=3.0.0 BUILD=qa
+# dist/ScreenCap-Pro3-QA.app — do not copy this flavor to /Applications
+```
+
+The production flavor keeps `com.vertusdesign.ScreenCap` and the `screencap://` scheme so a
+3.0.0 App Store update remains the same macOS app and can continue using the existing v2
+Screen Recording grant. The parallel flavor uses `com.vertusdesign.ScreenCap.Pro3QA` and
+`screencap-pro3://`, so macOS presents it as a separate TCC identity. Build it for QA only;
+the Makefile refuses `make install BUILD_FLAVOR=parallel`.
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful
 to another machine. Gatekeeper instructions for downloaded builds are at the top of this

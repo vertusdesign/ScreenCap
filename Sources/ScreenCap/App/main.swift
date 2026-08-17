@@ -16,7 +16,8 @@ let application = NSApplication.shared
 let delegate = AppDelegate()
 
 // `--capture area|repeat|window|fullscreen|record` fires one action right after launch;
-// the same commands are available at runtime through the screencap:// URL scheme.
+// the same commands are available at runtime through the bundle's URL scheme
+// (`screencap://` in production and `screencap-pro3://` in the parallel QA flavor).
 if let flagIndex = arguments.firstIndex(of: "--capture"), flagIndex + 1 < arguments.count {
     switch arguments[flagIndex + 1].lowercased() {
     case "area": delegate.launchAction = .captureArea

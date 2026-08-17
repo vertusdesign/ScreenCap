@@ -1,4 +1,5 @@
 import AVFoundation
+import Darwin
 import Foundation
 
 @available(macOS 15.0, *)
@@ -73,7 +74,11 @@ enum RecorderRecovery {
 
     static func markInProgress(for movieURL: URL) throws {
         let marker = markerURL(for: movieURL)
-        let contents = Data("ScreenCap recording in progress\n".utf8)
+        let markerText =
+            "ScreenCap recording in progress\n"
+                + "pid=\(ProcessInfo.processInfo.processIdentifier)\n"
+                + "started=\(Date().timeIntervalSince1970)\n"
+        let contents = Data(markerText.utf8)
         guard FileManager.default.createFile(
             atPath: marker.path,
             contents: contents,
@@ -101,6 +106,16 @@ enum RecorderRecovery {
             let movie = marker.deletingPathExtension()
             guard FileManager.default.fileExists(atPath: movie.path) else {
                 clearMarker(for: movie)
+                continue
+            }
+
+            // A second ScreenCap process can start while the first one is
+            // recording. Never move a live writer's movie out from under it:
+            // the writer keeps its file descriptor, but finalization still
+            // needs the original URL. New markers carry the owner PID; old
+            // markers use a short modification-time grace period.
+            guard !activeOwner(for: marker, movie: movie) else {
+                Log.debug("skip recovery for active recording: \(movie.lastPathComponent)")
                 continue
             }
 
@@ -137,5 +152,27 @@ enum RecorderRecovery {
             counter += 1
         }
         return candidate
+    }
+
+    private static func activeOwner(for marker: URL, movie: URL) -> Bool {
+        if let data = try? Data(contentsOf: marker),
+           let contents = String(data: data, encoding: .utf8),
+           let line = contents.split(separator: "\n").first(where: { $0.hasPrefix("pid=") }),
+           let pid = Int32(line.dropFirst(4)),
+           pid > 0 {
+            // EPERM means the process exists but is not inspectable. Both 0
+            // and EPERM therefore mean the marker still belongs to a live
+            // writer; only ESRCH is safe to recover.
+            return kill(pid, 0) == 0 || errno == EPERM
+        }
+
+        // Markers written by older builds have no owner. A file modified very
+        // recently is more likely to be an active recording than a stale
+        // crash; defer recovery until a later launch instead of risking a
+        // move underneath the writer.
+        guard let modified = try? movie.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+              modified.timeIntervalSinceNow > -120
+        else { return false }
+        return true
     }
 }

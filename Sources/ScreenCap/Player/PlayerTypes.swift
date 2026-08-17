@@ -101,6 +101,18 @@ struct PlayerLibrarySource: Codable, Identifiable, Equatable {
     }
 }
 
+enum PlayerPlaylistRemoval: Identifiable {
+    case recording(PlayerRecording)
+    case source(PlayerLibrarySource)
+
+    var id: String {
+        switch self {
+        case .recording(let recording): return "recording:\(recording.id)"
+        case .source(let source): return "source:\(source.id.uuidString)"
+        }
+    }
+}
+
 struct PlayerRecording: Identifiable, Hashable {
     let id: String
     let url: URL
@@ -111,7 +123,10 @@ struct PlayerRecording: Identifiable, Hashable {
 
     init(url: URL, source: PlayerLibrarySource) {
         self.url = url
-        self.id = url.standardizedFileURL.path
+        // The same file can legitimately be present through two folder
+        // sources. Include the source identity so SwiftUI does not collapse
+        // those rows into one element or route edits to the wrong recording.
+        self.id = "\(source.id.uuidString):\(url.standardizedFileURL.path)"
         self.displayName = url.deletingPathExtension().lastPathComponent
         self.folderName = source.kind == .folder
             ? source.displayName

@@ -8,6 +8,7 @@ enum PlayerMediaInspector {
         let videoTracks = asset.tracks(withMediaType: .video)
         guard !videoTracks.isEmpty else { return nil }
         let duration = asset.duration.seconds.isFinite ? max(asset.duration.seconds, 0) : 0
+        guard duration > 0.01 else { return nil }
         let size = videoTracks.first?.naturalSize ?? .zero
         return PlayerMediaInfo(
             duration: duration,

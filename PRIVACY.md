@@ -85,10 +85,11 @@ deliberately has none.
 
 ## What is stored on your Mac
 
-User defaults under `com.vertusdesign.ScreenCap`: your shortcuts, screenshot and recording
+User defaults under the app's bundle domain (`com.vertusdesign.ScreenCap` for production;
+the parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA`): your shortcuts, screenshot and recording
 folders, filename templates, interface language, and the tool settings you last used,
-including the recently used colors. Plain preferences, no content, no history of what you
-captured.
+including the recently used colors and Player playlist bookmarks. Plain preferences, no
+content, no transcript history and no history of what you captured.
 
 Removing the app and running `defaults delete com.vertusdesign.ScreenCap` removes all of it.
 

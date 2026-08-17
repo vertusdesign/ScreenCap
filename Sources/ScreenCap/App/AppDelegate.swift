@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if let launchWindow {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.handle(URL(string: "screencap://\(launchWindow)")!)
+                self.handle(URL(string: "\(AppInfo.urlScheme)://\(launchWindow)")!)
             }
         }
     }
@@ -100,13 +100,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotkeyManager.shared.unregisterAll()
     }
 
-    /// `screencap://area|repeat|window|fullscreen|record|preferences`.
+    /// `<bundle URL scheme>://area|repeat|window|fullscreen|record|preferences`.
     ///
     /// Gives Shortcuts, Raycast, Automator and plain `open` a way in when a
     /// global shortcut is already taken by another app.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            if url.scheme == "screencap" {
+            if url.scheme == AppInfo.urlScheme {
                 handle(url)
             } else if url.isFileURL {
                 openDocument(url)
@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handle(_ url: URL) {
-        guard url.scheme == "screencap" else { return }
+        guard url.scheme == AppInfo.urlScheme else { return }
         let command = (url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))).lowercased()
         Log.debug("url command: \(command)")
 

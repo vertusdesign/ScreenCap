@@ -1,6 +1,6 @@
 # ScreenCap architecture and product specification
 
-This document is the engineering contract for ScreenCap 2.2.0. It describes what the
+This document is the engineering contract for ScreenCap 3.0.0. It describes what the
 application does, which invariants must survive refactors, and which parts are tied to
 macOS. It is intentionally more precise than the user-facing [README](README.md).
 
@@ -34,6 +34,15 @@ image output pipeline. The fast path uses the display under the pointer; the alt
 ScreenCap's own display chooser with a clear selected display and a transparent full-screen hit
 layer, rather than Apple's content-sharing picker.
 
+The Player is a separate module. It owns a persisted playlist of user-selected video files
+and folders, reads media with AVFoundation/AVKit, and keeps edits in a view-model draft until
+an explicit export. Its Track Editor uses one shared playhead for video thumbnails, composite
+audio and raw audio lanes. Gain, mute, removal, trim, undo/redo and composite rebuild are
+preview operations; staged export is the only write path. Removing a playlist item never
+deletes its source. Speech transcription is an on-demand/opt-in automatic coordinator that
+requires Apple's on-device Speech Recognition capability and reports unsupported locales or
+missing permissions without a network fallback.
+
 The supported entry points are:
 
 | Entry point | Behaviour |
@@ -45,6 +54,7 @@ The supported entry points are:
 | URL | `screencap://area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, or `about`. |
 | Global hotkey | Configurable per action; defaults are documented in the README. |
 | CLI | `--capture <mode>` including `record`, `--window <about\|preferences>`, and `--selftest <dir>`. |
+| Player menu | **Open Player** opens the regular Player window; it is hidden at launch and can also open a video passed by Finder. |
 
 Current intentional boundaries:
 
@@ -85,6 +95,12 @@ flowchart TD
     Session --> Writer[RecorderWriterService]
     Stream --> Writer
     Writer --> Movie[QuickTime .mov: video + composite + system audio + microphone]
+    Entry --> Player[PlayerWindowController]
+    Player --> Library[PlayerLibraryStore: playlist sources + hidden entries]
+    Player --> Engine[PlayerEngine: AVPlayer + audio mix]
+    Player --> Editor[TrackEditor: shared playhead + trim + gain/mute/remove]
+    Editor --> Export[Staged AVAsset export / composite rebuild]
+    Player --> Speech[On-device Speech Recognition]
 ```
 
 The current source tree maps to these responsibilities:
@@ -99,6 +115,7 @@ The current source tree maps to these responsibilities:
 | Rendering | `AnnotationRenderer`, `AnnotationLayer`, `ObfuscationSource` | One drawing path for live preview and final export; raster layer for erasing. |
 | Output | `Output` | Clipboard, PNG/JPEG encoding, save panel, filename expansion, printing, feedback. |
 | Recording | `Sources/ScreenCap/Recorder` | macOS 15+ ScreenCaptureKit stream, independent audio tracks, PTS normalization and QuickTime output. |
+| Player | `Sources/ScreenCap/Player` | Playlist/library, AVPlayer playback, synchronized Track Editor, non-destructive trim/audio edits, staged export and transcription. |
 | Persistence/localization | `Support/Settings.swift`, `L10n.swift`, `Resources/l10n` | User defaults, recent colors, hotkeys, language selection and fallback. |
 
 The important future seam is between the domain/session layer and the platform shell. The
@@ -107,23 +124,16 @@ the domain model, state transitions, renderer rules, and acceptance tests indepe
 window system, then provide platform adapters for capture, windows, input, overlay, storage,
 clipboard, dialogs, printing and packaging.
 
-## Swift 6 migration gate
+## Swift 6 build contract
 
-The project currently uses Swift 5.10 language mode. A migration to Swift 6 is planned as a
-release-readiness task before version 3.0.0, after the recorder's stability work has settled.
-It must be performed incrementally:
+The package uses Swift 6 tools and `.swiftLanguageMode(.v6)`. AppKit-facing controllers and
+the Player/recorder view models are `@MainActor`; media work is staged through async
+AVFoundation operations and explicit task boundaries. The current SDK still emits deprecation
+and legacy AVFoundation callback sendability warnings on some Xcode versions. They are tracked
+technical debt, not a reason to claim Swift 5 compatibility; CI requires a successful build
+and the release checklist records the active toolchain.
 
-1. Enable complete concurrency checking in CI while remaining in Swift 5 language mode.
-2. Isolate AppKit and UI-facing code with `@MainActor` and define explicit actor boundaries
-   for recorder/session state.
-3. Remove unsafe shared mutable state and make `AVAssetWriter`/`AVAssetReader` processing
-   conform to the chosen isolation model.
-4. Switch the target to Swift 6 language mode only after the diagnostic pass is clean, then
-   make concurrency warnings blocking in CI.
-
-This migration is a compiler/language-mode change. It should preserve the existing macOS 14
-deployment requirement for screenshots and macOS 15 requirement for recording unless a
-separate product decision changes those targets.
+The macOS 14 screenshot and macOS 15 recorder requirements are unchanged.
 
 ## Domain model
 
@@ -273,6 +283,14 @@ The macOS implementation stores settings in `UserDefaults` under the application
 - save directory, filename template, save format, copy-on-save and ask-where-to-save;
 - dimming, loupe, selection-size badge, Retina downscaling and shutter sound;
 - last-used tool styles, recent primary colors and recent backdrop colors.
+- Player playlist sources and hidden folder entries (`player.library.sources.v1` and
+  `player.library.hiddenRecordings.v1`). Player edits and transcripts are intentionally not
+  persisted until the user exports a file.
+
+The production app keeps the existing `com.vertusdesign.ScreenCap` defaults domain so a 3.0.0
+update can retain v2 preferences and TCC decisions. `make app BUILD_FLAVOR=parallel` creates a
+local QA bundle with `com.vertusdesign.ScreenCap.Pro3QA`; macOS then stores a separate defaults
+domain and Screen Recording permission row. The parallel flavor is not an App Store identity.
 
 Settings are preferences, not document data. Annotation history and captured pixels exist only
 in memory for the active session. A port should use an explicit versioned settings document in
@@ -283,7 +301,8 @@ Windows registry, macOS defaults, or a Linux desktop's configuration service.
 
 The minimum automated checks for every platform implementation are:
 
-- build the debug target without warnings;
+- build the debug target successfully (SDK deprecation/sendability warnings are tracked in the
+  current Swift 6 toolchain and are not treated as product failures);
 - render every annotation type;
 - verify obfuscation preserves annotations beneath it;
 - verify PNG/JPEG encoding and filename-template expansion;
@@ -292,6 +311,18 @@ The minimum automated checks for every platform implementation are:
 - verify recent-color ordering, deduplication and the nine-entry limit;
 - verify session history restores a selection after moving between display views;
 - verify the final image uses the same compositing result as the live preview.
+- inspect a valid movie, a video without audio, a file with only one audio stream, and a
+  disappeared/unreadable source; the Player must reject non-video files without crashing;
+- verify duplicate folder sources do not collapse the same file into one SwiftUI row;
+- verify trim boundaries reject zero/negative ranges, removing the final audio track exports
+  video-only, and composite rebuild leaves the source unchanged until commit;
+- verify cancelled/failed Save Copy leaves an unsaved draft and playlist removal never deletes
+  a source file;
+- verify on-demand transcription requests Speech permission only on action, uses the on-device
+  path, and reports denied/unsupported/no-audio/cancelled cases without network access;
+- verify a second process cannot recover/move a movie whose marker PID is still alive, while a
+  stale marker can be recovered after the owner exits;
+- build both `production` and `parallel` flavors and inspect their bundle IDs and URL schemes.
 
 The current executable exposes these checks through:
 
@@ -310,7 +341,8 @@ layout.
 
 - `Package.swift` is the Swift package definition and declares the minimum macOS version.
 - `Makefile` is the canonical local build/packaging entry point.
-- `Resources/Info.plist` is a template; version, build and channel are substituted by `make`.
+- `Resources/Info.plist` is a template; bundle identity, URL scheme, version, build and channel
+  are substituted by `make`. Production is the App Store/update identity; `parallel` is QA only.
 - `.github/workflows/ci.yml` is the canonical CI check list.
 - `.github/workflows/release.yml` builds the universal DMG from a `v*` tag and publishes the
   DMG plus checksum.

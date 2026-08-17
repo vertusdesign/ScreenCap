@@ -92,6 +92,26 @@ final class PlayerEngine: ObservableObject {
         isPlaying = false
     }
 
+    func clear() {
+        pause()
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        player.replaceCurrentItem(with: nil)
+        currentURL = nil
+        duration = 0
+        currentTime = 0
+        errorMessage = nil
+        trimStart = 0
+        trimEnd = .infinity
+        descriptors = []
+        mutedTracks.removeAll()
+        removedTracks.removeAll()
+        trackVolumes.removeAll()
+        compositeRebuildRequested = false
+    }
+
     func seek(to seconds: Double) {
         let target = min(max(seconds, 0), max(trimEnd, duration))
         player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)

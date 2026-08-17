@@ -38,7 +38,7 @@ The repository's current implementation is macOS-only. Read
 [ARCHITECTURE.md](ARCHITECTURE.md) before changing session, geometry, rendering or output
 code, and [PORTING.md](PORTING.md) before designing a Windows/Linux implementation.
 
-Prerequisites for the macOS target are macOS 14 or newer, Swift 5.10, and the usual Apple
+Prerequisites for the macOS target are macOS 14 or newer, Swift 6 and the usual Apple
 developer command-line tools. There are no third-party Swift package dependencies. From a
 clean checkout:
 
@@ -63,15 +63,30 @@ Before opening a pull request:
 
 ```bash
 swift build 2>&1 | tee /tmp/screencap-build.log
-! grep -q "warning:" /tmp/screencap-build.log
 .build/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 
-For a release-shaped local check, also run `make dmg VERSION=2.2.0 CHANNEL= BUILD=1` and
+The Swift 6 SDK can emit deprecation and legacy AVFoundation callback sendability warnings;
+the build must complete successfully, while new warnings should still be reviewed and either
+fixed or documented. Translation CI treats English as the source catalog and allows a locale
+to omit a key temporarily because runtime lookup falls back to English.
+
+For a release-shaped local check, also run `make dmg VERSION=3.0.0 CHANNEL= BUILD=1` and
 verify the result with `lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap`, the version
 keys in `dist/ScreenCap.app/Contents/Info.plist`, and
-`(cd dist && shasum -a 256 -c ScreenCap-2.2.0.dmg.sha256)`. The CI workflow is the canonical
+`(cd dist && shasum -a 256 -c ScreenCap-3.0.0.dmg.sha256)`. The CI workflow is the canonical
 copy of these checks.
+
+To inspect the v3 Player beside an installed v2 build without sharing its TCC identity:
+
+```bash
+make app BUILD_FLAVOR=parallel VERSION=3.0.0 BUILD=qa
+open dist/ScreenCap-Pro3-QA.app
+```
+
+Do not install the parallel flavor. Production builds retain the App Store bundle ID
+`com.vertusdesign.ScreenCap`; the parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA`
+and a separate `screencap-pro3://` URL scheme. `make install BUILD_FLAVOR=parallel` is refused.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local
 certificate — `make install` picks one up from your keychain automatically if it is there.
@@ -97,8 +112,8 @@ by one for every language.
 
 1. Update the version/date in `CHANGELOG.md`, user-facing documentation and legal documents
    when their stated version or update date changes.
-2. Run the debug build, self-test, translation completeness check and warning check from
-   `.github/workflows/ci.yml`.
+2. Run the debug build, self-test and translation catalog check from `.github/workflows/ci.yml`;
+   review any Swift 6 SDK warnings in the build log.
 3. Build a local universal DMG and verify architecture, `CFBundleShortVersionString`, empty
    stable channel, and checksum.
 4. Commit the complete release scope on `main`, create an annotated `v<version>` tag, and push
