@@ -317,12 +317,19 @@ make app BUILD_FLAVOR=base VERSION=3.0.0 BUILD=1
 # dist/ScreenCap 3.app
 ```
 
-The private Pro checkout can be supplied as a sibling directory and built separately:
+The private Pro source directory can be supplied as a sibling directory and built separately:
 
 ```bash
 make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUILD=1
 # dist/ScreenCap 3 Pro.app — launch from dist; never install this flavor
 ```
+
+`ScreenCap-Pro-Private` is deliberately outside the public Git repository. The Makefile only
+reads from it and stages a temporary copy during a Pro build; `make clean` does not remove the
+sibling directory. Keep that directory in a private Git repository or another backup, because a
+manual deletion or a failed cloud-sync operation cannot be recovered from the public checkout.
+If it is missing, the Pro build stops with an explicit error instead of silently producing a
+base-only app.
 
 Base uses `com.vertusdesign.ScreenCap` and `screencap://`, preserving the existing Screen
 Recording grant. Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, so macOS

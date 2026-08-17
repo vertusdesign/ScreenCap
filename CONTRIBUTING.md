@@ -78,12 +78,17 @@ keys in `dist/ScreenCap 3.app/Contents/Info.plist`, and
 copy of these checks.
 
 The public checkout deliberately contains only ScreenCap 3. To build the private Pro flavor,
-place its sibling checkout at `../ScreenCap-Pro-Private` (or pass `PRIVATE_DIR` explicitly):
+place its private source directory at `../ScreenCap-Pro-Private` (or pass `PRIVATE_DIR` explicitly):
 
 ```bash
 make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUILD=1
 open "dist/ScreenCap 3 Pro.app"
 ```
+
+The sibling directory is not tracked by this public repository. Build targets read it and stage
+only a temporary ignored copy under `Sources/ScreenCap/Player`; they never delete the sibling.
+Keep the private directory in a separate private Git repository or backup. A missing directory
+is a hard Pro-build error, not a fallback to a Player-less binary.
 
 Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, while the base product
 uses the stable `com.vertusdesign.ScreenCap` and `screencap://`. `make install BUILD_FLAVOR=pro`

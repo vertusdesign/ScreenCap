@@ -314,7 +314,9 @@ The macOS implementation stores settings in `UserDefaults` under the application
 ScreenCap 3 keeps the existing `com.vertusdesign.ScreenCap` defaults domain so the release build
 retains v2 preferences and TCC decisions. ScreenCap 3 Pro uses `com.vertusdesign.ScreenCap.Pro3`,
 so macOS stores a separate defaults domain and Screen Recording permission row. Pro source and
-resources are supplied by a private sibling checkout and are not part of the public repository.
+resources are supplied by a private sibling source directory and are not part of the public
+repository. The Makefile fails closed when that directory is absent; it never reconstructs Pro
+code from the public tree.
 The current direct-download targets do not enable App Sandbox; App Store submission remains a
 separate entitlement and security-scoped-resource work item.
 
