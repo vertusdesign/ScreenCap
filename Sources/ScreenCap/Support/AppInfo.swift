@@ -3,20 +3,20 @@ import Foundation
 /// Static facts about the build, in one place so the About window, the update
 /// check and the release notes never disagree.
 enum AppInfo {
-    static let name = "ScreenCap"
-    /// Product label used by the regular macOS application menu. The bundle
-    /// executable and URL identifiers intentionally remain ScreenCap for
-    /// compatibility with existing installs and permissions.
-    static let menuName = "ScreenCap Pro 3"
+    static let name = BuildVariant.productName
+    /// Product label used by the macOS application menu, About window and
+    /// status-item tooltip. The executable remains `ScreenCap`; the two
+    /// products use different bundle identities and URL schemes.
+    static let menuName = BuildVariant.productName
 
     static var bundleIdentifier: String {
-        Bundle.main.bundleIdentifier ?? "com.vertusdesign.ScreenCap"
+        Bundle.main.bundleIdentifier ?? BuildVariant.fallbackBundleIdentifier
     }
 
     static var urlScheme: String {
         let types = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]]
         let schemes = types?.first?["CFBundleURLSchemes"] as? [String]
-        return schemes?.first ?? "screencap"
+        return schemes?.first ?? BuildVariant.fallbackURLScheme
     }
 
     static var version: String {

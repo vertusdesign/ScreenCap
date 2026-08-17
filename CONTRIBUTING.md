@@ -44,7 +44,7 @@ clean checkout:
 
 ```bash
 swift build
-SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap
+SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap
 ```
 
 The localised strings live outside the binary, so a plain `swift build` run needs
@@ -62,8 +62,8 @@ Useful while debugging:
 Before opening a pull request:
 
 ```bash
-swift build 2>&1 | tee /tmp/screencap-build.log
-.build/debug/ScreenCap --selftest /tmp/screencap-check
+make debug BUILD_FLAVOR=base 2>&1 | tee /tmp/screencap-build.log
+.build/base/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 
 The Swift 6 SDK can emit deprecation and legacy AVFoundation callback sendability warnings;
@@ -71,23 +71,23 @@ the build must complete successfully, while new warnings should still be reviewe
 fixed or documented. Translation CI treats English as the source catalog and allows a locale
 to omit a key temporarily because runtime lookup falls back to English.
 
-For a release-shaped local check, also run `make dmg VERSION=3.0.0 CHANNEL= BUILD=1` and
-verify the result with `lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap`, the version
-keys in `dist/ScreenCap.app/Contents/Info.plist`, and
-`(cd dist && shasum -a 256 -c ScreenCap-3.0.0.dmg.sha256)`. The CI workflow is the canonical
+For a release-shaped local check, also run `make dmg BUILD_FLAVOR=base VERSION=3.0.0 CHANNEL= BUILD=1` and
+verify the result with `lipo -archs "dist/ScreenCap 3.app/Contents/MacOS/ScreenCap"`, the version
+keys in `dist/ScreenCap 3.app/Contents/Info.plist`, and
+`(cd dist && shasum -a 256 -c ScreenCap-3-3.0.0.dmg.sha256)`. The CI workflow is the canonical
 copy of these checks.
 
-To inspect the v3 Player beside an installed v2 build without sharing its TCC identity:
+The public checkout deliberately contains only ScreenCap 3. To build the private Pro flavor,
+place its sibling checkout at `../ScreenCap-Pro-Private` (or pass `PRIVATE_DIR` explicitly):
 
 ```bash
-make app BUILD_FLAVOR=parallel VERSION=3.0.0 BUILD=qa
-open dist/ScreenCap-Pro3-QA.app
+make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUILD=1
+open "dist/ScreenCap 3 Pro.app"
 ```
 
-Do not install the parallel flavor. Production release builds retain the stable bundle ID
-`com.vertusdesign.ScreenCap`; the current direct-download target is not yet an App Store
-submission target. The parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA` and a
-separate `screencap-pro3://` URL scheme. `make install BUILD_FLAVOR=parallel` is refused.
+Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, while the base product
+uses the stable `com.vertusdesign.ScreenCap` and `screencap://`. `make install BUILD_FLAVOR=pro`
+is refused; launch Pro from `dist` only.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local
 certificate — `make install` picks one up from your keychain automatically if it is there.

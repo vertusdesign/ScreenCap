@@ -117,6 +117,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+#if SCREENCAP_PRO
         let player = NSMenuItem(
             title: L10n.t("menu.player"),
             action: #selector(openPlayer),
@@ -127,6 +128,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(player)
 
         menu.addItem(.separator())
+#endif
 
         let language = NSMenuItem(title: L10n.t("menu.language"), action: nil, keyEquivalent: "")
         language.image = symbol("globe")
@@ -381,9 +383,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         PreferencesWindowController.shared.show()
     }
 
+#if SCREENCAP_PRO
     @objc private func openPlayer() {
         DispatchQueue.main.async { PlayerWindowController.shared.show() }
     }
+#endif
 
     @objc private func openAbout() {
         AboutWindowController.shared.show()

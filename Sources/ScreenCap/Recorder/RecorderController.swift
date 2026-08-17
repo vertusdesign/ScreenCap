@@ -713,9 +713,11 @@ final class RecorderController {
         case RecordingAfterCaptureAction.showInFolder:
             NSWorkspace.shared.activateFileViewerSelecting([url])
             return true
+#if SCREENCAP_PRO
         case RecordingAfterCaptureAction.openInPlayer:
             DispatchQueue.main.async { PlayerWindowController.shared.show(url: url) }
             return true
+#endif
         default:
             guard let bundleIdentifier = RecordingAfterCaptureAction.bundleIdentifier(from: action),
                   let applicationURL = NSWorkspace.shared
@@ -781,10 +783,6 @@ final class RecorderController {
     private func afterCaptureChoices() -> [AfterCaptureChoice] {
         var choices = [
             AfterCaptureChoice(
-                value: RecordingAfterCaptureAction.openInPlayer,
-                title: L10n.t("prefs.recording.afterCapture.openInPlayer")
-            ),
-            AfterCaptureChoice(
                 value: RecordingAfterCaptureAction.showInFolder,
                 title: L10n.t("prefs.recording.afterCapture.showInFolder")
             ),
@@ -793,6 +791,15 @@ final class RecorderController {
                 title: L10n.t("prefs.recording.afterCapture.nothing")
             )
         ]
+#if SCREENCAP_PRO
+        choices.insert(
+            AfterCaptureChoice(
+                value: RecordingAfterCaptureAction.openInPlayer,
+                title: L10n.t("prefs.recording.afterCapture.openInPlayer")
+            ),
+            at: 0
+        )
+#endif
 
         let applications = NSWorkspace.shared
             .urlsForApplications(toOpen: .quickTimeMovie)

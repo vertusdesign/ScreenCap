@@ -55,8 +55,8 @@ volume can be scanned on a later launch. Startup recovery validates the original
 composite, repaired and recovered candidates; when a fragmented container is readable but its
 index is incomplete, a passthrough AVFoundation repair is attempted. Recovery never moves a
 marker owned by a live process, and it never deletes a candidate merely because a volume is
-temporarily unavailable. A recovered playable file is presented in a local dialog with Open,
-Show in Finder and Discard; there is intentionally no Try Again action. Closing the dialog keeps
+temporarily unavailable. A recovered playable file is presented in a local dialog with Show in
+Finder and Discard; there is intentionally no Try Again action. Closing the dialog keeps
 the recovered file. Display removal/change, sleep, session interruption, capture-stream stop and
 recording-volume unmount are converted into a graceful stop with a warning when a playable part
 exists; the configured after-recording action still receives the actual path.
@@ -66,17 +66,6 @@ successful recording, the recorder presents a native choice pop-up; a selected a
 and applied to later recordings. Choosing Later or closing the pop-up leaves the setting unconfigured,
 so the prompt appears again after the next successful recording. An explicit Do nothing choice is
 persisted and is therefore different from postponing the decision.
-
-The Player is a separate module. It owns a persisted playlist of user-selected video files
-and folders, reads media with AVFoundation/AVKit, and keeps edits in a view-model draft until
-an explicit export. Its Track Editor uses one shared playhead for video thumbnails, composite
-audio and raw audio lanes. Gain, mute, removal, trim, undo/redo and composite rebuild are
-preview operations; staged export is the only write path. Removing a playlist item never
-deletes its source. An external open request (Finder, notification or after-recording action)
-is deferred behind the same Save Copy/Discard decision when the current draft is dirty.
-Speech transcription is an on-demand/opt-in automatic coordinator that
-requires Apple's on-device Speech Recognition capability and reports unsupported locales or
-missing permissions without a network fallback.
 
 The supported entry points are:
 
@@ -89,7 +78,6 @@ The supported entry points are:
 | URL | `screencap://area`, `repeat`, `window`, `fullscreen`, `record`, `preferences`, or `about`. |
 | Global hotkey | Configurable per action; defaults are documented in the README. |
 | CLI | `--capture <mode>` including `record`, `--window <about\|preferences>`, and `--selftest <dir>`. |
-| Player menu | **Open Player** opens the regular Player window; it is hidden at launch and can also open a video passed by Finder. |
 
 Current intentional boundaries:
 
@@ -130,12 +118,6 @@ flowchart TD
     Session --> Writer[RecorderWriterService]
     Stream --> Writer
     Writer --> Movie[QuickTime .mov: video + composite + system audio + microphone]
-    Entry --> Player[PlayerWindowController]
-    Player --> Library[PlayerLibraryStore: playlist sources + hidden entries]
-    Player --> Engine[PlayerEngine: AVPlayer + audio mix]
-    Player --> Editor[TrackEditor: shared playhead + trim + gain/mute/remove]
-    Editor --> Export[Staged AVAsset export / composite rebuild]
-    Player --> Speech[On-device Speech Recognition]
 ```
 
 The current source tree maps to these responsibilities:
@@ -150,7 +132,6 @@ The current source tree maps to these responsibilities:
 | Rendering | `AnnotationRenderer`, `AnnotationLayer`, `ObfuscationSource` | One drawing path for live preview and final export; raster layer for erasing. |
 | Output | `Output` | Clipboard, PNG/JPEG encoding, save panel, filename expansion, printing, feedback. |
 | Recording | `Sources/ScreenCap/Recorder` | macOS 15+ ScreenCaptureKit stream, independent audio tracks, PTS normalization, QuickTime output, crash recovery and repair. |
-| Player | `Sources/ScreenCap/Player` | Playlist/library, AVPlayer playback, synchronized Track Editor, non-destructive trim/audio edits, staged export and transcription. |
 | Persistence/localization | `Support/Settings.swift`, `L10n.swift`, `Resources/l10n` | User defaults, recent colors, hotkeys, language selection and fallback. |
 
 The important future seam is between the domain/session layer and the platform shell. The
@@ -162,7 +143,7 @@ clipboard, dialogs, printing and packaging.
 ## Swift 6 build contract
 
 The package uses Swift 6 tools and `.swiftLanguageMode(.v6)`. AppKit-facing controllers and
-the Player/recorder view models are `@MainActor`; media work is staged through async
+the recorder view models are `@MainActor`; media work is staged through async
 AVFoundation operations and explicit task boundaries. The current SDK still emits deprecation
 and legacy AVFoundation callback sendability warnings on some Xcode versions. They are tracked
 technical debt, not a reason to claim Swift 5 compatibility; CI requires a successful build
@@ -317,18 +298,15 @@ The macOS implementation stores settings in `UserDefaults` under the application
 - hotkey bindings and preferred language;
 - save directory, filename template, save format, copy-on-save and ask-where-to-save;
 - dimming, loupe, selection-size badge, Retina downscaling and shutter sound;
-- last-used tool styles, recent primary colors and recent backdrop colors.
-- Player playlist sources and hidden folder entries (`player.library.sources.v1` and
-  `player.library.hiddenRecordings.v1`). Player edits and transcripts are intentionally not
-  persisted until the user exports a file.
+- last-used tool styles, recent primary colors and recent backdrop colors;
+- recording destination, audio toggles, codec, click visualization and after-recording action.
 
-The production app keeps the existing `com.vertusdesign.ScreenCap` defaults domain so a 3.0.0
-release/update can retain v2 preferences and TCC decisions. `make app BUILD_FLAVOR=parallel` creates a
-local QA bundle with `com.vertusdesign.ScreenCap.Pro3QA`; macOS then stores a separate defaults
-domain and Screen Recording permission row. The parallel flavor is not an App Store identity.
-The current production bundle is a direct-download build: `Resources/ScreenCap.entitlements`
-does not enable App Sandbox, so App Store submission remains a separate entitlement and
-security-scoped-resource work item rather than a claim made by this package.
+ScreenCap 3 keeps the existing `com.vertusdesign.ScreenCap` defaults domain so the release build
+retains v2 preferences and TCC decisions. ScreenCap 3 Pro uses `com.vertusdesign.ScreenCap.Pro3`,
+so macOS stores a separate defaults domain and Screen Recording permission row. Pro source and
+resources are supplied by a private sibling checkout and are not part of the public repository.
+The current direct-download targets do not enable App Sandbox; App Store submission remains a
+separate entitlement and security-scoped-resource work item.
 
 Settings are preferences, not document data. Annotation history and captured pixels exist only
 in memory for the active session. A port should use an explicit versioned settings document in
@@ -351,15 +329,6 @@ The minimum automated checks for every platform implementation are:
 - verify recent-color ordering, deduplication and the nine-entry limit;
 - verify session history restores a selection after moving between display views;
 - verify the final image uses the same compositing result as the live preview.
-- inspect a valid movie, a video without audio, a file with only one audio stream, and a
-  disappeared/unreadable source; the Player must reject non-video files without crashing;
-- verify duplicate folder sources do not collapse the same file into one SwiftUI row;
-- verify trim boundaries reject zero/negative ranges, removing the final audio track exports
-  video-only, and composite rebuild leaves the source unchanged until commit;
-- verify cancelled/failed Save Copy leaves an unsaved draft and playlist removal never deletes
-  a source file;
-- verify on-demand transcription requests Speech permission only on action, uses the on-device
-  path, and reports denied/unsupported/no-audio/cancelled cases without network access;
 - verify a second process cannot recover/move a movie whose marker PID is still alive, while a
   stale marker can be recovered after the owner exits;
 - verify a partial sibling and a remounted known recording folder remain discoverable after an
@@ -373,13 +342,14 @@ The minimum automated checks for every platform implementation are:
   after-recording action;
 - verify stopping exposes persistent stage updates and dismisses the progress HUD on success,
   degraded success, cancellation and fatal failure;
-- build both `production` and `parallel` flavors and inspect their bundle IDs and URL schemes.
+- build both `base` and `pro` flavors and inspect their bundle IDs, URL schemes and resource
+  registration; verify the base bundle has no movie document type or speech-recognition usage key.
 
 The current executable exposes these checks through:
 
 ```bash
-swift build
-SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest /tmp/screencap-selftest
+make debug BUILD_FLAVOR=base
+SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap --selftest /tmp/screencap-selftest
 ```
 
 Interactive manual checks remain necessary for permission prompts, display transitions,
@@ -392,9 +362,9 @@ layout.
 
 - `Package.swift` is the Swift package definition and declares the minimum macOS version.
 - `Makefile` is the canonical local build/packaging entry point.
-- `Resources/Info.plist` is a template; bundle identity, URL scheme, version, build and channel
-  are substituted by `make`. Production is the direct-download/release update identity;
-  `parallel` is QA only, and App Store submission remains gated by the sandbox pass above.
+- `Resources/Info.plist` is the public base template; bundle identity, URL scheme, version, build
+  and channel are substituted by `make`. Pro uses the private `Info-Pro.plist` template and
+  private Pro/resource overlays.
 - `.github/workflows/ci.yml` is the canonical CI check list.
 - `.github/workflows/release.yml` builds the universal DMG from a `v*` tag and publishes the
   DMG plus checksum.

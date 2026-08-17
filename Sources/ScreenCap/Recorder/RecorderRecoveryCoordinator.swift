@@ -61,13 +61,16 @@ final class RecorderRecoveryCoordinator {
             recording.url.lastPathComponent,
             Self.formatDuration(recording.duration)
         )
+#if SCREENCAP_PRO
         alert.addButton(withTitle: L10n.t("recording.recovery.open"))
+#endif
         alert.addButton(withTitle: L10n.t("recording.recovery.showInFinder"))
         alert.addButton(withTitle: L10n.t("recording.recovery.discard"))
 
         NSApp.activate(ignoringOtherApps: true)
         let response = alert.runModal()
         pending.removeFirst()
+#if SCREENCAP_PRO
         switch response {
         case .alertFirstButtonReturn:
             PlayerWindowController.shared.show(url: recording.url)
@@ -78,6 +81,16 @@ final class RecorderRecoveryCoordinator {
         default:
             break
         }
+#else
+        switch response {
+        case .alertFirstButtonReturn:
+            NSWorkspace.shared.activateFileViewerSelecting([recording.url])
+        case .alertSecondButtonReturn:
+            confirmDiscard(recording)
+        default:
+            break
+        }
+#endif
 
         DispatchQueue.main.async { [weak self] in
             self?.presentNext()
@@ -99,7 +112,9 @@ final class RecorderRecoveryCoordinator {
         do {
             try FileManager.default.removeItem(at: recording.url)
             RecorderRecovery.markDiscarded(recording)
+#if SCREENCAP_PRO
             PlayerLibraryStore.shared.reload()
+#endif
         } catch {
             Feedback.flash(message: L10n.t("recording.recovery.discard.failed"))
             Log.error("could not discard recovered recording: \(error.localizedDescription)")

@@ -60,7 +60,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 SystemNotificationCoordinator.shared.configure()
+#if SCREENCAP_PRO
                 self.installMainMenu(playerVisible: PlayerWindowController.shared.isVisible)
+#else
+                self.installMainMenu(playerVisible: false)
+#endif
             }
         }
 
@@ -141,7 +145,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "fullscreen", "screen": CaptureController.shared.perform(.captureFullScreen)
         case "record", "recording": CaptureController.shared.perform(.toggleRecording)
         case "preferences", "settings": PreferencesWindowController.shared.show()
+#if SCREENCAP_PRO
         case "player", "playback": DispatchQueue.main.async { PlayerWindowController.shared.show() }
+#endif
         case "about": AboutWindowController.shared.show()
         default: NSLog("ScreenCap: unknown URL command — \(command)")
         }
@@ -151,7 +157,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let contentType = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
         if contentType?.conforms(to: .movie) == true ||
             ["mov", "mp4", "m4v", "m4a", "avi", "mkv", "webm"].contains(url.pathExtension.lowercased()) {
+#if SCREENCAP_PRO
             DispatchQueue.main.async { PlayerWindowController.shared.show(url: url) }
+#else
+            NSWorkspace.shared.open(url)
+#endif
         } else {
             CaptureController.shared.openImage(url)
         }
@@ -163,6 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// regular application role used while the Player window is open. A regular
     /// activation policy is what makes the Player appear beside Apple in the
     /// menu bar, in Cmd-Tab, and in Mission Control/Fn-F3.
+#if SCREENCAP_PRO
     @MainActor
     func setPlayerWindowVisible(_ visible: Bool) {
         if visible {
@@ -173,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = NSApp.setActivationPolicy(.accessory)
         }
     }
+#endif
 
     /// The permanent status item remains the entry point while ScreenCap is an
     /// accessory app. When Player is visible this becomes a conventional macOS
@@ -201,6 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: ","
         )
         appMenu.addItem(.separator())
+#if SCREENCAP_PRO
         let openPlayer = appMenu.addItem(
             withTitle: L10n.t("menu.player"),
             action: #selector(openPlayerFromMainMenu),
@@ -210,6 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if playerVisible {
             openPlayer.isHidden = true
         }
+#endif
         appMenu.addItem(.separator())
         appMenu.addItem(
             withTitle: L10n.t("menu.quit", AppInfo.menuName),
@@ -219,6 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 
+#if SCREENCAP_PRO
         if playerVisible {
             let fileMenuItem = NSMenuItem(title: L10n.t("menu.file"), action: nil, keyEquivalent: "")
             let fileMenu = NSMenu(title: L10n.t("menu.file"))
@@ -292,6 +307,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             NSApp.windowsMenu = nil
         }
+#else
+        NSApp.windowsMenu = nil
+#endif
 
         let helpMenuItem = NSMenuItem(title: L10n.t("menu.help"), action: nil, keyEquivalent: "")
         let helpMenu = NSMenu(title: L10n.t("menu.help"))
@@ -307,11 +325,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = mainMenu
     }
 
+#if SCREENCAP_PRO
     @MainActor @objc private func openPlayerFromMainMenu() {
         Task { @MainActor in
             PlayerWindowController.shared.show()
         }
     }
+#endif
 
     @MainActor @objc private func recoverRecordingsFromMainMenu() {
         if #available(macOS 15.0, *) {

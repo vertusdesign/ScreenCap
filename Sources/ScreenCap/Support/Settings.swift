@@ -25,7 +25,9 @@ enum RecordingAfterCaptureAction {
     static let notConfigured = "__askAfterFirstRecording__"
     static let nothing = "nothing"
     static let showInFolder = "showInFolder"
+#if SCREENCAP_PRO
     static let openInPlayer = "openInPlayer"
+#endif
     static let applicationPrefix = "application:"
 
     static func application(_ bundleIdentifier: String) -> String {
@@ -91,7 +93,9 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let recordingVideoCodec = "recordingVideoCodec"
         static let recordingShowMouseClicks = "recordingShowMouseClicks"
         static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
+#if SCREENCAP_PRO
         static let playerTranscriptionMode = "playerTranscriptionMode"
+#endif
     }
 
     private static var toolDefaults: [String: Any] {
@@ -135,16 +139,19 @@ final class Settings: ObservableObject, @unchecked Sendable {
     }
 
     private static var recordingDefaults: [String: Any] {
-        [
+        var defaults: [String: Any] = [
             Key.recordingAskWhereToSave: false,
             Key.recordingSkipSystemAudio: false,
             Key.recordingSkipMicrophone: false,
             Key.recordingNoiseSuppression: false,
             Key.recordingAtLogicalSize: false,
             Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
-            Key.recordingShowMouseClicks: false,
-            Key.playerTranscriptionMode: PlayerTranscriptionMode.onDemand.rawValue
+            Key.recordingShowMouseClicks: false
         ]
+#if SCREENCAP_PRO
+        defaults[Key.playerTranscriptionMode] = PlayerTranscriptionMode.onDemand.rawValue
+#endif
+        return defaults
     }
 
     private init() {
@@ -152,6 +159,14 @@ final class Settings: ObservableObject, @unchecked Sendable {
         registered.merge(Self.toolDefaults) { current, _ in current }
         registered.merge(Self.recordingDefaults) { current, _ in current }
         defaults.register(defaults: registered)
+#if !SCREENCAP_PRO
+        // A base build may reuse the v2 bundle identity. Remove a stale Pro-only
+        // preference rather than silently routing the next recording through a
+        // Player flow that does not exist in this binary.
+        if defaults.string(forKey: Key.recordingAfterCaptureAction) == "openInPlayer" {
+            defaults.removeObject(forKey: Key.recordingAfterCaptureAction)
+        }
+#endif
         migrateHotkeysIfNeeded()
     }
 
@@ -438,6 +453,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         }
     }
 
+#if SCREENCAP_PRO
     var playerTranscriptionMode: PlayerTranscriptionMode {
         get {
             PlayerTranscriptionMode(
@@ -446,6 +462,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         }
         set { set(newValue.rawValue, Key.playerTranscriptionMode) }
     }
+#endif
 
     var obfuscation: ObfuscationSettings {
         get {

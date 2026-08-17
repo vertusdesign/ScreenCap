@@ -1,10 +1,9 @@
-ScreenCap 3.0.0 adds the native Player module, synchronized track editing and privacy-first
-on-device transcription, while retaining the reliable screenshot and screen-recording flows.
+ScreenCap 3.0.0 is the public screenshot and screen-recording release, with native annotation
+tools, click visualization and crash-safe local recording recovery.
 
 The production release bundle identity remains compatible with v2 updates. The current target is
 distributed as a direct-download/DMG build; App Store submission still requires the sandbox and
-capability pass documented in `SECURITY.md`. A separate `BUILD_FLAVOR=parallel` bundle is
-available for local side-by-side permission QA only.
+capability pass documented in `SECURITY.md`. The private Pro build is not part of this repository.
 
 ### New since 2.0.0
 

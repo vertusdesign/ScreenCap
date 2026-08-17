@@ -70,6 +70,6 @@ body:
       description: |
         Screenshots help. If the app misbehaved rather than crashed, output from a debug run
         is the most useful thing you can attach:
-        `SCREENCAP_DEBUG=1 /Applications/ScreenCap.app/Contents/MacOS/ScreenCap`
+        `SCREENCAP_DEBUG=1 "/Applications/ScreenCap 3.app/Contents/MacOS/ScreenCap"`
     validations:
       required: false

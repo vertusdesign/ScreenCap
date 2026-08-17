@@ -15,12 +15,8 @@ account of what it does with it.
   Copy.
 - Recordings are written locally to the recording folder when you start and stop the
   macOS 15+ recorder. They are never uploaded or shared automatically.
-- The Player library stores only local playlist source paths/bookmarks. Removing an item
-  from the playlist never deletes the source file.
-- Transcription is on-demand by default. When requested, ScreenCap asks macOS for Speech
-  Recognition permission and requires Apple's on-device recognition path; if the local
-  recognizer is unavailable, it reports that limitation instead of silently switching to
-  a server.
+- Recording recovery stores only local session markers and bounded recording-folder paths so an
+  interrupted movie can be found after a restart. It never uploads diagnostics or media.
 
 ## The permission and what it is used for
 
@@ -56,14 +52,6 @@ The recorder captures system/output audio as a separate track when enabled. Its 
 writes silence to ScreenCap's own system-audio track; it does not change the Mac's volume or
 the user's selected output device.
 
-### Player and transcription
-
-The embedded Player uses AVFoundation/AVKit to read the file the user selected. Track
-waveforms, trim ranges and mute/remove edits remain in memory until the user exports a
-copy or explicitly confirms replacing the original. The Player does not scan arbitrary
-folders until the user adds a folder to its playlist. An automatic transcription mode is
-opt-in and waits briefly after a recording is opened; it can be disabled at any time.
-
 macOS shows its own indicator while any app reads the screen. Seeing it for the moment a
 capture is taken is expected; seeing it at any other time is not, and would be a bug worth
 reporting.
@@ -85,11 +73,11 @@ deliberately has none.
 
 ## What is stored on your Mac
 
-User defaults under the app's bundle domain (`com.vertusdesign.ScreenCap` for production;
-the parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA`): your shortcuts, screenshot and recording
-folders, filename templates, interface language, and the tool settings you last used,
-including the recently used colors and Player playlist bookmarks. Plain preferences, no
-content, no transcript history and no history of what you captured.
+User defaults under the app's bundle domain (`com.vertusdesign.ScreenCap` for ScreenCap 3;
+`com.vertusdesign.ScreenCap.Pro3` for the private Pro build): your shortcuts, screenshot and
+recording folders, filename templates, interface language, and the tool settings you last used,
+including the recently used colors. Plain preferences, no content and no history of what you
+captured.
 
 Removing the app and running `defaults delete com.vertusdesign.ScreenCap` removes all of it.
 

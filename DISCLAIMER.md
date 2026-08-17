@@ -8,8 +8,8 @@ anything working.
 
 ## Stable release, with documented boundaries
 
-Version 3.0.0 is the current stable release. The capture, drawing, export, recording and Player
-paths work and have been tested by hand. The remaining intentional boundaries are listed in the
+Version 3.0.0 is the current stable release. The capture, drawing, export and recording paths
+work and have been tested by hand. The remaining intentional boundaries are listed in the
 [README](README.md#known-limitations).
 
 Do not use it where a failure would cost you something.

@@ -4,5 +4,12 @@ dist/
 *.xcuserdatad
 .swiftpm/
 
+# Pro-only sources/resources are supplied from the private sibling checkout by
+# `make BUILD_FLAVOR=pro`; never publish the staged copy from this repository.
+Sources/ScreenCapPro/
+Sources/ScreenCap/Player/*
+!Sources/ScreenCap/Player/.gitkeep
+Resources/l10n-pro/
+
 # Local Claude Code settings
 .claude/settings.local.json

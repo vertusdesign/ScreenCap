@@ -38,22 +38,20 @@ The app's bundle identifier, signing identity and entitlements must be stable be
 when possible. macOS associates TCC decisions with the code identity, so an ad-hoc rebuild can
 look like a new app and legitimately require approval again.
 
-### Production update versus parallel QA
+### ScreenCap 3 versus private Pro
 
-ScreenCap 3.0.0 release builds intentionally keep the v2 identity
-`com.vertusdesign.ScreenCap`, the `ScreenCap.app` bundle name and the `screencap://` URL scheme.
+ScreenCap 3 release builds intentionally keep the v2 identity
+`com.vertusdesign.ScreenCap`, the `ScreenCap 3.app` bundle name and the `screencap://` URL scheme.
 That keeps direct-download updates and any future App Store submission on the same product
 identity, and lets macOS reuse the existing Screen Recording decision when the signing identity
 is unchanged. Do not ship a different production bundle ID merely to obtain a second permission
 row. The current release target is not App Sandbox-enabled; App Store submission additionally
 requires the sandbox/capability work described in the architecture and security documents.
 
-For local side-by-side QA, `make app BUILD_FLAVOR=parallel` substitutes
-`com.vertusdesign.ScreenCap.Pro3QA`, `ScreenCap-Pro3-QA.app` and `screencap-pro3://`. This
-flavor is a separate TCC/defaults identity and may be opened next to v2, but it must not be
-copied to `/Applications` or uploaded to App Store Connect. The Makefile refuses the parallel
-flavor's `install` target. Both flavors may register movie document types; use the distinct URL
-scheme when invoking a specific build.
+The private Pro build uses `com.vertusdesign.ScreenCap.Pro3`, `ScreenCap 3 Pro.app` and
+`screencap-pro3://`. It is a separate TCC/defaults identity and may be opened next to ScreenCap
+3, but it must not be copied to `/Applications`. Only Pro registers movie document types; the
+base bundle does not claim recorded videos in Finder.
 
 ## 3. State model
 
@@ -193,9 +191,9 @@ trying to inspect platform error strings.
 - Do not request Accessibility permission for a screenshot-only app. Add it only when a
   separate feature genuinely requires global input or window manipulation beyond the capture
   contract.
-- Test the update path with a production-signed v2 build before release: the bundle ID and
+- Test the update path with a production-signed v2 build before release: the base bundle ID and
   signing identity must remain stable, and an existing grant must be reused rather than
-  prompting for a second app. Test the parallel QA flavor separately and expect its own row.
+  prompting for a second app. Test the private Pro flavor separately and expect its own row.
 - Never use a polling loop to wait for permission. Use request completion, app activation, or
   the next user action to trigger a live check.
 

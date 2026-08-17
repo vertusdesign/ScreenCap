@@ -34,8 +34,8 @@ explicitly, all of which can be checked against the source.
 Verify it yourself against a build:
 
 ```bash
-otool -L /Applications/ScreenCap.app/Contents/MacOS/ScreenCap        # linked frameworks
-nm -u /Applications/ScreenCap.app/Contents/MacOS/ScreenCap | sort    # undefined symbols
+otool -L "/Applications/ScreenCap 3.app/Contents/MacOS/ScreenCap"        # linked frameworks
+nm -u "/Applications/ScreenCap 3.app/Contents/MacOS/ScreenCap" | sort    # undefined symbols
 ```
 
 ## Hardened runtime and signing
@@ -50,11 +50,11 @@ That is a real gap: notarization is Apple's malware scan of the shipped binary, 
 it you are trusting the source and the build. Building from source is the way to remove that
 trust requirement, and it is one command.
 
-The current direct-download target is also not App Sandbox-enabled. That is intentional for
-the present local/DMG workflow, but it means this exact entitlement set is not yet an App Store
-submission target. Before distribution through the Mac App Store, security-scoped bookmark/file
-flows and the Screen Recording, microphone, speech-recognition and Apple Events capabilities
-must be revalidated under a sandboxed target.
+The current direct-download targets are also not App Sandbox-enabled. That is intentional for
+the present local/DMG workflow, but it means these exact entitlement sets are not yet App Store
+submission targets. Before distribution through the Mac App Store, security-scoped bookmark/file
+flows and the Screen Recording, microphone and Apple Events capabilities must be revalidated
+under a sandboxed target. Speech recognition belongs only to the private Pro target.
 
 ## The URL scheme
 

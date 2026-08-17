@@ -21,8 +21,8 @@ jobs:
 
       - name: Self-test
         run: |
-          swift build
-          SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
+          make debug BUILD_FLAVOR=base
+          SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
 
       # Stable tags such as v2.0.0 keep VERSION numeric and CHANNEL empty. A prerelease
       # suffix such as -beta still maps to CHANNEL for future preview builds.
@@ -42,17 +42,17 @@ jobs:
 
       - name: Build disk image
         run: |
-          make dmg \
+          make dmg BUILD_FLAVOR=base \
             VERSION="${{ steps.version.outputs.version }}" \
             CHANNEL="${{ steps.version.outputs.channel }}" \
             BUILD="${{ github.run_number }}"
 
       - name: Verify universal binary
-        run: lipo -archs dist/ScreenCap.app/Contents/MacOS/ScreenCap | tee /dev/stderr | grep -q x86_64
+        run: lipo -archs "dist/ScreenCap 3.app/Contents/MacOS/ScreenCap" | tee /dev/stderr | grep -q x86_64
 
       - name: Verify the app reports the tagged version
         run: |
-          PLIST=dist/ScreenCap.app/Contents/Info.plist
+          PLIST="dist/ScreenCap 3.app/Contents/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PLIST")" \
              = "${{ steps.version.outputs.version }}"
           test "$(/usr/libexec/PlistBuddy -c 'Print SCVersionChannel' "$PLIST")" \

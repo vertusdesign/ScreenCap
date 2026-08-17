@@ -33,21 +33,27 @@ final class SystemNotificationCoordinator: NSObject, UNUserNotificationCenterDel
     /// avoids a surprising permission prompt on a fresh launch.
     func configure() {
         center.delegate = self
+        var actions = [
+            UNNotificationAction(
+                identifier: Category.showInFinder,
+                title: L10n.t("notification.action.showInFinder"),
+                options: [.foreground]
+            )
+        ]
+#if SCREENCAP_PRO
+        actions.insert(
+            UNNotificationAction(
+                identifier: Category.open,
+                title: L10n.t("notification.action.open"),
+                options: [.foreground]
+            ),
+            at: 0
+        )
+#endif
         center.setNotificationCategories([
             UNNotificationCategory(
                 identifier: Category.recordingResult,
-                actions: [
-                    UNNotificationAction(
-                        identifier: Category.open,
-                        title: L10n.t("notification.action.open"),
-                        options: [.foreground]
-                    ),
-                    UNNotificationAction(
-                        identifier: Category.showInFinder,
-                        title: L10n.t("notification.action.showInFinder"),
-                        options: [.foreground]
-                    )
-                ],
+                actions: actions,
                 intentIdentifiers: [],
                 options: []
             )
@@ -225,8 +231,13 @@ final class SystemNotificationCoordinator: NSObject, UNUserNotificationCenterDel
         switch action {
         case Category.showInFinder:
             NSWorkspace.shared.activateFileViewerSelecting([url])
+#if SCREENCAP_PRO
         case Category.open, UNNotificationDefaultActionIdentifier:
             PlayerWindowController.shared.show(url: url)
+#else
+        case UNNotificationDefaultActionIdentifier:
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+#endif
         default:
             break
         }

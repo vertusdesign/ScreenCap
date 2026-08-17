@@ -7,37 +7,21 @@ All notable changes are recorded here. This project follows
 
 ### Added
 
-- **ScreenCap Player module** with a native macOS playback window, recording-library sidebar,
-  folder grouping, add-video/add-folder flows and playlist-only removal.
 - **Marker regions**: the highlighter now supports brush, rectangular and oval translucent
   regions, with the selected mode remembered between captures and constrained by ⇧/⌥ drag modifiers.
-- **Synchronized Track Editor** with a composite audio track, raw system/microphone tracks,
-  shared playhead, current/total time, waveform lanes and always-available trim handles.
-- **Per-track gain and composite rebuild**: raise/lower each audio track independently and
-  render a fresh composite from the raw sources before export, useful for recovering a quiet
-  microphone recording without touching the original file.
-- **Non-destructive edits** with mute/remove confirmation, undo/redo, unsaved-edit protection when
-  switching recordings, save-copy and atomic replace-original export paths.
-- **External-open safety**: Finder, notification and after-recording Player opens now wait for
-  the same Save Copy/Discard decision when the current recording has unsaved edits.
-- **Privacy-first transcription** using Apple's on-device Speech Recognition path when available;
-  transcription is on-demand by default and can be explicitly switched to idle-time automatic mode.
-- **After-recording action**: Open in ScreenCap Player is available in Preferences. New
-  installations start unconfigured; after the first successful recording, a native prompt asks
-  the user to choose an action and remembers that choice. “Later” keeps asking after the next
-  successful recording.
-- **QA and upgrade safety**: production keeps the existing `com.vertusdesign.ScreenCap` TCC
-  identity, while `BUILD_FLAVOR=parallel` creates an explicitly separate local QA bundle and
-  URL scheme for side-by-side v2 testing. Failed/cancelled Save Copy operations keep drafts,
-  duplicate folder sources keep distinct playlist identities, and removing a selected playlist
-  item cannot leave a stale player selection.
+- **After-recording action**: New installations start unconfigured; after the first successful
+  recording, a native prompt asks the user to choose an action and remembers that choice. “Later”
+  keeps asking after the next successful recording.
+- **Build separation**: the public ScreenCap 3 target retains the existing
+  `com.vertusdesign.ScreenCap` TCC identity. The private Pro target uses a separate bundle and
+  URL scheme and is not included in this repository.
 - **Recovery race guard**: recording markers identify the active writer process; a second app
   instance no longer moves a live movie into a recovered filename during finalization.
 - **Crash-safe recording recovery**: the writer uses atomic `*.partial.mov` output plus a local
   session manifest/heartbeat. Startup and the manual Recovery command scan configured and recently
   used recording folders, preserve candidates across a temporarily unavailable volume, repair a
   fragmented MOV through passthrough AVFoundation export when possible, and present a local
-  Open/Finder/Discard dialog without a Try Again action.
+  Finder/Discard dialog without a Try Again action.
 - **Interruption handling**: display disconnect/change, system sleep, session deactivation,
   capture-stream failure and recording-volume unmount now stop through the same finalization path;
   a playable partial is reported as saved with warning and still receives the configured
@@ -53,7 +37,6 @@ All notable changes are recorded here. This project follows
 ### Compatibility
 
 - Existing VLC/QuickTime after-recording actions remain available.
-- Removing a video or folder from the Player library never removes the source files from disk.
 
 ## [2.2.0] — 2026-08-14
 

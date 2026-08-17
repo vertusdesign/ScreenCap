@@ -17,10 +17,10 @@ jobs:
         run: swift --version && xcodebuild -version
 
       - name: Build
-        run: swift build 2>&1 | tee build.log
+        run: make debug BUILD_FLAVOR=base 2>&1 | tee build.log
 
       - name: Self-test
-        run: SCREENCAP_STRINGS=Resources/l10n .build/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
+        run: SCREENCAP_STRINGS=Resources/l10n .build/base/debug/ScreenCap --selftest "$RUNNER_TEMP/selftest"
 
       # English is the source catalog. Other locales may intentionally omit a
       # new key while it is being translated; L10n.t falls back to English.
@@ -41,4 +41,4 @@ jobs:
           EOF
 
       - name: Universal build
-        run: swift build -c release --arch arm64 --arch x86_64
+        run: make universal BUILD_FLAVOR=base
