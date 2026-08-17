@@ -96,9 +96,35 @@ struct PlayerTrackDescriptor: Identifiable, Equatable {
     let index: Int?
     var isMuted: Bool
     var isRemoved: Bool
+    var volume: Double
+
+    init(
+        kind: PlayerTrackKind,
+        title: String,
+        subtitle: String?,
+        index: Int?,
+        isMuted: Bool,
+        isRemoved: Bool,
+        volume: Double = 1
+    ) {
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.index = index
+        self.isMuted = isMuted
+        self.isRemoved = isRemoved
+        self.volume = volume
+    }
 
     var id: String { kind.rawValue }
     var symbolName: String { kind.symbolName }
+
+    static func gainText(for volume: Double) -> String {
+        guard volume > 0.001 else { return "−∞" }
+        let decibels = 20 * log10(volume)
+        if abs(decibels) < 0.05 { return "0 dB" }
+        return String(format: "%+.1f dB", decibels)
+    }
 }
 
 struct PlayerMediaInfo {
@@ -113,6 +139,8 @@ struct PlayerEditSnapshot: Equatable {
     let trimEnd: Double
     let mutedTracks: Set<PlayerTrackKind>
     let removedTracks: Set<PlayerTrackKind>
+    let volumes: [PlayerTrackKind: Double]
+    let compositeRebuildRequested: Bool
 }
 
 enum PlayerTranscriptionMode: String, CaseIterable, Codable, Identifiable {

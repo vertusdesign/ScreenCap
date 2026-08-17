@@ -14,6 +14,7 @@ final class PlayerViewModel: ObservableObject {
     @Published var trimStart: Double = 0
     @Published var trimEnd: Double = 0
     @Published private(set) var isDirty = false
+    @Published private(set) var compositeRebuildRequested = false
     @Published var transcriptionMode: PlayerTranscriptionMode {
         didSet { Settings.shared.playerTranscriptionMode = transcriptionMode }
     }
@@ -24,6 +25,9 @@ final class PlayerViewModel: ObservableObject {
     private var mutedTracks = Set<PlayerTrackKind>()
     private var baselineMutedTracks = Set<PlayerTrackKind>()
     private var removedTracks = Set<PlayerTrackKind>()
+    private var volumes = [PlayerTrackKind: Double]()
+    private var baselineVolumes = [PlayerTrackKind: Double]()
+    private var baselineCompositeRebuildRequested = false
     private var cancellables = Set<AnyCancellable>()
 
     init(library: PlayerLibraryStore, engine: PlayerEngine) {
@@ -62,6 +66,10 @@ final class PlayerViewModel: ObservableObject {
         mutedTracks = Set(tracks.filter(\.isMuted).map(\.kind))
         baselineMutedTracks = mutedTracks
         removedTracks = []
+        volumes = Dictionary(uniqueKeysWithValues: tracks.map { ($0.kind, $0.volume) })
+        baselineVolumes = volumes
+        compositeRebuildRequested = false
+        baselineCompositeRebuildRequested = false
         undoStack.removeAll()
         redoStack.removeAll()
         isDirty = false
@@ -95,6 +103,30 @@ final class PlayerViewModel: ObservableObject {
         engine.setMuted(muted, for: kind)
         updateDescriptors()
         markDirty()
+    }
+
+    func setTrackVolume(_ volume: Double, for kind: PlayerTrackKind) {
+        guard kind.isAudio else { return }
+        let value = min(max(volume, 0), 4)
+        guard abs((volumes[kind] ?? 1) - value) > 0.005 else { return }
+        pushUndoSnapshot()
+        volumes[kind] = value
+        engine.setVolume(value, for: kind)
+        updateDescriptors()
+        markDirty()
+    }
+
+    func rebuildComposite() {
+        let rawTracks = tracks.filter { $0.kind != .video && !$0.kind.isDerived }
+        guard !rawTracks.isEmpty else {
+            Feedback.flash(message: L10n.t("player.composite.unavailable"))
+            return
+        }
+        pushUndoSnapshot()
+        compositeRebuildRequested = true
+        engine.setCompositeRebuildRequested(true)
+        markDirty()
+        Feedback.flash(message: L10n.t("player.composite.rebuild.ready"))
     }
 
     func requestRemoveTrack(_ kind: PlayerTrackKind) {
@@ -153,12 +185,21 @@ final class PlayerViewModel: ObservableObject {
     func resetEdits() {
         guard isDirty else { return }
         pushUndoSnapshot()
-        apply(PlayerEditSnapshot(trimStart: 0, trimEnd: duration, mutedTracks: baselineMutedTracks, removedTracks: []))
+        apply(PlayerEditSnapshot(
+            trimStart: 0,
+            trimEnd: duration,
+            mutedTracks: baselineMutedTracks,
+            removedTracks: [],
+            volumes: baselineVolumes,
+            compositeRebuildRequested: baselineCompositeRebuildRequested
+        ))
     }
 
     func markSaved() {
         isDirty = false
         baselineMutedTracks = mutedTracks
+        baselineVolumes = volumes
+        baselineCompositeRebuildRequested = compositeRebuildRequested
         undoStack.removeAll()
         redoStack.removeAll()
     }
@@ -230,7 +271,9 @@ final class PlayerViewModel: ObservableObject {
             trimStart: trimStart,
             trimEnd: trimEnd,
             mutedTracks: mutedTracks,
-            removedTracks: removedTracks
+            removedTracks: removedTracks,
+            volumes: volumes,
+            compositeRebuildRequested: compositeRebuildRequested
         )
     }
 
@@ -245,17 +288,23 @@ final class PlayerViewModel: ObservableObject {
         trimEnd = snapshot.trimEnd
         mutedTracks = snapshot.mutedTracks
         removedTracks = snapshot.removedTracks
+        volumes = snapshot.volumes
+        compositeRebuildRequested = snapshot.compositeRebuildRequested
         engine.setTrim(start: trimStart, end: trimEnd)
         for kind in PlayerTrackKind.allCases where kind.isAudio {
             engine.setMuted(mutedTracks.contains(kind) || removedTracks.contains(kind), for: kind)
+            engine.setVolume(volumes[kind] ?? 1, for: kind)
             engine.setRemoved(removedTracks.contains(kind), for: kind)
         }
+        engine.setCompositeRebuildRequested(compositeRebuildRequested)
         updateDescriptors()
         isDirty = snapshot != PlayerEditSnapshot(
             trimStart: 0,
             trimEnd: duration,
             mutedTracks: baselineMutedTracks,
-            removedTracks: []
+            removedTracks: [],
+            volumes: baselineVolumes,
+            compositeRebuildRequested: baselineCompositeRebuildRequested
         )
     }
 
@@ -264,6 +313,7 @@ final class PlayerViewModel: ObservableObject {
             var copy = descriptor
             copy.isMuted = mutedTracks.contains(descriptor.kind)
             copy.isRemoved = removedTracks.contains(descriptor.kind)
+            copy.volume = volumes[descriptor.kind] ?? 1
             return copy
         }
     }

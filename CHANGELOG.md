@@ -11,6 +11,9 @@ All notable changes are recorded here. This project follows
   folder grouping, add-video/add-folder flows and playlist-only removal.
 - **Synchronized Track Editor** with a composite audio track, raw system/microphone tracks,
   shared playhead, current/total time, waveform lanes and always-available trim handles.
+- **Per-track gain and composite rebuild**: raise/lower each audio track independently and
+  render a fresh composite from the raw sources before export, useful for recovering a quiet
+  microphone recording without touching the original file.
 - **Non-destructive edits** with mute/remove confirmation, undo/redo, unsaved-edit protection when
   switching recordings, save-copy and atomic replace-original export paths.
 - **Privacy-first transcription** using Apple's on-device Speech Recognition path when available;

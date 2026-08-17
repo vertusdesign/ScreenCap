@@ -229,10 +229,16 @@
 "player.track.mute" = "Mute track";
 "player.track.unmute" = "Unmute track";
 "player.track.remove" = "Remove track from edit";
+"player.track.volume" = "Track volume";
 "player.track.toggle" = "Show or hide track editor";
 "player.track.remove.confirm.title" = "Remove audio track?";
 "player.track.remove.confirm.message" = "The source file will not be changed. The track will be excluded when you export this edit.";
 "player.trim" = "Trim range";
+"player.composite.rebuild" = "Rebuild Composite";
+"player.composite.rebuild.help" = "Render a new composite from the raw audio tracks using their current gain values. The source file is unchanged until export.";
+"player.composite.rebuild.ready" = "Composite rebuild is ready for export";
+"player.composite.rebuild.pending" = "Composite will be rebuilt on export";
+"player.composite.unavailable" = "This recording has no independent audio tracks to rebuild";
 "player.edit.undo" = "Undo edit";
 "player.edit.redo" = "Redo edit";
 "player.edit.reset" = "Reset edits";

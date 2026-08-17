@@ -4,7 +4,7 @@ struct TrackEditorView: View {
     @ObservedObject var viewModel: PlayerViewModel
     @State private var thumbnails: [NSImage] = []
 
-    private let labelWidth: CGFloat = 166
+    private let labelWidth: CGFloat = 230
     private let timelineWidth: CGFloat = 880
 
     var body: some View {
@@ -27,7 +27,8 @@ struct TrackEditorView: View {
                                 width: timelineWidth,
                                 thumbnails: thumbnails,
                                 onMute: { viewModel.toggleTrackMute(track.kind) },
-                                onRemove: { viewModel.requestRemoveTrack(track.kind) }
+                                onRemove: { viewModel.requestRemoveTrack(track.kind) },
+                                onVolume: { viewModel.setTrackVolume($0, for: track.kind) }
                             )
                         }
                     }
@@ -70,6 +71,11 @@ struct TrackEditorView: View {
         HStack(spacing: 10) {
             Label(L10n.t("player.track.editor"), systemImage: "timeline.selection")
                 .font(.headline)
+            if viewModel.compositeRebuildRequested {
+                Label(L10n.t("player.composite.rebuild.pending"), systemImage: "waveform.badge.plus")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
             Spacer()
             Text(viewModel.currentTimeText)
                 .monospacedDigit()
@@ -96,6 +102,14 @@ struct TrackEditorView: View {
             .buttonStyle(.borderless)
             .disabled(!viewModel.isDirty)
             .help(L10n.t("player.edit.reset"))
+            Button {
+                viewModel.rebuildComposite()
+            } label: {
+                Label(L10n.t("player.composite.rebuild"), systemImage: "arrow.triangle.2.circlepath")
+            }
+            .buttonStyle(.borderless)
+            .disabled(viewModel.tracks.filter { $0.kind.isAudio && !$0.kind.isDerived }.isEmpty)
+            .help(L10n.t("player.composite.rebuild.help"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -108,6 +122,7 @@ private struct TrackEditorRow: View {
     let thumbnails: [NSImage]
     let onMute: () -> Void
     let onRemove: () -> Void
+    let onVolume: (Double) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -127,6 +142,19 @@ private struct TrackEditorRow: View {
                 }
                 Spacer(minLength: 2)
                 if track.kind.isAudio {
+                    Slider(
+                        value: Binding(
+                            get: { track.volume },
+                            set: onVolume
+                        ),
+                        in: 0...4
+                    )
+                    .frame(width: 58)
+                    .help(L10n.t("player.track.volume"))
+                    Text(PlayerTrackDescriptor.gainText(for: track.volume))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
                     Button(action: onMute) {
                         Image(systemName: track.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     }
@@ -142,7 +170,7 @@ private struct TrackEditorRow: View {
                 }
             }
             .padding(.trailing, 10)
-            .frame(width: 166, height: 40, alignment: .leading)
+            .frame(width: 230, height: 40, alignment: .leading)
 
             TimelineLane(track: track, thumbnails: thumbnails)
                 .frame(width: width, height: 40)
