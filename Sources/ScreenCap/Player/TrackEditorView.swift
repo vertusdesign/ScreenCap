@@ -26,9 +26,9 @@ struct TrackEditorView: View {
                                 track: track,
                                 width: timelineWidth,
                                 thumbnails: thumbnails,
-                                onMute: { viewModel.toggleTrackMute(track.kind) },
-                                onRemove: { viewModel.requestRemoveTrack(track.kind) },
-                                onVolume: { viewModel.setTrackVolume($0, for: track.kind) }
+                                onMute: { viewModel.toggleTrackMute(track.trackID) },
+                                onRemove: { viewModel.requestRemoveTrack(track.trackID) },
+                                onVolume: { viewModel.setTrackVolume($0, for: track.trackID) }
                             )
                         }
                     }
@@ -150,6 +150,7 @@ private struct TrackEditorRow: View {
                         in: 0...4
                     )
                     .frame(width: 58)
+                    .disabled(track.isRemoved)
                     .help(L10n.t("player.track.volume"))
                     Text(PlayerTrackDescriptor.gainText(for: track.volume))
                         .font(.caption2.monospacedDigit())
@@ -159,14 +160,14 @@ private struct TrackEditorRow: View {
                         Image(systemName: track.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     }
                     .buttonStyle(.borderless)
+                    .disabled(track.isRemoved)
                     .help(track.isMuted ? L10n.t("player.track.unmute") : L10n.t("player.track.mute"))
-                    if !track.kind.isDerived {
-                        Button(action: onRemove) {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                        .help(L10n.t("player.track.remove"))
+                    Button(action: onRemove) {
+                        Image(systemName: "trash")
                     }
+                    .buttonStyle(.borderless)
+                    .disabled(track.isRemoved)
+                    .help(L10n.t("player.track.remove"))
                 }
             }
             .padding(.trailing, 10)
@@ -202,7 +203,7 @@ private struct TimelineLane: View {
                 .padding(2)
                 .opacity(0.82)
             } else {
-                WaveformLane(seed: track.kind.rawValue.hashValue)
+                WaveformLane(seed: track.trackID.id.hashValue)
                     .padding(.horizontal, 5)
             }
             Rectangle()

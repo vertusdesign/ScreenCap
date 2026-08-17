@@ -19,8 +19,8 @@ enum PlayerCompositeRebuilder {
 
     static func rebuild(
         sourceURL: URL,
-        volumes: [PlayerTrackKind: Double],
-        removedTracks: Set<PlayerTrackKind>
+        volumes: [PlayerTrackID: Double],
+        removedTracks: Set<PlayerTrackID>
     ) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         let tracks = try await asset.load(.tracks)
@@ -29,6 +29,7 @@ enum PlayerCompositeRebuilder {
         guard let videoTrack = videoTracks.first else { throw PlayerCompositeRebuilderError.noVideo }
         let rawTracks = Array(audioTracks.dropFirst())
         guard !rawTracks.isEmpty else { throw PlayerCompositeRebuilderError.noRawTracks }
+        let rawTrackIDs = rawTracks.indices.map { PlayerTrackID.audio(physicalIndex: $0 + 1) }
 
         let videoDescriptions = try await videoTrack.load(.formatDescriptions)
         var rawSources: [OriginalAudioSource] = []
@@ -56,14 +57,16 @@ enum PlayerCompositeRebuilder {
         )
         let mix = AVMutableAudioMix()
         mix.inputParameters = rawTracks.enumerated().map { offset, track in
-            let kind: PlayerTrackKind = offset == 0 ? .systemAudio : .microphone
+            let trackID = offset < rawTrackIDs.count
+                ? rawTrackIDs[offset]
+                : PlayerTrackID.audio(physicalIndex: offset + 1)
             let parameter = AVMutableAudioMixInputParameters(track: track)
             // Rebuild deliberately uses every raw track that was not removed.
             // Mute is a playback audition state; a zero gain still provides an
             // explicit way to exclude a source from the newly rendered mix.
-            let gain = removedTracks.contains(kind)
+            let gain = removedTracks.contains(trackID)
                 ? 0
-                : min(max(volumes[kind] ?? 1, 0), 4)
+                : min(max(volumes[trackID] ?? 1, 0), 4)
             parameter.setVolume(Float(gain), at: .zero)
             return parameter
         }

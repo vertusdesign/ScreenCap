@@ -247,7 +247,9 @@
 "player.track.toggle" = "Show or hide track editor";
 "player.track.remove.confirm.title" = "Remove audio track?";
 "player.track.remove.confirm.message" = "The source file will not be changed. The track will be excluded when you export this edit.";
+"player.track.remove.confirm.message.lastAudio" = "This is the last active audio track. The source file will not be changed, and the exported video will contain no audio.";
 "player.trim" = "Trim range";
+"player.trim.invalid" = "The trim range must contain at least a fraction of a second.";
 "player.composite.rebuild" = "Rebuild Composite";
 "player.composite.rebuild.help" = "Render a new composite from the raw audio tracks using their current gain values. The source file is unchanged until export.";
 "player.composite.rebuild.ready" = "Composite rebuild is ready for export";

@@ -31,6 +31,38 @@ enum PlayerTrackKind: String, CaseIterable, Codable, Identifiable {
     var isDerived: Bool { self == .compositeAudio }
 }
 
+/// Stable identity of one physical media track. A kind alone is not enough:
+/// imported movies can contain several microphone-like audio tracks, and each
+/// row must remain independently editable/removable.
+struct PlayerTrackID: Hashable, Codable, Identifiable {
+    let kind: PlayerTrackKind
+    let physicalIndex: Int?
+
+    init(kind: PlayerTrackKind, physicalIndex: Int? = nil) {
+        self.kind = kind
+        self.physicalIndex = physicalIndex
+    }
+
+    var id: String {
+        let index = physicalIndex.map { String($0) } ?? "none"
+        return "\(kind.rawValue):\(index)"
+    }
+
+    /// Maps the audio stream order used by ScreenCap: composite first, then
+    /// system audio, then microphone/additional raw inputs.
+    static func audio(physicalIndex: Int) -> Self {
+        let kind: PlayerTrackKind
+        if physicalIndex == 0 {
+            kind = .compositeAudio
+        } else if physicalIndex == 1 {
+            kind = .systemAudio
+        } else {
+            kind = .microphone
+        }
+        return Self(kind: kind, physicalIndex: physicalIndex)
+    }
+}
+
 enum PlayerLibrarySourceKind: String, Codable {
     case video
     case folder
@@ -116,7 +148,11 @@ struct PlayerTrackDescriptor: Identifiable, Equatable {
         self.volume = volume
     }
 
-    var id: String { kind.rawValue }
+    var trackID: PlayerTrackID {
+        PlayerTrackID(kind: kind, physicalIndex: index)
+    }
+
+    var id: String { trackID.id }
     var symbolName: String { kind.symbolName }
 
     static func gainText(for volume: Double) -> String {
@@ -137,9 +173,9 @@ struct PlayerMediaInfo {
 struct PlayerEditSnapshot: Equatable {
     let trimStart: Double
     let trimEnd: Double
-    let mutedTracks: Set<PlayerTrackKind>
-    let removedTracks: Set<PlayerTrackKind>
-    let volumes: [PlayerTrackKind: Double]
+    let mutedTracks: Set<PlayerTrackID>
+    let removedTracks: Set<PlayerTrackID>
+    let volumes: [PlayerTrackID: Double]
     let compositeRebuildRequested: Bool
 }
 

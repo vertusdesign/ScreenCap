@@ -27,7 +27,9 @@ struct PlayerView: View {
             Button(L10n.t("action.remove"), role: .destructive) { viewModel.confirmRemoveTrack() }
             Button(L10n.t("action.cancel"), role: .cancel) { viewModel.cancelRemoveTrack() }
         } message: {
-            Text(L10n.t("player.track.remove.confirm.message"))
+            Text(viewModel.removingLastAudioTrack
+                ? L10n.t("player.track.remove.confirm.message.lastAudio")
+                : L10n.t("player.track.remove.confirm.message"))
         }
         .alert(
             L10n.t("player.unsaved.title"),

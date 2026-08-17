@@ -46,8 +46,7 @@ enum PlayerMediaInspector {
         // followed by the original system-audio and microphone streams. Keeping
         // the physical index on the descriptor prevents the editor from ever
         // confusing a composite row with a raw source row.
-        for index in audioTracks.dropFirst().indices {
-            let rawIndex = index
+        for rawIndex in audioTracks.dropFirst().indices {
             let kind: PlayerTrackKind = rawIndex == 1 ? .systemAudio : .microphone
             let titleKey = rawIndex == 1 ? "player.track.systemAudio" : "player.track.microphone"
             result.append(

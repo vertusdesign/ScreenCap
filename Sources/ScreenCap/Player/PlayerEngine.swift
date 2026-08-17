@@ -16,9 +16,9 @@ final class PlayerEngine: ObservableObject {
     private var endObserver: NSObjectProtocol?
     private var trimStart: Double = 0
     private var trimEnd: Double = .infinity
-    private var mutedTracks = Set<PlayerTrackKind>()
-    private var removedTracks = Set<PlayerTrackKind>()
-    private var trackVolumes: [PlayerTrackKind: Double] = [:]
+    private var mutedTracks = Set<PlayerTrackID>()
+    private var removedTracks = Set<PlayerTrackID>()
+    private var trackVolumes: [PlayerTrackID: Double] = [:]
     private var compositeRebuildRequested = false
     private var descriptors: [PlayerTrackDescriptor] = []
 
@@ -48,10 +48,10 @@ final class PlayerEngine: ObservableObject {
         currentURL = url
         errorMessage = nil
         self.descriptors = descriptors
-        mutedTracks = Set(descriptors.filter(\.isMuted).map(\.kind))
-        removedTracks = Set(descriptors.filter(\.isRemoved).map(\.kind))
+        mutedTracks = Set(descriptors.filter(\.isMuted).map(\.trackID))
+        removedTracks = Set(descriptors.filter(\.isRemoved).map(\.trackID))
         trackVolumes = Dictionary(uniqueKeysWithValues: descriptors.map {
-            ($0.kind, min(max($0.volume, 0), 4))
+            ($0.trackID, min(max($0.volume, 0), 4))
         })
         compositeRebuildRequested = false
         let item = AVPlayerItem(url: url)
@@ -108,22 +108,23 @@ final class PlayerEngine: ObservableObject {
         }
     }
 
-    func setMuted(_ muted: Bool, for kind: PlayerTrackKind) {
-        if muted { mutedTracks.insert(kind) } else { mutedTracks.remove(kind) }
+    func setMuted(_ muted: Bool, for trackID: PlayerTrackID) {
+        if muted { mutedTracks.insert(trackID) } else { mutedTracks.remove(trackID) }
         applyAudioMix()
     }
 
-    func setRemoved(_ removed: Bool, for kind: PlayerTrackKind) {
-        if removed { removedTracks.insert(kind) } else { removedTracks.remove(kind) }
-    }
-
-    func setVolume(_ volume: Double, for kind: PlayerTrackKind) {
-        trackVolumes[kind] = min(max(volume, 0), 4)
+    func setRemoved(_ removed: Bool, for trackID: PlayerTrackID) {
+        if removed { removedTracks.insert(trackID) } else { removedTracks.remove(trackID) }
         applyAudioMix()
     }
 
-    func volume(for kind: PlayerTrackKind) -> Double {
-        trackVolumes[kind] ?? 1
+    func setVolume(_ volume: Double, for trackID: PlayerTrackID) {
+        trackVolumes[trackID] = min(max(volume, 0), 4)
+        applyAudioMix()
+    }
+
+    func volume(for trackID: PlayerTrackID) -> Double {
+        trackVolumes[trackID] ?? 1
     }
 
     /// The preview is rebuilt from raw sources while the original composite
@@ -136,12 +137,12 @@ final class PlayerEngine: ObservableObject {
 
     var shouldRebuildComposite: Bool { compositeRebuildRequested }
 
-    var currentTrackVolumes: [PlayerTrackKind: Double] { trackVolumes }
-    var currentMutedTracks: Set<PlayerTrackKind> { mutedTracks }
-    var currentRemovedTracks: Set<PlayerTrackKind> { removedTracks }
+    var currentTrackVolumes: [PlayerTrackID: Double] { trackVolumes }
+    var currentMutedTracks: Set<PlayerTrackID> { mutedTracks }
+    var currentRemovedTracks: Set<PlayerTrackID> { removedTracks }
 
-    func isMuted(_ kind: PlayerTrackKind) -> Bool {
-        mutedTracks.contains(kind)
+    func isMuted(_ trackID: PlayerTrackID) -> Bool {
+        mutedTracks.contains(trackID)
     }
 
     func exportEdited(to destination: URL, completion: @escaping (Result<URL, Error>) -> Void) {
@@ -149,7 +150,22 @@ final class PlayerEngine: ObservableObject {
             completion(.failure(PlayerEngineError.noMedia))
             return
         }
+        guard destination.isFileURL else {
+            completion(.failure(PlayerEngineError.destinationUnavailable))
+            return
+        }
+        guard destination.standardizedFileURL != currentURL.standardizedFileURL else {
+            completion(.failure(PlayerEngineError.sameAsSource))
+            return
+        }
         let sourceAsset = AVURLAsset(url: currentURL)
+        guard trimStart.isFinite,
+              trimEnd.isFinite,
+              trimEnd > trimStart + 0.01
+        else {
+            completion(.failure(PlayerEngineError.emptyTimeRange))
+            return
+        }
         let range = CMTimeRange(
             start: CMTime(seconds: trimStart, preferredTimescale: 600),
             duration: CMTime(seconds: max((trimEnd.isFinite ? trimEnd : duration) - trimStart, 0), preferredTimescale: 600)
@@ -160,8 +176,9 @@ final class PlayerEngine: ObservableObject {
         let rebuild = compositeRebuildRequested
         var mutedForExport = muted
         if rebuild {
-            mutedForExport.insert(.systemAudio)
-            mutedForExport.insert(.microphone)
+            for track in descriptors where track.kind == .systemAudio || track.kind == .microphone {
+                mutedForExport.insert(track.trackID)
+            }
         }
         Task { [weak self] in
             var rebuiltURL: URL?
@@ -169,6 +186,10 @@ final class PlayerEngine: ObservableObject {
                 if let rebuiltURL { try? FileManager.default.removeItem(at: rebuiltURL) }
             }
             do {
+                guard let self else {
+                    completion(.failure(PlayerEngineError.noMedia))
+                    return
+                }
                 var exportSource = sourceAsset
                 if rebuild {
                     let url = try await PlayerCompositeRebuilder.rebuild(
@@ -179,7 +200,7 @@ final class PlayerEngine: ObservableObject {
                     rebuiltURL = url
                     exportSource = AVURLAsset(url: url)
                 }
-                try await self?.export(
+                try await self.export(
                     asset: exportSource,
                     timeRange: range,
                     destination: destination,
@@ -198,9 +219,9 @@ final class PlayerEngine: ObservableObject {
         asset: AVAsset,
         timeRange: CMTimeRange,
         destination: URL,
-        volumes: [PlayerTrackKind: Double],
-        mutedTracks: Set<PlayerTrackKind>,
-        removedTracks: Set<PlayerTrackKind>,
+        volumes: [PlayerTrackID: Double],
+        mutedTracks: Set<PlayerTrackID>,
+        removedTracks: Set<PlayerTrackID>,
         completion: @escaping (Result<URL, Error>) -> Void
     ) async throws {
         guard let editedAsset = makeEditedComposition(
@@ -212,15 +233,23 @@ final class PlayerEngine: ObservableObject {
         else {
             throw PlayerEngineError.exportUnavailable
         }
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try? FileManager.default.removeItem(at: destination)
+        let parentDirectory = destination.deletingLastPathComponent()
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: parentDirectory.path, isDirectory: &isDirectory),
+              isDirectory.boolValue
+        else {
+            throw PlayerEngineError.destinationUnavailable
         }
-        exporter.outputURL = destination
+        let staging = parentDirectory.appendingPathComponent(
+            ".\(destination.lastPathComponent).screencap-exporting-\(UUID().uuidString).mov"
+        )
+        defer { try? FileManager.default.removeItem(at: staging) }
+        exporter.outputURL = staging
         exporter.outputFileType = .mov
         exporter.shouldOptimizeForNetworkUse = false
         if let audioMix = buildAudioMix(
             for: editedAsset.composition.tracks(withMediaType: .audio),
-            kinds: editedAsset.audioKinds,
+            trackIDs: editedAsset.audioTrackIDs,
             volumes: volumes,
             mutedTracks: mutedTracks
         ) {
@@ -238,6 +267,20 @@ final class PlayerEngine: ObservableObject {
                 }
             }
         }
+        do {
+            if FileManager.default.fileExists(atPath: destination.path) {
+                _ = try FileManager.default.replaceItemAt(
+                    destination,
+                    withItemAt: staging,
+                    backupItemName: nil,
+                    options: []
+                )
+            } else {
+                try FileManager.default.moveItem(at: staging, to: destination)
+            }
+        } catch {
+            throw PlayerEngineError.exportCommitFailed(error.localizedDescription)
+        }
         completion(.success(destination))
     }
 
@@ -246,26 +289,25 @@ final class PlayerEngine: ObservableObject {
         let asset = item.asset
         guard let mix = buildAudioMix(
                   for: asset.tracks(withMediaType: .audio),
-                  kinds: audioKinds(count: asset.tracks(withMediaType: .audio).count)
+                  trackIDs: audioTrackIDs(count: asset.tracks(withMediaType: .audio).count)
               ) else { return }
         item.audioMix = mix
     }
 
-    private func buildAudioMix(for audioTracks: [AVAssetTrack], kinds: [PlayerTrackKind]) -> AVAudioMix? {
+    private func buildAudioMix(for audioTracks: [AVAssetTrack], trackIDs: [PlayerTrackID]) -> AVAudioMix? {
         guard !audioTracks.isEmpty else { return nil }
 
-        let compositeMuted = mutedTracks.contains(.compositeAudio)
         let parameters = audioTracks.enumerated().map { index, track in
             let parameter = AVMutableAudioMixInputParameters(track: track)
-            let kind = index < kinds.count ? kinds[index] : .systemAudio
+            let trackID = index < trackIDs.count ? trackIDs[index] : PlayerTrackID.audio(physicalIndex: index)
             let isRebuilding = compositeRebuildRequested && audioTracks.count > 1
             let muted = isRebuilding
-                ? (kind == .compositeAudio || removedTracks.contains(kind))
-                : (compositeMuted || mutedTracks.contains(kind))
-            let masterVolume = trackVolumes[.compositeAudio] ?? 1
-            let volume = isRebuilding && kind != .compositeAudio
-                ? (trackVolumes[kind] ?? 1) * masterVolume
-                : (trackVolumes[kind] ?? 1)
+                ? (trackID.kind == .compositeAudio || removedTracks.contains(trackID))
+                : mutedTracks.contains(trackID) || removedTracks.contains(trackID)
+            let masterVolume = trackVolumes[PlayerTrackID.audio(physicalIndex: 0)] ?? 1
+            let volume = isRebuilding && trackID.kind != .compositeAudio
+                ? (trackVolumes[trackID] ?? 1) * masterVolume
+                : (trackVolumes[trackID] ?? 1)
             parameter.setVolume(Float(muted ? 0 : volume), at: .zero)
             return parameter
         }
@@ -276,16 +318,16 @@ final class PlayerEngine: ObservableObject {
 
     private func buildAudioMix(
         for audioTracks: [AVAssetTrack],
-        kinds: [PlayerTrackKind],
-        volumes: [PlayerTrackKind: Double],
-        mutedTracks: Set<PlayerTrackKind>
+        trackIDs: [PlayerTrackID],
+        volumes: [PlayerTrackID: Double],
+        mutedTracks: Set<PlayerTrackID>
     ) -> AVAudioMix? {
         guard !audioTracks.isEmpty else { return nil }
         let parameters = audioTracks.enumerated().map { index, track in
             let parameter = AVMutableAudioMixInputParameters(track: track)
-            let kind = index < kinds.count ? kinds[index] : .systemAudio
-            let volume = min(max(volumes[kind] ?? 1, 0), 4)
-            parameter.setVolume(Float(mutedTracks.contains(kind) ? 0 : volume), at: .zero)
+            let trackID = index < trackIDs.count ? trackIDs[index] : PlayerTrackID.audio(physicalIndex: index)
+            let volume = min(max(volumes[trackID] ?? 1, 0), 4)
+            parameter.setVolume(Float(mutedTracks.contains(trackID) ? 0 : volume), at: .zero)
             return parameter
         }
         let mix = AVMutableAudioMix()
@@ -293,44 +335,41 @@ final class PlayerEngine: ObservableObject {
         return mix
     }
 
-    private func audioKinds(count: Int) -> [PlayerTrackKind] {
+    private func audioTrackIDs(count: Int) -> [PlayerTrackID] {
         guard count > 0 else { return [] }
-        return (0..<count).map {
-            if $0 == 0 { return .compositeAudio }
-            return $0 == 1 ? .systemAudio : .microphone
-        }
+        return (0..<count).map(PlayerTrackID.audio(physicalIndex:))
     }
 
     private func makeEditedComposition(
         from asset: AVAsset,
         timeRange: CMTimeRange,
-        removedTracks: Set<PlayerTrackKind>
-    ) -> (composition: AVMutableComposition, audioKinds: [PlayerTrackKind])? {
+        removedTracks: Set<PlayerTrackID>
+    ) -> (composition: AVMutableComposition, audioTrackIDs: [PlayerTrackID])? {
         let composition = AVMutableComposition()
         do {
-            if let video = asset.tracks(withMediaType: .video).first,
-               let target = composition.addMutableTrack(
-                   withMediaType: .video,
-                   preferredTrackID: kCMPersistentTrackID_Invalid
-               ) {
-                try target.insertTimeRange(timeRange, of: video, at: .zero)
-                target.preferredTransform = video.preferredTransform
-            }
+            guard let video = asset.tracks(withMediaType: .video).first,
+                  let videoTarget = composition.addMutableTrack(
+                      withMediaType: .video,
+                      preferredTrackID: kCMPersistentTrackID_Invalid
+                  )
+            else { return nil }
+            try videoTarget.insertTimeRange(timeRange, of: video, at: .zero)
+            videoTarget.preferredTransform = video.preferredTransform
 
             let sourceAudio = asset.tracks(withMediaType: .audio)
-            let kinds = audioKinds(count: sourceAudio.count)
-            var activeKinds: [PlayerTrackKind] = []
+            let trackIDs = audioTrackIDs(count: sourceAudio.count)
+            var activeTrackIDs: [PlayerTrackID] = []
             for (index, source) in sourceAudio.enumerated() {
-                let kind = index < kinds.count ? kinds[index] : .systemAudio
-                guard !removedTracks.contains(kind) else { continue }
+                let trackID = index < trackIDs.count ? trackIDs[index] : PlayerTrackID.audio(physicalIndex: index)
+                guard !removedTracks.contains(trackID) else { continue }
                 guard let target = composition.addMutableTrack(
                     withMediaType: .audio,
                     preferredTrackID: kCMPersistentTrackID_Invalid
                 ) else { continue }
                 try target.insertTimeRange(timeRange, of: source, at: .zero)
-                activeKinds.append(kind)
+                activeTrackIDs.append(trackID)
             }
-            return (composition, activeKinds)
+            return (composition, activeTrackIDs)
         } catch {
             return nil
         }
@@ -340,16 +379,24 @@ final class PlayerEngine: ObservableObject {
 
 enum PlayerEngineError: LocalizedError {
     case noMedia
+    case destinationUnavailable
+    case sameAsSource
+    case emptyTimeRange
     case exportUnavailable
     case exportCancelled
     case exportFailed
+    case exportCommitFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .noMedia: return "No video is loaded."
+        case .destinationUnavailable: return "The export destination is not available."
+        case .sameAsSource: return "Choose a new file name; replacing the original uses the Replace Original action."
+        case .emptyTimeRange: return "The selected trim range is empty."
         case .exportUnavailable: return "This video cannot be exported on this Mac."
         case .exportCancelled: return "Export was cancelled."
         case .exportFailed: return "The edited video could not be exported."
+        case .exportCommitFailed(let message): return "The export finished, but the destination could not be updated: \(message)"
         }
     }
 }

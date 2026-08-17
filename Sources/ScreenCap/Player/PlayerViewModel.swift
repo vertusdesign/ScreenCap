@@ -18,15 +18,15 @@ final class PlayerViewModel: ObservableObject {
     @Published var transcriptionMode: PlayerTranscriptionMode {
         didSet { Settings.shared.playerTranscriptionMode = transcriptionMode }
     }
-    @Published var pendingTrackRemoval: PlayerTrackKind?
+    @Published var pendingTrackRemoval: PlayerTrackID?
 
     private var undoStack: [PlayerEditSnapshot] = []
     private var redoStack: [PlayerEditSnapshot] = []
-    private var mutedTracks = Set<PlayerTrackKind>()
-    private var baselineMutedTracks = Set<PlayerTrackKind>()
-    private var removedTracks = Set<PlayerTrackKind>()
-    private var volumes = [PlayerTrackKind: Double]()
-    private var baselineVolumes = [PlayerTrackKind: Double]()
+    private var mutedTracks = Set<PlayerTrackID>()
+    private var baselineMutedTracks = Set<PlayerTrackID>()
+    private var removedTracks = Set<PlayerTrackID>()
+    private var volumes = [PlayerTrackID: Double]()
+    private var baselineVolumes = [PlayerTrackID: Double]()
     private var baselineCompositeRebuildRequested = false
     private var cancellables = Set<AnyCancellable>()
 
@@ -58,15 +58,19 @@ final class PlayerViewModel: ObservableObject {
     var durationText: String { Self.formatTime(duration) }
 
     func select(_ recording: PlayerRecording) {
+        guard let info = PlayerMediaInspector.inspect(url: recording.url) else {
+            Feedback.flash(message: L10n.t("player.open.failed"))
+            library.reload()
+            return
+        }
         selectedRecording = recording
-        let info = PlayerMediaInspector.inspect(url: recording.url)
         tracks = PlayerMediaInspector.tracks(url: recording.url)
         trimStart = 0
-        trimEnd = info?.duration ?? 0
-        mutedTracks = Set(tracks.filter(\.isMuted).map(\.kind))
+        trimEnd = info.duration
+        mutedTracks = Set(tracks.filter(\.isMuted).map(\.trackID))
         baselineMutedTracks = mutedTracks
         removedTracks = []
-        volumes = Dictionary(uniqueKeysWithValues: tracks.map { ($0.kind, $0.volume) })
+        volumes = Dictionary(uniqueKeysWithValues: tracks.map { ($0.trackID, $0.volume) })
         baselineVolumes = volumes
         compositeRebuildRequested = false
         baselineCompositeRebuildRequested = false
@@ -95,53 +99,61 @@ final class PlayerViewModel: ObservableObject {
         }
     }
 
-    func toggleTrackMute(_ kind: PlayerTrackKind) {
-        guard kind.isAudio else { return }
+    func toggleTrackMute(_ trackID: PlayerTrackID) {
+        guard trackID.kind.isAudio, !removedTracks.contains(trackID) else { return }
         pushUndoSnapshot()
-        let muted = !mutedTracks.contains(kind)
-        if muted { mutedTracks.insert(kind) } else { mutedTracks.remove(kind) }
-        engine.setMuted(muted, for: kind)
+        let muted = !mutedTracks.contains(trackID)
+        if muted { mutedTracks.insert(trackID) } else { mutedTracks.remove(trackID) }
+        engine.setMuted(muted, for: trackID)
         updateDescriptors()
         markDirty()
     }
 
-    func setTrackVolume(_ volume: Double, for kind: PlayerTrackKind) {
-        guard kind.isAudio else { return }
+    func setTrackVolume(_ volume: Double, for trackID: PlayerTrackID) {
+        guard trackID.kind.isAudio, !removedTracks.contains(trackID) else { return }
         let value = min(max(volume, 0), 4)
-        guard abs((volumes[kind] ?? 1) - value) > 0.005 else { return }
+        guard abs((volumes[trackID] ?? 1) - value) > 0.005 else { return }
         pushUndoSnapshot()
-        volumes[kind] = value
-        engine.setVolume(value, for: kind)
+        volumes[trackID] = value
+        engine.setVolume(value, for: trackID)
         updateDescriptors()
         markDirty()
     }
 
     func rebuildComposite() {
-        let rawTracks = tracks.filter { $0.kind != .video && !$0.kind.isDerived }
+        let rawTracks = tracks.filter { $0.kind != .video && !$0.kind.isDerived && !$0.isRemoved }
         guard !rawTracks.isEmpty else {
             Feedback.flash(message: L10n.t("player.composite.unavailable"))
             return
         }
         pushUndoSnapshot()
+        if let composite = tracks.first(where: { $0.kind == .compositeAudio }) {
+            removedTracks.remove(composite.trackID)
+            mutedTracks.remove(composite.trackID)
+            engine.setRemoved(false, for: composite.trackID)
+            engine.setMuted(false, for: composite.trackID)
+        }
         compositeRebuildRequested = true
         engine.setCompositeRebuildRequested(true)
         markDirty()
         Feedback.flash(message: L10n.t("player.composite.rebuild.ready"))
     }
 
-    func requestRemoveTrack(_ kind: PlayerTrackKind) {
-        guard kind.isAudio, !kind.isDerived else { return }
-        pendingTrackRemoval = kind
+    func requestRemoveTrack(_ trackID: PlayerTrackID) {
+        guard trackID.kind.isAudio,
+              tracks.contains(where: { $0.trackID == trackID && !$0.isRemoved })
+        else { return }
+        pendingTrackRemoval = trackID
     }
 
     func confirmRemoveTrack() {
-        guard let kind = pendingTrackRemoval else { return }
+        guard let trackID = pendingTrackRemoval else { return }
         pendingTrackRemoval = nil
         pushUndoSnapshot()
-        removedTracks.insert(kind)
-        mutedTracks.insert(kind)
-        engine.setMuted(true, for: kind)
-        engine.setRemoved(true, for: kind)
+        removedTracks.insert(trackID)
+        mutedTracks.insert(trackID)
+        engine.setMuted(true, for: trackID)
+        engine.setRemoved(true, for: trackID)
         updateDescriptors()
         markDirty()
     }
@@ -150,9 +162,18 @@ final class PlayerViewModel: ObservableObject {
         pendingTrackRemoval = nil
     }
 
+    var removingLastAudioTrack: Bool {
+        guard pendingTrackRemoval != nil else { return false }
+        return tracks.filter { $0.kind.isAudio && !$0.isRemoved }.count <= 1
+    }
+
     func setTrim(start: Double, end: Double) {
         let safeStart = min(max(start, 0), max(duration, 0))
         let safeEnd = min(max(end, safeStart), max(duration, 0))
+        guard safeEnd > safeStart + 0.01 else {
+            Feedback.flash(message: L10n.t("player.trim.invalid"))
+            return
+        }
         guard abs(trimStart - safeStart) > 0.01 || abs(trimEnd - safeEnd) > 0.01 else { return }
         pushUndoSnapshot()
         trimStart = safeStart
@@ -295,10 +316,13 @@ final class PlayerViewModel: ObservableObject {
         volumes = snapshot.volumes
         compositeRebuildRequested = snapshot.compositeRebuildRequested
         engine.setTrim(start: trimStart, end: trimEnd)
-        for kind in PlayerTrackKind.allCases where kind.isAudio {
-            engine.setMuted(mutedTracks.contains(kind) || removedTracks.contains(kind), for: kind)
-            engine.setVolume(volumes[kind] ?? 1, for: kind)
-            engine.setRemoved(removedTracks.contains(kind), for: kind)
+        for track in tracks where track.kind.isAudio {
+            engine.setMuted(
+                mutedTracks.contains(track.trackID) || removedTracks.contains(track.trackID),
+                for: track.trackID
+            )
+            engine.setVolume(volumes[track.trackID] ?? 1, for: track.trackID)
+            engine.setRemoved(removedTracks.contains(track.trackID), for: track.trackID)
         }
         engine.setCompositeRebuildRequested(compositeRebuildRequested)
         updateDescriptors()
@@ -315,9 +339,9 @@ final class PlayerViewModel: ObservableObject {
     private func updateDescriptors() {
         tracks = tracks.map { descriptor in
             var copy = descriptor
-            copy.isMuted = mutedTracks.contains(descriptor.kind)
-            copy.isRemoved = removedTracks.contains(descriptor.kind)
-            copy.volume = volumes[descriptor.kind] ?? 1
+            copy.isMuted = mutedTracks.contains(descriptor.trackID)
+            copy.isRemoved = removedTracks.contains(descriptor.trackID)
+            copy.volume = volumes[descriptor.trackID] ?? 1
             return copy
         }
     }
