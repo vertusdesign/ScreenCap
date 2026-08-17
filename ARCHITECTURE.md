@@ -316,7 +316,10 @@ retains v2 preferences and TCC decisions. ScreenCap 3 Pro uses `com.vertusdesign
 so macOS stores a separate defaults domain and Screen Recording permission row. Pro source and
 resources are supplied by a private sibling source directory and are not part of the public
 repository. The Makefile fails closed when that directory is absent; it never reconstructs Pro
-code from the public tree.
+code from the public tree. `ScreenCap-Pro-Private` is also a separate private Git worktree, with
+its own private remote and independent commit history; `make private-sync-check` is the handoff
+gate for a clean, synchronized Pro checkout. The public repository must never contain a Pro
+source copy, submodule, subtree or private remote URL.
 The current direct-download targets do not enable App Sandbox; App Store submission remains a
 separate entitlement and security-scoped-resource work item.
 

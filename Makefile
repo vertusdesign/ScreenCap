@@ -8,12 +8,17 @@ ifneq ($(filter base pro,$(BUILD_FLAVOR)),$(BUILD_FLAVOR))
 $(error BUILD_FLAVOR must be base or pro)
 endif
 
+# The Pro source checkout is intentionally independent from this public
+# repository.  It must have its own private remote; this path is only a local
+# build input and is never copied into the public Git history.
+PRIVATE_DIR    ?= $(CURDIR)/../ScreenCap-Pro-Private
+PRIVATE_REMOTE ?= origin
+
 ifeq ($(BUILD_FLAVOR),pro)
 BUNDLE_ID       := com.vertusdesign.ScreenCap.Pro3
 BUNDLE_NAME     := ScreenCap 3 Pro
 URL_SCHEME      := screencap-pro3
 APP_BUNDLE      := ScreenCap 3 Pro.app
-PRIVATE_DIR     ?= $(CURDIR)/../ScreenCap-Pro-Private
 PLAYER_SOURCE   := $(PRIVATE_DIR)/Player
 PRIVATE_L10N    := $(PRIVATE_DIR)/l10n
 PLIST_TEMPLATE  := $(PRIVATE_DIR)/Info-Pro.plist
@@ -53,7 +58,8 @@ endif
 SIGN_ID     ?= $(DETECTED_ID)
 dmg: SIGN_ID = -
 
-.PHONY: all app run debug clean dmg install icon universal prepare-sources
+.PHONY: all app run debug clean dmg install icon universal prepare-sources \
+	private-status private-sync-check
 
 all: app
 
@@ -62,12 +68,36 @@ prepare-sources:
 ifeq ($(BUILD_FLAVOR),pro)
 	@test -d "$(PLAYER_SOURCE)" || (echo "Missing private Pro sources: $(PLAYER_SOURCE)" >&2; exit 1)
 	@test -f "$(PLIST_TEMPLATE)" || (echo "Missing private Pro Info.plist: $(PLIST_TEMPLATE)" >&2; exit 1)
+	@test "$$(git -C "$(PRIVATE_DIR)" rev-parse --is-inside-work-tree 2>/dev/null)" = true || (echo "Private Pro source directory is not a Git worktree: $(PRIVATE_DIR)" >&2; echo "Initialize it and configure its private remote before building Pro." >&2; exit 1)
 	mkdir -p "Sources/ScreenCap/Player"
 	find "Sources/ScreenCap/Player" -type f ! -name .gitkeep -delete
 	cp -R "$(PLAYER_SOURCE)/." "Sources/ScreenCap/Player/"
 else
 	find "Sources/ScreenCap/Player" -type f ! -name .gitkeep -delete
 endif
+
+# Show the private checkout state without changing it.  This is deliberately
+# separate from a build so local development can inspect the public and private
+# histories independently.
+private-status:
+	@test -d "$(PRIVATE_DIR)" || (echo "Missing private Pro checkout: $(PRIVATE_DIR)" >&2; exit 1)
+	@test "$$(git -C "$(PRIVATE_DIR)" rev-parse --is-inside-work-tree 2>/dev/null)" = true || (echo "Private Pro source directory is not a Git worktree: $(PRIVATE_DIR)" >&2; exit 1)
+	@echo "Private Pro checkout: $(PRIVATE_DIR)"
+	@git -C "$(PRIVATE_DIR)" status --short --branch
+	@git -C "$(PRIVATE_DIR)" remote -v
+
+# Verify that the private checkout is committed and aligned with its private
+# upstream.  Run `git fetch --prune $(PRIVATE_REMOTE)` first, or pass
+# PRIVATE_FETCH=1 to let this target refresh the remote-tracking refs.
+private-sync-check:
+	@test -d "$(PRIVATE_DIR)" || (echo "Missing private Pro checkout: $(PRIVATE_DIR)" >&2; exit 1)
+	@test "$$(git -C "$(PRIVATE_DIR)" rev-parse --is-inside-work-tree 2>/dev/null)" = true || (echo "Private Pro source directory is not a Git worktree: $(PRIVATE_DIR)" >&2; exit 1)
+	@if [ "$(PRIVATE_FETCH)" = "1" ]; then git -C "$(PRIVATE_DIR)" fetch --prune "$(PRIVATE_REMOTE)"; fi
+	@test -n "$$(git -C "$(PRIVATE_DIR)" remote get-url "$(PRIVATE_REMOTE)" 2>/dev/null)" || (echo "Private Pro checkout has no '$(PRIVATE_REMOTE)' remote; configure its private repository before syncing." >&2; exit 1)
+	@test -n "$$(git -C "$(PRIVATE_DIR)" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)" || (echo "Private Pro checkout has no upstream; push its branch to $(PRIVATE_REMOTE) and set the upstream before syncing." >&2; exit 1)
+	@test -z "$$(git -C "$(PRIVATE_DIR)" status --porcelain)" || (echo "Private Pro checkout has uncommitted changes; commit them before syncing." >&2; exit 1)
+	@set -- $$(git -C "$(PRIVATE_DIR)" rev-list --left-right --count HEAD...@{u}); test "$$1" = 0 && test "$$2" = 0 || (echo "Private Pro checkout is not synchronized with its upstream (ahead $$1, behind $$2)." >&2; exit 1)
+	@echo "Private Pro checkout is clean and synchronized with $(PRIVATE_REMOTE)."
 
 debug: prepare-sources
 	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)"

@@ -85,10 +85,27 @@ make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUI
 open "dist/ScreenCap 3 Pro.app"
 ```
 
-The sibling directory is not tracked by this public repository. Build targets read it and stage
-only a temporary ignored copy under `Sources/ScreenCap/Player`; they never delete the sibling.
-Keep the private directory in a separate private Git repository or backup. A missing directory
-is a hard Pro-build error, not a fallback to a Player-less binary.
+The sibling directory is not tracked by this public repository. It is a required, separate
+private Git worktree: initialise it with its own private remote, commit Pro changes there, and
+sync that repository independently. Build targets read it and stage only a temporary ignored
+copy under `Sources/ScreenCap/Player`; they never delete or commit the sibling. A missing
+directory or a directory without Git history is a hard Pro-build error, not a fallback to a
+Player-less binary.
+
+Use these checks from the public checkout:
+
+```bash
+make private-status PRIVATE_DIR=../ScreenCap-Pro-Private
+git -C ../ScreenCap-Pro-Private fetch --prune origin
+make private-sync-check PRIVATE_DIR=../ScreenCap-Pro-Private
+```
+
+`private-sync-check` requires a clean private worktree, an `origin` remote, an upstream branch,
+and zero ahead/behind commits after the last fetch. It does not push or pull automatically;
+review and run those operations in the private repository deliberately. `PRIVATE_FETCH=1` may
+be used when a fetch is explicitly wanted. Google Drive is only storage here, not the canonical
+Git synchronization mechanism; do not edit the same private worktree concurrently on multiple
+machines through cloud sync.
 
 Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, while the base product
 uses the stable `com.vertusdesign.ScreenCap` and `screencap://`. `make install BUILD_FLAVOR=pro`
@@ -120,13 +137,16 @@ by one for every language.
    when their stated version or update date changes.
 2. Run the debug build, self-test and translation catalog check from `.github/workflows/ci.yml`;
    review any Swift 6 SDK warnings in the build log.
-3. Build a local universal DMG and verify architecture, `CFBundleShortVersionString`, empty
+3. If the change touches Pro, commit and sync `ScreenCap-Pro-Private` separately, then run
+   `make private-sync-check PRIVATE_DIR=../ScreenCap-Pro-Private`. Never add Pro files to the
+   public repository or use a public remote for the private checkout.
+4. Build a local universal DMG and verify architecture, `CFBundleShortVersionString`, empty
    stable channel, and checksum.
-4. Commit the complete release scope on `main`, create an annotated `v<version>` tag, and push
+5. Commit the complete release scope on `main`, create an annotated `v<version>` tag, and push
    the commit and tag. `.github/workflows/release.yml` builds the release DMG on `macos-15`,
    runs the self-test, uploads the artifact and creates the GitHub Release from
    `.github/RELEASE_NOTES.md`.
-5. Open the published release and verify that it is not marked as a draft/prerelease and that
+6. Open the published release and verify that it is not marked as a draft/prerelease and that
    both the DMG and `.sha256` assets are present.
 
 ## Code style

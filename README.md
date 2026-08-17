@@ -324,12 +324,24 @@ make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0 BUI
 # dist/ScreenCap 3 Pro.app — launch from dist; never install this flavor
 ```
 
-`ScreenCap-Pro-Private` is deliberately outside the public Git repository. The Makefile only
-reads from it and stages a temporary copy during a Pro build; `make clean` does not remove the
-sibling directory. Keep that directory in a private Git repository or another backup, because a
-manual deletion or a failed cloud-sync operation cannot be recovered from the public checkout.
-If it is missing, the Pro build stops with an explicit error instead of silently producing a
-base-only app.
+`ScreenCap-Pro-Private` is deliberately outside the public Git repository and must itself be a
+separate private Git worktree with a private `origin`. The Makefile only reads from it and stages
+a temporary ignored copy during a Pro build; `make clean` does not remove the sibling. A missing
+directory or missing Git history stops the Pro build with an explicit error instead of silently
+producing a base-only app. Keep the private checkout backed by its remote; Google Drive is only
+the local storage location and must not be treated as the synchronization authority.
+
+Inspect and verify the private repository independently:
+
+```bash
+make private-status PRIVATE_DIR=../ScreenCap-Pro-Private
+git -C ../ScreenCap-Pro-Private fetch --prune origin
+make private-sync-check PRIVATE_DIR=../ScreenCap-Pro-Private
+```
+
+The sync check requires no uncommitted changes, an `origin` remote, an upstream branch and no
+ahead/behind commits. It never pushes or pulls automatically. Pro files must never be copied into
+the public Git history, public remote, release tag or public issue attachment.
 
 Base uses `com.vertusdesign.ScreenCap` and `screencap://`, preserving the existing Screen
 Recording grant. Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, so macOS
