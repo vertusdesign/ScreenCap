@@ -210,19 +210,19 @@ enum TranscriptionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return "Speech Recognition permission was not granted."
+            return L10n.t("player.transcript.error.permissionDenied")
         case .recognizerUnavailable:
-            return "On-device speech recognition is unavailable for this language on this Mac."
+            return L10n.t("player.transcript.error.recognizerUnavailable")
         case .onDeviceRecognitionUnavailable:
-            return "This language is not available for on-device speech recognition on this Mac."
+            return L10n.t("player.transcript.error.onDeviceRecognitionUnavailable")
         case .audioExtractionUnavailable:
-            return "The recording does not contain an audio stream that can be transcribed."
+            return L10n.t("player.transcript.error.audioExtractionUnavailable")
         case .audioExtractionFailed:
-            return "Audio could not be prepared for transcription."
+            return L10n.t("player.transcript.error.audioExtractionFailed")
         case .recordingUnavailable:
-            return "The selected recording is no longer available."
+            return L10n.t("player.transcript.error.recordingUnavailable")
         case .cancelled:
-            return "Transcription was cancelled."
+            return L10n.t("player.transcript.error.cancelled")
         }
     }
 }

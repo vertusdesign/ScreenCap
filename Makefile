@@ -1,8 +1,9 @@
 APP_NAME    := ScreenCap
 VERSION     ?= 3.0.0
-# `production` is the App Store/update identity and deliberately keeps the
-# existing TCC bundle ID. `parallel` is a local QA identity, allowing a v3
-# build to coexist with an installed v2 without sharing Screen Recording TCC.
+# `production` is the direct-download/release identity and deliberately keeps the
+# existing TCC bundle ID. A future App Store target will need a separate sandbox
+# capability pass. `parallel` is a local QA identity, allowing a v3 build to
+# coexist with an installed v2 without sharing Screen Recording TCC.
 BUILD_FLAVOR ?= production
 ifneq ($(filter production parallel,$(BUILD_FLAVOR)),$(BUILD_FLAVOR))
 $(error BUILD_FLAVOR must be production or parallel)

@@ -15,6 +15,10 @@ final class PlayerViewModel: ObservableObject {
     @Published var trimEnd: Double = 0
     @Published private(set) var isDirty = false
     @Published private(set) var compositeRebuildRequested = false
+    /// A video opened through Finder, a notification or the after-recording
+    /// action. It must wait for the same save/discard decision as a sidebar
+    /// switch when the current recording has an unsaved draft.
+    @Published private(set) var pendingSelection: PlayerRecording?
     @Published private(set) var pendingPlaylistRemoval: PlayerPlaylistRemoval?
     @Published var transcriptionMode: PlayerTranscriptionMode {
         didSet { Settings.shared.playerTranscriptionMode = transcriptionMode }
@@ -93,11 +97,41 @@ final class PlayerViewModel: ObservableObject {
             canonical.path.hasPrefix(recordingDirectory.path + "/") {
             _ = library.addFolder(url: canonical.deletingLastPathComponent())
         }
+        let target: PlayerRecording?
         if let existing = library.recordings.first(where: { $0.url.standardizedFileURL == canonical }) {
-            select(existing)
-        } else if let added = library.addVideo(url: canonical) {
-            select(added)
+            target = existing
+        } else {
+            target = library.addVideo(url: canonical)
         }
+        guard let target else {
+            Feedback.flash(message: L10n.t("player.open.failed"))
+            return
+        }
+        guard selectedRecording?.id != target.id else {
+            pendingSelection = nil
+            return
+        }
+        guard !isDirty else {
+            pendingSelection = target
+            return
+        }
+        select(target)
+    }
+
+    func confirmPendingSelectionAfterSave() {
+        guard let pendingSelection else { return }
+        self.pendingSelection = nil
+        select(pendingSelection)
+    }
+
+    func discardEditsAndSelectPending() {
+        guard let pendingSelection else { return }
+        self.pendingSelection = nil
+        select(pendingSelection)
+    }
+
+    func cancelPendingSelection() {
+        pendingSelection = nil
     }
 
     func toggleTrackMute(_ trackID: PlayerTrackID) {
@@ -347,6 +381,7 @@ final class PlayerViewModel: ObservableObject {
         transcription.cancel()
         engine.clear()
         selectedRecording = nil
+        pendingSelection = nil
         tracks = []
         trimStart = 0
         trimEnd = 0

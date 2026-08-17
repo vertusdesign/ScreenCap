@@ -29,7 +29,9 @@ permission and global-hotkey rules rather than assuming macOS APIs exist everywh
 > does the same thing. Building from source avoids the warning entirely, because nothing is
 > downloaded and so nothing is quarantined.
 
-Everything happens on your Mac. No accounts, no uploads, no network access at all.
+Everything happens on your Mac. No accounts, no uploads, and no app-owned network access.
+Explicit About, Support and Check for Updates actions only hand a URL to your default browser;
+ScreenCap itself never fetches those pages.
 
 - Four capture modes on global shortcuts: area, repeat last area, window under the cursor, full screen
 - The screen freezes the moment you press, so menus and tooltips stay put while you aim
@@ -46,7 +48,7 @@ Everything happens on your Mac. No accounts, no uploads, no network access at al
   composite rebuild and safe copy/replace export
 - On-demand transcription through Apple's on-device Speech Recognition path, with an optional automatic mode
 - 24 interface languages
-- No Dock icon, no background polling, no network access of any kind
+- No Dock icon while running as a menu-bar utility, no background polling, and no app-owned network fetches
 
 ## Install
 
@@ -168,8 +170,9 @@ mute and confirmed removal, including removing the final audio stream. **Rebuild
 renders a new composite from the raw tracks (for example, after raising a quiet microphone)
 without modifying the original until export.
 
-Trim and audio changes are non-destructive drafts with undo/redo. Switching recordings keeps
-the draft open until the user saves a copy, discards it, or cancels. **Replace original** uses
+Trim and audio changes are non-destructive drafts with undo/redo. Switching recordings — including
+opening a video from Finder, a notification or the after-recording action — keeps the draft open
+until the user saves a copy, discards it, or cancels. **Replace original** uses
 an atomic staged export; **Save edited copy** keeps the source untouched. Failed or cancelled
 exports leave the draft intact.
 
@@ -251,6 +254,10 @@ collapses into a single undo step.
 
 - **Not notarized**, so Gatekeeper blocks the first launch until you allow it in
   System Settings → Privacy & Security (see [Install](#install)).
+- **Mac App Store packaging is not yet submission-ready.** The current direct-download build
+  uses the hardened runtime but does not enable App Sandbox; a future App Store submission
+  needs a dedicated sandbox entitlement/capability pass, including security-scoped file access
+  and review of Screen Recording, microphone, speech and Apple Events permissions.
 - **A selection lives on one display.** You can capture any display, but a single selection
   cannot span two of them.
 - **No scrolling capture**, recorder microphone source picker, pause/resume, countdown, camera
@@ -351,8 +358,9 @@ make app BUILD_FLAVOR=parallel VERSION=3.0.0 BUILD=qa
 ```
 
 The production flavor keeps `com.vertusdesign.ScreenCap` and the `screencap://` scheme so a
-3.0.0 App Store update remains the same macOS app and can continue using the existing v2
-Screen Recording grant. The parallel flavor uses `com.vertusdesign.ScreenCap.Pro3QA` and
+future 3.0.0 release/update remains the same macOS app and can continue using the existing v2
+Screen Recording grant. It is currently the direct-download/release identity; App Store
+submission still requires the sandbox pass described in Known limitations. The parallel flavor uses `com.vertusdesign.ScreenCap.Pro3QA` and
 `screencap-pro3://`, so macOS presents it as a separate TCC identity. Build it for QA only;
 the Makefile refuses `make install BUILD_FLAVOR=parallel`.
 

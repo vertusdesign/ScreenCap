@@ -60,7 +60,9 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         guard panel.runModal() == .OK else { return }
-        panel.urls.compactMap { viewModel.library.addVideo(url: $0) }.last.map(viewModel.select)
+        panel.urls.compactMap { viewModel.library.addVideo(url: $0) }
+            .last
+            .map { viewModel.select(url: $0.url) }
     }
 
     @objc func openFolderFromMenu(_ sender: Any?) {

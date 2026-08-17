@@ -84,9 +84,10 @@ make app BUILD_FLAVOR=parallel VERSION=3.0.0 BUILD=qa
 open dist/ScreenCap-Pro3-QA.app
 ```
 
-Do not install the parallel flavor. Production builds retain the App Store bundle ID
-`com.vertusdesign.ScreenCap`; the parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA`
-and a separate `screencap-pro3://` URL scheme. `make install BUILD_FLAVOR=parallel` is refused.
+Do not install the parallel flavor. Production release builds retain the stable bundle ID
+`com.vertusdesign.ScreenCap`; the current direct-download target is not yet an App Store
+submission target. The parallel QA flavor uses `com.vertusdesign.ScreenCap.Pro3QA` and a
+separate `screencap-pro3://` URL scheme. `make install BUILD_FLAVOR=parallel` is refused.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local
 certificate — `make install` picks one up from your keychain automatically if it is there.

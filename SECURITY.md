@@ -50,6 +50,12 @@ That is a real gap: notarization is Apple's malware scan of the shipped binary, 
 it you are trusting the source and the build. Building from source is the way to remove that
 trust requirement, and it is one command.
 
+The current direct-download target is also not App Sandbox-enabled. That is intentional for
+the present local/DMG workflow, but it means this exact entitlement set is not yet an App Store
+submission target. Before distribution through the Mac App Store, security-scoped bookmark/file
+flows and the Screen Recording, microphone, speech-recognition and Apple Events capabilities
+must be revalidated under a sandboxed target.
+
 ## The URL scheme
 
 The app registers `screencap://` so it can be triggered from Shortcuts, Raycast or a script.

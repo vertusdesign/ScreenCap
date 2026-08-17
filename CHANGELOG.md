@@ -18,6 +18,8 @@ All notable changes are recorded here. This project follows
   microphone recording without touching the original file.
 - **Non-destructive edits** with mute/remove confirmation, undo/redo, unsaved-edit protection when
   switching recordings, save-copy and atomic replace-original export paths.
+- **External-open safety**: Finder, notification and after-recording Player opens now wait for
+  the same Save Copy/Discard decision when the current recording has unsaved edits.
 - **Privacy-first transcription** using Apple's on-device Speech Recognition path when available;
   transcription is on-demand by default and can be explicitly switched to idle-time automatic mode.
 - **After-recording action**: Open in ScreenCap Player is available in Preferences. New

@@ -20,10 +20,10 @@ enum PlayerTrackKind: String, CaseIterable, Codable, Identifiable {
 
     var fallbackTitle: String {
         switch self {
-        case .video: return "Video"
-        case .compositeAudio: return "Composite Audio"
-        case .microphone: return "Microphone"
-        case .systemAudio: return "System Audio"
+        case .video: return L10n.t("player.track.video")
+        case .compositeAudio: return L10n.t("player.track.composite")
+        case .microphone: return L10n.t("player.track.microphone")
+        case .systemAudio: return L10n.t("player.track.systemAudio")
         }
     }
 
@@ -202,10 +202,6 @@ enum PlayerTranscriptionMode: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 
     var title: String {
-        switch self {
-        case .off: return "Off"
-        case .onDemand: return "On demand"
-        case .automatic: return "Automatic"
-        }
+        L10n.t("player.transcript.mode.\(rawValue)")
     }
 }

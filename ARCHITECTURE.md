@@ -72,7 +72,9 @@ and folders, reads media with AVFoundation/AVKit, and keeps edits in a view-mode
 an explicit export. Its Track Editor uses one shared playhead for video thumbnails, composite
 audio and raw audio lanes. Gain, mute, removal, trim, undo/redo and composite rebuild are
 preview operations; staged export is the only write path. Removing a playlist item never
-deletes its source. Speech transcription is an on-demand/opt-in automatic coordinator that
+deletes its source. An external open request (Finder, notification or after-recording action)
+is deferred behind the same Save Copy/Discard decision when the current draft is dirty.
+Speech transcription is an on-demand/opt-in automatic coordinator that
 requires Apple's on-device Speech Recognition capability and reports unsupported locales or
 missing permissions without a network fallback.
 
@@ -321,9 +323,12 @@ The macOS implementation stores settings in `UserDefaults` under the application
   persisted until the user exports a file.
 
 The production app keeps the existing `com.vertusdesign.ScreenCap` defaults domain so a 3.0.0
-update can retain v2 preferences and TCC decisions. `make app BUILD_FLAVOR=parallel` creates a
+release/update can retain v2 preferences and TCC decisions. `make app BUILD_FLAVOR=parallel` creates a
 local QA bundle with `com.vertusdesign.ScreenCap.Pro3QA`; macOS then stores a separate defaults
 domain and Screen Recording permission row. The parallel flavor is not an App Store identity.
+The current production bundle is a direct-download build: `Resources/ScreenCap.entitlements`
+does not enable App Sandbox, so App Store submission remains a separate entitlement and
+security-scoped-resource work item rather than a claim made by this package.
 
 Settings are preferences, not document data. Annotation history and captured pixels exist only
 in memory for the active session. A port should use an explicit versioned settings document in
@@ -388,7 +393,8 @@ layout.
 - `Package.swift` is the Swift package definition and declares the minimum macOS version.
 - `Makefile` is the canonical local build/packaging entry point.
 - `Resources/Info.plist` is a template; bundle identity, URL scheme, version, build and channel
-  are substituted by `make`. Production is the App Store/update identity; `parallel` is QA only.
+  are substituted by `make`. Production is the direct-download/release update identity;
+  `parallel` is QA only, and App Store submission remains gated by the sandbox pass above.
 - `.github/workflows/ci.yml` is the canonical CI check list.
 - `.github/workflows/release.yml` builds the universal DMG from a `v*` tag and publishes the
   DMG plus checksum.

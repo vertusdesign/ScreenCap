@@ -409,14 +409,15 @@ enum PlayerEngineError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noMedia: return "No video is loaded."
-        case .destinationUnavailable: return "The export destination is not available."
-        case .sameAsSource: return "Choose a new file name; replacing the original uses the Replace Original action."
-        case .emptyTimeRange: return "The selected trim range is empty."
-        case .exportUnavailable: return "This video cannot be exported on this Mac."
-        case .exportCancelled: return "Export was cancelled."
-        case .exportFailed: return "The edited video could not be exported."
-        case .exportCommitFailed(let message): return "The export finished, but the destination could not be updated: \(message)"
+        case .noMedia: return L10n.t("player.error.noMedia")
+        case .destinationUnavailable: return L10n.t("player.error.destinationUnavailable")
+        case .sameAsSource: return L10n.t("player.error.sameAsSource")
+        case .emptyTimeRange: return L10n.t("player.error.emptyTimeRange")
+        case .exportUnavailable: return L10n.t("player.error.exportUnavailable")
+        case .exportCancelled: return L10n.t("player.error.exportCancelled")
+        case .exportFailed: return L10n.t("player.error.exportFailed")
+        case .exportCommitFailed(let message):
+            return L10n.t("player.error.exportCommitFailed", message)
         }
     }
 }

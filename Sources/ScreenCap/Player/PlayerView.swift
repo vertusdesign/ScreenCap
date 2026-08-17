@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct PlayerView: View {
     @ObservedObject var viewModel: PlayerViewModel
     @State private var pendingRecording: PlayerRecording?
+    @State private var isSavingDraft = false
     @State private var showTranscript = false
     @State private var showReplaceConfirmation = false
 
@@ -36,10 +37,17 @@ struct PlayerView: View {
         .alert(
             L10n.t("player.unsaved.title"),
             isPresented: Binding(
-                get: { pendingRecording != nil || viewModel.pendingPlaylistRemoval != nil },
+                get: {
+                    !isSavingDraft && (
+                        pendingRecording != nil
+                            || viewModel.pendingSelection != nil
+                            || viewModel.pendingPlaylistRemoval != nil
+                    )
+                },
                 set: {
-                    if !$0 {
+                    if !$0 && !isSavingDraft {
                         pendingRecording = nil
+                        viewModel.cancelPendingSelection()
                         viewModel.cancelPlaylistRemoval()
                     }
                 }
@@ -48,7 +56,9 @@ struct PlayerView: View {
             if pendingRecording != nil {
                 Button(L10n.t("player.unsaved.saveCopy")) {
                     let next = pendingRecording
+                    isSavingDraft = true
                     viewModel.exportEditedCopy { success in
+                        isSavingDraft = false
                         guard success, let next else { return }
                         viewModel.select(next)
                         pendingRecording = nil
@@ -59,6 +69,19 @@ struct PlayerView: View {
                     pendingRecording = nil
                 }
             }
+            if viewModel.pendingSelection != nil {
+                Button(L10n.t("player.unsaved.saveCopy")) {
+                    isSavingDraft = true
+                    viewModel.exportEditedCopy { success in
+                        isSavingDraft = false
+                        guard success else { return }
+                        viewModel.confirmPendingSelectionAfterSave()
+                    }
+                }
+                Button(L10n.t("player.unsaved.discard"), role: .destructive) {
+                    viewModel.discardEditsAndSelectPending()
+                }
+            }
             if viewModel.pendingPlaylistRemoval != nil {
                 Button(L10n.t("player.remove.video"), role: .destructive) {
                     viewModel.confirmPlaylistRemoval()
@@ -66,6 +89,7 @@ struct PlayerView: View {
             }
             Button(L10n.t("action.cancel"), role: .cancel) {
                 pendingRecording = nil
+                viewModel.cancelPendingSelection()
                 viewModel.cancelPlaylistRemoval()
             }
         } message: {
@@ -188,7 +212,7 @@ struct PlayerView: View {
                 }
                 .labelsHidden()
                 .frame(width: 120)
-                .help(L10n.t("player.transcription.mode.help"))
+                .help(L10n.t("player.transcript.mode.help"))
                 Button {
                     showTranscript.toggle()
                 } label: {
@@ -281,7 +305,9 @@ struct PlayerView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         if panel.runModal() == .OK {
-            panel.urls.compactMap { viewModel.library.addVideo(url: $0) }.last.map(viewModel.select)
+            panel.urls.compactMap { viewModel.library.addVideo(url: $0) }
+                .last
+                .map { viewModel.select(url: $0.url) }
         }
     }
 

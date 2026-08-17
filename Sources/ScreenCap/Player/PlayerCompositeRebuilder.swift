@@ -270,9 +270,12 @@ enum PlayerCompositeRebuilderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noVideo: return "The recording has no video track."
-        case .noRawTracks: return "There are no independent audio tracks to mix."
-        case .readerFailed(let message), .writerFailed(let message): return message
+        case .noVideo: return L10n.t("player.composite.error.noVideo")
+        case .noRawTracks: return L10n.t("player.composite.error.noRawTracks")
+        case .readerFailed(let message):
+            return L10n.t("player.composite.error.readerFailed", message)
+        case .writerFailed(let message):
+            return L10n.t("player.composite.error.writerFailed", message)
         }
     }
 }

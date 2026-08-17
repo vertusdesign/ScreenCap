@@ -40,11 +40,13 @@ look like a new app and legitimately require approval again.
 
 ### Production update versus parallel QA
 
-ScreenCap 3.0.0 production builds intentionally keep the v2 identity
+ScreenCap 3.0.0 release builds intentionally keep the v2 identity
 `com.vertusdesign.ScreenCap`, the `ScreenCap.app` bundle name and the `screencap://` URL scheme.
-That is required for an App Store update to remain the same product and lets macOS reuse the
-existing Screen Recording decision when the signing identity is unchanged. Do not ship a
-different production bundle ID merely to obtain a second permission row.
+That keeps direct-download updates and any future App Store submission on the same product
+identity, and lets macOS reuse the existing Screen Recording decision when the signing identity
+is unchanged. Do not ship a different production bundle ID merely to obtain a second permission
+row. The current release target is not App Sandbox-enabled; App Store submission additionally
+requires the sandbox/capability work described in the architecture and security documents.
 
 For local side-by-side QA, `make app BUILD_FLAVOR=parallel` substitutes
 `com.vertusdesign.ScreenCap.Pro3QA`, `ScreenCap-Pro3-QA.app` and `screencap-pro3://`. This
