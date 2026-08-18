@@ -328,14 +328,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             viewMenu.addItem(.separator())
             let zoomMenu = NSMenu(title: L10n.t("menu.player.zoom"))
             let zoomItem = NSMenuItem(title: L10n.t("menu.player.zoom"), action: nil, keyEquivalent: "")
-            let zoomValues: [(String, Double)] = [
-                (L10n.t("player.zoom.fit"), 0), ("50%", 0.5), ("100%", 1),
-                ("150%", 1.5), ("200%", 2), ("300%", 3), ("400%", 4)
-            ]
-            for (title, value) in zoomValues {
-                let item = zoomMenu.addItem(withTitle: title, action: #selector(PlayerWindowController.setZoomFromMenu(_:)), keyEquivalent: "")
+            for preset in PlayerZoomPreset.allCases {
+                let item = zoomMenu.addItem(withTitle: preset.title, action: #selector(PlayerWindowController.setZoomFromMenu(_:)), keyEquivalent: "")
                 item.target = PlayerWindowController.shared
-                item.representedObject = NSNumber(value: value)
+                item.representedObject = NSNumber(value: preset.rawValue)
             }
             zoomItem.submenu = zoomMenu
             viewMenu.addItem(zoomItem)
