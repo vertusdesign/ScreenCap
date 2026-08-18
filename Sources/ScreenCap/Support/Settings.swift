@@ -51,6 +51,10 @@ final class Settings: ObservableObject, @unchecked Sendable {
 
     private enum Key {
         static let hotkeys = "hotkeys"
+        /// Actions explicitly cleared by the user. A missing key in the
+        /// bindings dictionary is otherwise indistinguishable from an old
+        /// installation that predates a newly added default shortcut.
+        static let disabledHotkeys = "disabledHotkeys"
         static let hotkeyDefaultsVersion = "hotkeyDefaultsVersion"
         static let language = "language"
         static let saveDirectory = "saveDirectory"
@@ -190,21 +194,29 @@ final class Settings: ObservableObject, @unchecked Sendable {
 
     var hotkeys: [HotkeyAction: Hotkey] {
         get {
-            guard let data = defaults.data(forKey: Key.hotkeys),
-                  let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data)
-            else { return Self.defaultHotkeys }
-
             // Merge defaults so an existing installation receives new additive
             // actions (such as recording) without losing any saved shortcuts.
             var result = Self.defaultHotkeys
-            for (rawAction, hotkey) in stored {
-                if let action = HotkeyAction(rawValue: rawAction) { result[action] = hotkey }
+            if let data = defaults.data(forKey: Key.hotkeys),
+               let stored = try? JSONDecoder().decode([String: Hotkey].self, from: data) {
+                for (rawAction, hotkey) in stored {
+                    if let action = HotkeyAction(rawValue: rawAction) { result[action] = hotkey }
+                }
+            }
+            let disabled = (defaults.array(forKey: Key.disabledHotkeys) as? [String] ?? [])
+                .compactMap(HotkeyAction.init(rawValue:))
+            for action in disabled {
+                result.removeValue(forKey: action)
             }
             return result
         }
         set {
             let stored = Dictionary(uniqueKeysWithValues: newValue.map { ($0.key.rawValue, $0.value) })
             defaults.set(try? JSONEncoder().encode(stored), forKey: Key.hotkeys)
+            let disabled = HotkeyAction.allCases
+                .filter { $0.defaultHotkey != nil && newValue[$0] == nil }
+                .map(\.rawValue)
+            defaults.set(disabled, forKey: Key.disabledHotkeys)
             objectWillChange.send()
             HotkeyManager.shared.apply(newValue)
         }

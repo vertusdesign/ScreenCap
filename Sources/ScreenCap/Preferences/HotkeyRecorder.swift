@@ -48,7 +48,9 @@ final class HotkeyRecorderView: NSView {
                 isRecording = false
                 return nil
             }
-            if event.keyCode == UInt16(kVK_Delete) {
+            if event.keyCode == UInt16(kVK_Delete)
+                || event.keyCode == UInt16(kVK_ForwardDelete)
+            {
                 hotkey = nil
                 onChange?(nil)
                 isRecording = false
