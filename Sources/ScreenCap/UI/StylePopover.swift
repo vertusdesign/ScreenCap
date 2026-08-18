@@ -833,7 +833,9 @@ final class StylePopover: OverlayPanel {
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            self?.colorPanelDidClose()
+            Task { @MainActor [weak self] in
+                self?.colorPanelDidClose()
+            }
         }
     }
 

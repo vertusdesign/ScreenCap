@@ -66,10 +66,11 @@ make debug BUILD_FLAVOR=base 2>&1 | tee /tmp/screencap-build.log
 .build/base/debug/ScreenCap --selftest /tmp/screencap-check
 ```
 
-The Swift 6 SDK can emit deprecation and legacy AVFoundation callback sendability warnings;
-the build must complete successfully, while new warnings should still be reviewed and either
-fixed or documented. Translation CI treats English as the source catalog and allows a locale
-to omit a key temporarily because runtime lookup falls back to English.
+Swift 6 concurrency diagnostics and deprecated AVFoundation APIs are treated as defects in
+application code: review and fix them before merging. Vendored RNNoise is allowed to contain
+upstream performance advisories, but those must be documented and must not hide correctness
+warnings. Translation CI treats English as the source catalog and allows a locale to omit a
+key temporarily because runtime lookup falls back to English.
 
 For a release-shaped local check, also run `make dmg BUILD_FLAVOR=base VERSION=3.0.0 CHANNEL=` and
 verify the result with `lipo -archs "dist/ScreenCap 3.app/Contents/MacOS/ScreenCap"`, the version
@@ -141,7 +142,7 @@ by one for every language.
 1. Update the version/date in `CHANGELOG.md`, user-facing documentation and legal documents
    when their stated version or update date changes.
 2. Run the debug build, self-test and translation catalog check from `.github/workflows/ci.yml`;
-   review any Swift 6 SDK warnings in the build log.
+   fail the review for any new Swift 6 concurrency or AVFoundation deprecation warning.
 3. If the change touches Pro, commit and sync `ScreenCap-Pro-Private` separately, then run
    `make private-sync-check PRIVATE_DIR=../ScreenCap-Pro-Private`. Never add Pro files to the
    public repository or use a public remote for the private checkout.

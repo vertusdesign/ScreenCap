@@ -160,7 +160,8 @@ void compute_conv2d_c(const Conv2dLayer *conv, float *out, float *mem, const flo
 #if defined(_MSC_VER)
 #pragma message ("Only SSE and SSE2 are available. On newer machines, enable SSSE3/AVX/AVX2 to get better performance")
 #else
-#warning "Only SSE and SSE2 are available. On newer machines, enable SSSE3/AVX/AVX2 using -march= to get better performance"
+/* ScreenCap intentionally keeps the portable x86 path; SIMD dispatch is a
+ * performance opportunity and not a correctness requirement. */
 #endif
 #endif
 

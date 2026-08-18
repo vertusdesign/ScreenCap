@@ -17,6 +17,37 @@ enum RecorderPostProcessor {
         }
     }
 
+    /// State shared by AVFoundation's sendable media-data callback and the
+    /// async continuation. The callback normally runs on one owned serial
+    /// queue, but AVFoundation may invoke it again while a completion path is
+    /// being unwound. Locking makes the exactly-once completion guarantee
+    /// explicit instead of relying on an undocumented callback detail.
+    private final class AppendState: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+        private var didFinish = false
+
+        func increment() {
+            lock.lock()
+            count += 1
+            lock.unlock()
+        }
+
+        func finishCount() -> Int? {
+            lock.lock()
+            defer { lock.unlock() }
+            guard !didFinish else { return nil }
+            didFinish = true
+            return count
+        }
+
+        var isFinished: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return didFinish
+        }
+    }
+
     struct ValidationResult: Sendable {
         let isValid: Bool
         let summary: String
@@ -298,36 +329,47 @@ enum RecorderPostProcessor {
         // Feed every track concurrently. AVAssetWriter can apply backpressure
         // to one input while it is waiting for another input, so sequentially
         // draining the inputs can deadlock on longer recordings.
+        let writerBox = QueueConfined(writer)
+        let videoOutputBox = QueueConfined<AVAssetReaderOutput>(videoOutput)
+        let videoInputBox = QueueConfined(videoInput)
+        let videoSampleBox = QueueConfined<CMSampleBuffer?>(firstVideoSample)
+        let mixedOutputBox = QueueConfined<AVAssetReaderOutput>(mixedOutput)
+        let compositeInputBox = QueueConfined(compositeInput)
+        let mixedSampleBox = QueueConfined<CMSampleBuffer?>(firstMixedSample)
+        let originalOutputBoxes = originalAudioSources.map {
+            QueueConfined<AVAssetReaderOutput>($0.output)
+        }
+        let originalInputBoxes = originalAudioInputs.map { QueueConfined($0) }
+        let originalSampleBoxes = originalAudioSources.map {
+            QueueConfined<CMSampleBuffer?>($0.firstSample)
+        }
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 _ = try await appendAll(
                     label: "video",
-                    from: videoOutput,
-                    to: videoInput,
-                    writer: writer,
-                    initialSample: firstVideoSample
+                    from: videoOutputBox,
+                    to: videoInputBox,
+                    writer: writerBox,
+                    initialSample: videoSampleBox
                 )
             }
             group.addTask {
                 _ = try await appendAll(
                     label: "composite",
-                    from: mixedOutput,
-                    to: compositeInput,
-                    writer: writer,
-                    initialSample: firstMixedSample
+                    from: mixedOutputBox,
+                    to: compositeInputBox,
+                    writer: writerBox,
+                    initialSample: mixedSampleBox
                 )
             }
-            for (index, pair) in zip(originalAudioSources, originalAudioInputs)
-                .enumerated()
-            {
-                let (source, input) = pair
+            for index in originalAudioSources.indices {
                 group.addTask {
                     let count = try await appendAll(
                         label: "original-" + String(index),
-                        from: source.output,
-                        to: input,
-                        writer: writer,
-                        initialSample: source.firstSample
+                        from: originalOutputBoxes[index],
+                        to: originalInputBoxes[index],
+                        writer: writerBox,
+                        initialSample: originalSampleBoxes[index]
                     )
                     Log.debug(
                         "composite source audio[" + String(index) + "] samples="
@@ -345,40 +387,37 @@ enum RecorderPostProcessor {
 
     private static func appendAll(
         label: String,
-        from output: AVAssetReaderOutput,
-        to input: AVAssetWriterInput,
-        writer: AVAssetWriter,
-        initialSample: CMSampleBuffer? = nil
+        from outputBox: QueueConfined<AVAssetReaderOutput>,
+        to inputBox: QueueConfined<AVAssetWriterInput>,
+        writer writerBox: QueueConfined<AVAssetWriter>,
+        initialSample pendingInitialSampleBox: QueueConfined<CMSampleBuffer?>
     ) async throws -> Int {
-        let outputBox = QueueConfined(output)
-        let inputBox = QueueConfined(input)
-        let writerBox = QueueConfined(writer)
-        let pendingInitialSampleBox = QueueConfined(initialSample)
         return try await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<Int, Error>) in
             let queue = DispatchQueue(
                 label: "com.vertusdesign.ScreenCap.recorder.postprocess",
                 qos: .userInitiated
             )
-            var count = 0
-            var didFinish = false
-
-            func finish(_ result: Result<Int, Error>) {
-                guard !didFinish else { return }
-                didFinish = true
+            let state = AppendState()
+            let finish: @Sendable (Error?) -> Void = { error in
+                guard let count = state.finishCount() else { return }
                 Log.debug("append " + label + " finished count=" + String(count))
-                continuation.resume(with: result)
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: count)
+                }
             }
 
             inputBox.value.requestMediaDataWhenReady(on: queue) {
-                guard !didFinish else { return }
+                guard !state.isFinished else { return }
 
                 while inputBox.value.isReadyForMoreMediaData {
                     if writerBox.value.status == .failed || writerBox.value.status == .cancelled {
-                        finish(.failure(RecorderPostProcessorError.writerFailed(
+                        finish(RecorderPostProcessorError.writerFailed(
                             writerBox.value.error?.localizedDescription
                                 ?? "writer stopped during post-processing"
-                        )))
+                        ))
                         return
                     }
 
@@ -392,18 +431,18 @@ enum RecorderPostProcessor {
 
                     guard let sampleBuffer else {
                         inputBox.value.markAsFinished()
-                        finish(.success(count))
+                        finish(nil)
                         return
                     }
 
                     guard inputBox.value.append(sampleBuffer) else {
-                        finish(.failure(RecorderPostProcessorError.writerFailed(
+                        finish(RecorderPostProcessorError.writerFailed(
                             writerBox.value.error?.localizedDescription
                                 ?? "could not append media sample"
-                        )))
+                        ))
                         return
                     }
-                    count += 1
+                    state.increment()
                 }
             }
         }

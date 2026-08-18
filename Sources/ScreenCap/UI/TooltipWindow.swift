@@ -8,6 +8,7 @@ import AppKit
 /// it is just never visible — it is permanently hidden behind the capture
 /// surface. This reimplements the same idea as a tiny borderless window one
 /// level above the overlay, driven manually from hover events.
+@MainActor
 final class TooltipWindow: NSWindow {
     static let shared = TooltipWindow()
 
@@ -85,10 +86,11 @@ final class TooltipWindow: NSWindow {
 /// Schedules and cancels a `TooltipWindow` presentation for one hover-tracked
 /// view, so `OverlayButton`/`ColorSwatchButton` don't each reimplement the
 /// same delay-then-show/hide bookkeeping.
+@MainActor
 final class HoverTooltip {
     private weak var view: NSView?
     private var text: String?
-    private var workItem: DispatchWorkItem?
+    private var pendingShow: Task<Void, Never>?
 
     init(for view: NSView) { self.view = view }
 
@@ -97,9 +99,11 @@ final class HoverTooltip {
     func scheduleShow() {
         cancelPending()
         guard let text, !text.isEmpty else { return }
-        let item = DispatchWorkItem { [weak self] in self?.present() }
-        workItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: item)
+        pendingShow = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            self?.present()
+        }
     }
 
     func hide() {
@@ -108,8 +112,8 @@ final class HoverTooltip {
     }
 
     private func cancelPending() {
-        workItem?.cancel()
-        workItem = nil
+        pendingShow?.cancel()
+        pendingShow = nil
     }
 
     private func present() {

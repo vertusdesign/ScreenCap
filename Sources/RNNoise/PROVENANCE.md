@@ -8,3 +8,8 @@
 
 The model is compiled into the application. The recorder does not download a
 model or contact the network at runtime.
+
+The universal macOS build intentionally uses RNNoise's portable x86 path. The
+upstream source emits a compile-time warning when SSSE3/AVX dispatch is not
+enabled; this is a performance advisory only, so the warning directive is
+replaced by a source comment without changing the generated processing path.

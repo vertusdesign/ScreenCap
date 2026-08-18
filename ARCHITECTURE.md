@@ -153,11 +153,12 @@ clipboard, dialogs, printing and packaging.
 ## Swift 6 build contract
 
 The package uses Swift 6 tools and `.swiftLanguageMode(.v6)`. AppKit-facing controllers and
-the recorder view models are `@MainActor`; media work is staged through async
-AVFoundation operations and explicit task boundaries. The current SDK still emits deprecation
-and legacy AVFoundation callback sendability warnings on some Xcode versions. They are tracked
-technical debt, not a reason to claim Swift 5 compatibility; CI requires a successful build
-and the release checklist records the active toolchain.
+the recorder view models are `@MainActor`; media work is staged through async AVFoundation
+operations and explicit task boundaries. Application-level concurrency and AVFoundation
+deprecation diagnostics are fixed before a build is accepted. The upstream RNNoise SIMD
+advisory is documented in its provenance file and does not change recording correctness;
+the ScreenCap build itself remains warning-clean. CI requires a successful build and the
+release checklist records the active toolchain.
 
 The macOS 14 screenshot and macOS 15 recorder requirements are unchanged.
 
@@ -335,8 +336,8 @@ Windows registry, macOS defaults, or a Linux desktop's configuration service.
 
 The minimum automated checks for every platform implementation are:
 
-- build the debug target successfully (SDK deprecation/sendability warnings are tracked in the
-  current Swift 6 toolchain and are not treated as product failures);
+- build the debug target successfully with no new Swift concurrency or AVFoundation deprecation
+  warnings (vendored RNNoise performance advisories are documented in `Sources/RNNoise/PROVENANCE.md`);
 - render every annotation type;
 - verify obfuscation preserves annotations beneath it;
 - verify brush, rectangular and elliptical highlighter annotations render and retain

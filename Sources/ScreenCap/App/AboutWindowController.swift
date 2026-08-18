@@ -17,7 +17,9 @@ final class AboutWindowController: NSWindowController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.rebuild()
+            Task { @MainActor [weak self] in
+                self?.rebuild()
+            }
         }
     }
 
