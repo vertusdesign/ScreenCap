@@ -103,6 +103,17 @@
 "menu.zoom" = "Zoom";
 "menu.bringAllToFront" = "Bring All to Front";
 "menu.support" = "ScreenCap Support";
+"menu.player.export" = "Export…";
+"menu.player.resetEdits" = "Reset Edits";
+"menu.player.playlist" = "Show/Hide Recording Library";
+"menu.player.trackEditor" = "Show/Hide Track Editor";
+"menu.player.transcript" = "Show/Hide Transcript";
+"menu.player.zoom" = "Video Zoom";
+"menu.player.fullscreen" = "Enter Full Screen";
+"menu.player.playback" = "Playback";
+"menu.player.playPause" = "Play/Pause";
+"menu.player.speed" = "Playback Speed";
+"menu.player.autoplay" = "Automatically Play Next Video";
 
 "prefs.title" = "%@ Settings";
 "prefs.tab.shortcuts" = "Shortcuts";

@@ -100,7 +100,10 @@ final class HoverTooltip {
         cancelPending()
         guard let text, !text.isEmpty else { return }
         pendingShow = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(450))
+            // Keep the custom overlay tooltip responsive while retaining a
+            // short debounce so moving across adjacent controls does not
+            // flash a tooltip for every pixel.
+            try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.present()
         }

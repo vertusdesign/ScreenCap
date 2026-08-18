@@ -250,6 +250,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             openFolder.target = PlayerWindowController.shared
             fileMenu.addItem(.separator())
+            let exportItem = NSMenuItem(title: L10n.t("menu.player.export"), action: nil, keyEquivalent: "e")
+            let exportMenu = NSMenu(title: L10n.t("menu.player.export"))
+            let videoPresets: [(PlayerExportPreset, String)] = [
+                (.source, L10n.t("player.export.preset.source")),
+                (.fourK, L10n.t("player.export.preset.fourK")),
+                (.fullHD, L10n.t("player.export.preset.fullHD")),
+                (.hd, L10n.t("player.export.preset.hd")),
+                (.sd, L10n.t("player.export.preset.sd"))
+            ]
+            for (preset, title) in videoPresets {
+                let presetItem = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                let presetMenu = NSMenu(title: title)
+                for format in PlayerExportFormat.allCases {
+                    let item = presetMenu.addItem(withTitle: format.title, action: #selector(PlayerWindowController.exportPresetFromMenu(_:)), keyEquivalent: "")
+                    item.target = PlayerWindowController.shared
+                    item.representedObject = "\(preset.rawValue)|\(format.rawValue)"
+                }
+                presetItem.submenu = presetMenu
+                exportMenu.addItem(presetItem)
+            }
+            exportMenu.addItem(.separator())
+            let audio = exportMenu.addItem(withTitle: L10n.t("player.export.preset.audioOnly"), action: #selector(PlayerWindowController.exportPresetFromMenu(_:)), keyEquivalent: "")
+            audio.target = PlayerWindowController.shared
+            audio.representedObject = "\(PlayerExportPreset.audioOnly.rawValue)|\(PlayerExportFormat.mov.rawValue)"
+            exportItem.submenu = exportMenu
+            fileMenu.addItem(exportItem)
+            let replace = fileMenu.addItem(
+                withTitle: L10n.t("player.export.replace"),
+                action: #selector(PlayerWindowController.requestReplaceFromMenu(_:)),
+                keyEquivalent: ""
+            )
+            replace.target = PlayerWindowController.shared
+            fileMenu.addItem(.separator())
             fileMenu.addItem(
                 withTitle: L10n.t("menu.closeWindow"),
                 action: #selector(NSWindow.performClose(_:)),
@@ -261,8 +294,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let editMenuItem = NSMenuItem()
         let editMenu = NSMenu(title: L10n.t("menu.edit"))
-        editMenu.addItem(withTitle: L10n.t("action.undo"), action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: L10n.t("action.redo"), action: Selector(("redo:")), keyEquivalent: "Z")
+        let undo = editMenu.addItem(withTitle: L10n.t("action.undo"), action: #selector(PlayerWindowController.undoFromMenu(_:)), keyEquivalent: "z")
+        let redo = editMenu.addItem(withTitle: L10n.t("action.redo"), action: #selector(PlayerWindowController.redoFromMenu(_:)), keyEquivalent: "Z")
+        if playerVisible {
+            undo.target = PlayerWindowController.shared
+            redo.target = PlayerWindowController.shared
+            undo.isEnabled = PlayerWindowController.shared.canUndo
+            redo.isEnabled = PlayerWindowController.shared.canRedo
+            let reset = editMenu.addItem(withTitle: L10n.t("menu.player.resetEdits"), action: #selector(PlayerWindowController.resetEditsFromMenu(_:)), keyEquivalent: "")
+            reset.target = PlayerWindowController.shared
+            reset.isEnabled = PlayerWindowController.shared.canUndo || PlayerWindowController.shared.canRedo
+        } else {
+            undo.action = Selector(("undo:"))
+            redo.action = Selector(("redo:"))
+        }
         editMenu.addItem(.separator())
         editMenu.addItem(withTitle: L10n.t("action.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         editMenu.addItem(withTitle: L10n.t("action.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
@@ -274,14 +319,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if playerVisible {
             let viewMenuItem = NSMenuItem(title: L10n.t("menu.view"), action: nil, keyEquivalent: "")
             let viewMenu = NSMenu(title: L10n.t("menu.view"))
-            let showPlayer = viewMenu.addItem(
-                withTitle: L10n.t("menu.player"),
-                action: #selector(openPlayerFromMainMenu),
-                keyEquivalent: ""
-            )
-            showPlayer.target = self
+            let togglePlaylist = viewMenu.addItem(withTitle: L10n.t("menu.player.playlist"), action: #selector(PlayerWindowController.togglePlaylistFromMenu(_:)), keyEquivalent: "")
+            togglePlaylist.target = PlayerWindowController.shared
+            let toggleTrackEditor = viewMenu.addItem(withTitle: L10n.t("menu.player.trackEditor"), action: #selector(PlayerWindowController.toggleTrackEditorFromMenu(_:)), keyEquivalent: "")
+            toggleTrackEditor.target = PlayerWindowController.shared
+            let toggleTranscript = viewMenu.addItem(withTitle: L10n.t("menu.player.transcript"), action: #selector(PlayerWindowController.toggleTranscriptFromMenu(_:)), keyEquivalent: "")
+            toggleTranscript.target = PlayerWindowController.shared
+            viewMenu.addItem(.separator())
+            let zoomMenu = NSMenu(title: L10n.t("menu.player.zoom"))
+            let zoomItem = NSMenuItem(title: L10n.t("menu.player.zoom"), action: nil, keyEquivalent: "")
+            let zoomValues: [(String, Double)] = [
+                (L10n.t("player.zoom.fit"), 0), ("50%", 0.5), ("100%", 1),
+                ("150%", 1.5), ("200%", 2), ("300%", 3), ("400%", 4)
+            ]
+            for (title, value) in zoomValues {
+                let item = zoomMenu.addItem(withTitle: title, action: #selector(PlayerWindowController.setZoomFromMenu(_:)), keyEquivalent: "")
+                item.target = PlayerWindowController.shared
+                item.representedObject = NSNumber(value: value)
+            }
+            zoomItem.submenu = zoomMenu
+            viewMenu.addItem(zoomItem)
+            viewMenu.addItem(withTitle: L10n.t("menu.player.fullscreen"), action: #selector(PlayerWindowController.toggleFullscreenFromMenu(_:)), keyEquivalent: "f").target = PlayerWindowController.shared
             viewMenuItem.submenu = viewMenu
             mainMenu.addItem(viewMenuItem)
+
+            let playbackItem = NSMenuItem(title: L10n.t("menu.player.playback"), action: nil, keyEquivalent: "")
+            let playbackMenu = NSMenu(title: L10n.t("menu.player.playback"))
+            let play = playbackMenu.addItem(withTitle: L10n.t("menu.player.playPause"), action: #selector(PlayerWindowController.togglePlaybackFromMenu(_:)), keyEquivalent: " ")
+            play.target = PlayerWindowController.shared
+            let previous = playbackMenu.addItem(withTitle: L10n.t("player.navigation.previous"), action: #selector(PlayerWindowController.previousFromMenu(_:)), keyEquivalent: "")
+            previous.target = PlayerWindowController.shared
+            let next = playbackMenu.addItem(withTitle: L10n.t("player.navigation.next"), action: #selector(PlayerWindowController.nextFromMenu(_:)), keyEquivalent: "")
+            next.target = PlayerWindowController.shared
+            playbackMenu.addItem(.separator())
+            let speedItem = NSMenuItem(title: L10n.t("menu.player.speed"), action: nil, keyEquivalent: "")
+            let speedMenu = NSMenu(title: L10n.t("menu.player.speed"))
+            for rate in [Float(0.5), 0.75, 1, 1.25, 1.5, 2] {
+                let item = speedMenu.addItem(withTitle: String(format: "%.2gx", rate), action: #selector(PlayerWindowController.setPlaybackRateFromMenu(_:)), keyEquivalent: "")
+                item.target = PlayerWindowController.shared
+                item.representedObject = NSNumber(value: rate)
+            }
+            speedItem.submenu = speedMenu
+            playbackMenu.addItem(speedItem)
+            let autoplay = playbackMenu.addItem(withTitle: L10n.t("menu.player.autoplay"), action: #selector(PlayerWindowController.toggleAutoplayFromMenu(_:)), keyEquivalent: "")
+            autoplay.target = PlayerWindowController.shared
+            autoplay.state = PlayerWindowController.shared.isAutoplayNext ? .on : .off
+            playbackItem.submenu = playbackMenu
+            mainMenu.addItem(playbackItem)
 
             let windowMenuItem = NSMenuItem(title: L10n.t("menu.window"), action: nil, keyEquivalent: "")
             let windowMenu = NSMenu(title: L10n.t("menu.window"))

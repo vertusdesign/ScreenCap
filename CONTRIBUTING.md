@@ -18,6 +18,9 @@ was on. Mention both.
 
 If a shortcut does nothing, check Settings first: a shortcut already owned by another app is
 marked with a warning triangle, because macOS gives it to whoever registered first.
+When ScreenCap owns a menu, popover or context-menu tracking loop, a local fallback monitor keeps
+the registered screenshot/recording shortcuts available there as well; Carbon remains the global
+registration path when another app is focused.
 
 ## Proposing a change
 

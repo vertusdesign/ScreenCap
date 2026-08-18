@@ -73,6 +73,7 @@ final class HotkeyManager: @unchecked Sendable {
 
     private var registrations: [UInt32: Registration] = [:]
     private var eventHandler: EventHandlerRef?
+    private var localMonitor: Any?
     private var nextID: UInt32 = 1
     private let signature: OSType = 0x534C_5348 // 'SLSH'
 
@@ -81,6 +82,8 @@ final class HotkeyManager: @unchecked Sendable {
     /// Shortcuts the system refused, almost always because another app owns them.
     /// Surfaced in Preferences so a silently dead hotkey is never a mystery.
     private(set) var failedActions: Set<HotkeyAction> = []
+    private var localBindings: [HotkeyAction: Hotkey] = [:]
+    private var lastTriggered: (HotkeyAction, TimeInterval)?
 
     private init() {}
 
@@ -91,8 +94,11 @@ final class HotkeyManager: @unchecked Sendable {
         installEventHandlerIfNeeded()
         unregisterAll()
         failedActions.removeAll()
+        localBindings.removeAll()
         for (action, hotkey) in bindings where action.isAvailable && hotkey.isValid {
-            register(hotkey, for: action)
+            if register(hotkey, for: action) {
+                localBindings[action] = hotkey
+            }
         }
         NotificationCenter.default.post(name: .hotkeyRegistrationChanged, object: nil)
     }
@@ -102,6 +108,7 @@ final class HotkeyManager: @unchecked Sendable {
             UnregisterEventHotKey(registration.ref)
         }
         registrations.removeAll()
+        localBindings.removeAll()
     }
 
     private var isSuspended = false
@@ -125,7 +132,8 @@ final class HotkeyManager: @unchecked Sendable {
         apply(Settings.shared.hotkeys)
     }
 
-    private func register(_ hotkey: Hotkey, for action: HotkeyAction) {
+    @discardableResult
+    private func register(_ hotkey: Hotkey, for action: HotkeyAction) -> Bool {
         let id = nextID
         nextID += 1
 
@@ -143,14 +151,16 @@ final class HotkeyManager: @unchecked Sendable {
         guard status == noErr, let ref else {
             failedActions.insert(action)
             NSLog("ScreenCap: could not register \(hotkey.displayString) (status \(status)) — most likely taken by another app")
-            return
+            return false
         }
         registrations[id] = Registration(ref: ref, action: action)
+        return true
     }
 
     // MARK: - Event handling
 
     private func installEventHandlerIfNeeded() {
+        installLocalFallbackIfNeeded()
         guard eventHandler == nil else { return }
 
         var eventType = EventTypeSpec(
@@ -173,6 +183,38 @@ final class HotkeyManager: @unchecked Sendable {
         )
     }
 
+    /// AppKit menu tracking can run a nested event loop in which a Carbon hot
+    /// key notification is delayed until the menu closes. A local monitor is a
+    /// narrow fallback for shortcuts while this app owns the focused menu or
+    /// popover. Carbon remains the source for global/background shortcuts.
+    private func installLocalFallbackIfNeeded() {
+        guard localMonitor == nil else { return }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, !self.isSuspended,
+                  let action = self.localAction(for: event) else { return event }
+            self.dispatch(action)
+            return nil
+        }
+    }
+
+    private func localAction(for event: NSEvent) -> HotkeyAction? {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        return localBindings.first(where: { action, hotkey in
+            action.isAvailable && hotkey.keyCode == event.keyCode && hotkey.cocoaModifiers == flags
+        })?.key
+    }
+
+    private func dispatch(_ action: HotkeyAction) {
+        let now = ProcessInfo.processInfo.systemUptime
+        if let lastTriggered,
+           lastTriggered.0 == action,
+           now - lastTriggered.1 < 0.20 {
+            return
+        }
+        lastTriggered = (action, now)
+        DispatchQueue.main.async { [weak self] in self?.handler?(action) }
+    }
+
     private func handle(_ event: EventRef) -> OSStatus {
         var hotKeyID = EventHotKeyID()
         let status = GetEventParameter(
@@ -190,9 +232,7 @@ final class HotkeyManager: @unchecked Sendable {
         else { return OSStatus(eventNotHandledErr) }
 
         let action = registration.action
-        DispatchQueue.main.async { [weak self] in
-            self?.handler?(action)
-        }
+        dispatch(action)
         return noErr
     }
 }

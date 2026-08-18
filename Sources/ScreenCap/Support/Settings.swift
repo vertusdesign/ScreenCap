@@ -103,6 +103,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let playerMediumSeek = "playerMediumSeek"
         static let playerLargeSeek = "playerLargeSeek"
         static let playerAutoplayNext = "playerAutoplayNext"
+        static let playerSidebarWidth = "playerSidebarWidth"
 #endif
     }
 
@@ -162,6 +163,9 @@ final class Settings: ObservableObject, @unchecked Sendable {
         defaults[Key.playerMediumSeek] = 30.0
         defaults[Key.playerLargeSeek] = 60.0
         defaults[Key.playerAutoplayNext] = false
+        // Half of the supported maximum keeps the initial library useful
+        // without letting it consume the whole player window.
+        defaults[Key.playerSidebarWidth] = 360.0
 #endif
         return defaults
     }
@@ -501,6 +505,14 @@ final class Settings: ObservableObject, @unchecked Sendable {
     var playerAutoplayNext: Bool {
         get { defaults.bool(forKey: Key.playerAutoplayNext) }
         set { set(newValue, Key.playerAutoplayNext) }
+    }
+
+    /// Width of the Pro Player's Recording Library sidebar. It is deliberately
+    /// persisted independently of the window frame so hiding/showing the
+    /// sidebar never makes it jump back to a proportional HSplitView width.
+    var playerSidebarWidth: Double {
+        get { min(max(defaults.double(forKey: Key.playerSidebarWidth), 245), 720) }
+        set { set(min(max(newValue, 245), 720), Key.playerSidebarWidth) }
     }
 #endif
 
