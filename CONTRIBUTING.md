@@ -98,6 +98,22 @@ copy under `Sources/ScreenCap/Player`; they never delete or commit the sibling. 
 directory or a directory without Git history is a hard Pro-build error, not a fallback to a
 Player-less binary.
 
+### Private Pro source is the only editable source of Player code
+
+`Sources/ScreenCap/Player` is a generated staging directory, not a development checkout. A Pro
+build copies the committed contents of `ScreenCap-Pro-Private/Player` into it; a base build clears
+that staging copy intentionally. Therefore:
+
+- make and review all Pro Player changes in the private worktree;
+- commit the private change before running a Pro build or handing it off;
+- never use the staged copy as the recovery source for an uncommitted change;
+- after a base build, verify the private worktree rather than assuming Player files were lost;
+- keep the public worktree free of Pro source, including generated staging files and artifacts.
+
+If a change appears only under `Sources/ScreenCap/Player`, stop and move it to the private
+worktree before continuing. This invariant prevents a routine public build from removing the only
+copy of Pro work.
+
 Use these checks from the public checkout:
 
 ```bash
