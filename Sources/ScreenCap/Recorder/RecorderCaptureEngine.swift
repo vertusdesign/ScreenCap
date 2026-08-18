@@ -430,33 +430,48 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate, @
     }
 
     private func isLeadingBlankScreenSample(_ sampleBuffer: CMSampleBuffer) -> Bool {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer),
-              CVPixelBufferGetPixelFormatType(imageBuffer)
-                  == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
-              CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0) != nil
-        else {
-            return false
-        }
-
+        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return false }
+        let format = CVPixelBufferGetPixelFormatType(imageBuffer)
         CVPixelBufferLockBaseAddress(imageBuffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(imageBuffer, .readOnly) }
 
-        let width = CVPixelBufferGetWidthOfPlane(imageBuffer, 0)
-        let height = CVPixelBufferGetHeightOfPlane(imageBuffer, 0)
-        let bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0)
-        let baseAddress = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0)!
-            .assumingMemoryBound(to: UInt8.self)
-
-        // Video-range black is Y=16. A small margin tolerates encoder and
-        // color-conversion rounding while still distinguishing a real frame.
-        var maximumLuma = 16
-        for y in stride(from: 0, to: height, by: max(1, height / 24)) {
-            for x in stride(from: 0, to: width, by: max(1, width / 24)) {
-                maximumLuma = max(maximumLuma, Int(baseAddress[y * bytesPerRow + x]))
-                if maximumLuma > 20 { return false }
+        // ScreenCap uses 420v normally and BGRA when the click indicator is
+        // enabled. The old guard only inspected 420v, so click-highlighted
+        // recordings could still encode an all-black initialization frame.
+        if format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+           let base = CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0) {
+            let width = CVPixelBufferGetWidthOfPlane(imageBuffer, 0)
+            let height = CVPixelBufferGetHeightOfPlane(imageBuffer, 0)
+            let bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0)
+            let pixels = base.assumingMemoryBound(to: UInt8.self)
+            // Video-range black is Y=16. A small margin tolerates rounding.
+            for y in stride(from: 0, to: height, by: max(1, height / 24)) {
+                for x in stride(from: 0, to: width, by: max(1, width / 24)) {
+                    if Int(pixels[y * bytesPerRow + x]) > 20 { return false }
+                }
             }
+            return true
         }
-        return true
+
+        if format == kCVPixelFormatType_32BGRA || format == kCVPixelFormatType_32ARGB,
+           let base = CVPixelBufferGetBaseAddress(imageBuffer) {
+            let width = CVPixelBufferGetWidth(imageBuffer)
+            let height = CVPixelBufferGetHeight(imageBuffer)
+            let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
+            let pixels = base.assumingMemoryBound(to: UInt8.self)
+            for y in stride(from: 0, to: height, by: max(1, height / 24)) {
+                for x in stride(from: 0, to: width, by: max(1, width / 24)) {
+                    let offset = y * bytesPerRow + x * 4
+                    let blue = Int(pixels[offset])
+                    let green = Int(pixels[offset + 1])
+                    let red = Int(pixels[offset + 2])
+                    if max(red, max(green, blue)) > 10 { return false }
+                }
+            }
+            return true
+        }
+
+        return false
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {

@@ -324,6 +324,15 @@ source copy, submodule, subtree or private remote URL. The detailed Pro transcri
 contract is maintained privately at `ScreenCap-Pro-Private/docs/transcription-reliability.md`;
 the public tree records only the product boundary and must not become a source of Pro code or
 private implementation details.
+
+The Pro Player is a separate private module. Its playlist is a bookmark-backed folder index:
+file imports resolve to their containing folder, legacy per-file sources migrate on first launch,
+and overlapping sources are de-duplicated by canonical path. Duration and media validation are
+asynchronous and cached, with an explicit scanning state for large folders. Favorites, folder
+disclosure, filter and sort preferences are local-only. File moves/copies use collision-safe
+destinations; Delete moves to the macOS Trash after confirmation. The detailed Player contract,
+including export presets, keyboard navigation and edge-case QA, lives in
+`ScreenCap-Pro-Private/docs/player-playlist-and-export.md`.
 The current direct-download targets do not enable App Sandbox; App Store submission remains a
 separate entitlement and security-scoped-resource work item.
 

@@ -114,8 +114,9 @@ Git synchronization mechanism; do not edit the same private worktree concurrentl
 machines through cloud sync.
 
 Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, while the base product
-uses the stable `com.vertusdesign.ScreenCap` and `screencap://`. `make install BUILD_FLAVOR=pro`
-is refused; launch Pro from `dist` only.
+uses the stable `com.vertusdesign.ScreenCap` and `screencap://`. Both flavors may be installed
+side by side; `make install BUILD_FLAVOR=pro` installs `/Applications/ScreenCap 3 Pro.app` and
+does not remove the base app.
 
 For a build that keeps its Screen Recording grant across rebuilds, sign it with a local
 certificate — `make install` picks one up from your keychain automatically if it is there.

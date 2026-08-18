@@ -2,7 +2,8 @@ APP_NAME    := ScreenCap
 VERSION     ?= 3.0.0
 
 # `base` is the public ScreenCap 3 product. `pro` adds the private Player
-# source layer from a sibling checkout and is never installable by this target.
+# source layer from a sibling checkout. The two bundle identifiers are distinct,
+# so both builds may be installed side by side while Pro is being validated.
 BUILD_FLAVOR ?= base
 ifneq ($(filter base pro,$(BUILD_FLAVOR)),$(BUILD_FLAVOR))
 $(error BUILD_FLAVOR must be base or pro)
@@ -149,8 +150,10 @@ endif
 
 install: app
 ifeq ($(BUILD_FLAVOR),pro)
-	@echo "Refusing to install the Pro flavor; launch it from dist instead." >&2
-	@exit 1
+	-pkill -f '/Applications/ScreenCap 3 Pro\.app/Contents/MacOS/ScreenCap$$' || true
+	-rm -rf "/Applications/ScreenCap 3 Pro.app"
+	cp -R "$(APP)" "/Applications/ScreenCap 3 Pro.app"
+	@echo "Installed /Applications/ScreenCap 3 Pro.app"
 else
 	-pkill -f '/Applications/ScreenCap 3\.app/Contents/MacOS/ScreenCap$$' || true
 	-pkill -f '/Applications/ScreenCap\.app/Contents/MacOS/ScreenCap$$' || true

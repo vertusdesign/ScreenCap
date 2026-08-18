@@ -323,7 +323,9 @@ The private Pro source directory can be supplied as a sibling directory and buil
 
 ```bash
 make app BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0
-# dist/ScreenCap 3 Pro.app — launch from dist; never install this flavor
+# dist/ScreenCap 3 Pro.app
+make install BUILD_FLAVOR=pro PRIVATE_DIR=../ScreenCap-Pro-Private VERSION=3.0.0
+# installs /Applications/ScreenCap 3 Pro.app alongside ScreenCap 3.app
 ```
 
 `ScreenCap-Pro-Private` is deliberately outside the public Git repository and must itself be a
@@ -347,7 +349,8 @@ the public Git history, public remote, release tag or public issue attachment.
 
 Base uses `com.vertusdesign.ScreenCap` and `screencap://`, preserving the existing Screen
 Recording grant. Pro uses `com.vertusdesign.ScreenCap.Pro3` and `screencap-pro3://`, so macOS
-keeps separate TCC/defaults identities. `make install BUILD_FLAVOR=pro` is refused.
+keeps separate TCC/defaults identities. Both flavors can be installed side by side; the Pro
+installer targets `/Applications/ScreenCap 3 Pro.app` and never removes the base app.
 
 The distribution DMG is intentionally ad-hoc signed because a local certificate is not useful
 to another machine. Gatekeeper instructions for downloaded builds are at the top of this

@@ -12,6 +12,9 @@ struct PreferencesView: View {
 
     enum Tab: Hashable {
         case shortcuts, capture, recording, tools
+#if SCREENCAP_PRO
+        case player
+#endif
 
         var title: String {
             switch self {
@@ -19,6 +22,9 @@ struct PreferencesView: View {
             case .capture: return L10n.t("prefs.tab.capture")
             case .recording: return L10n.t("prefs.tab.recording")
             case .tools: return L10n.t("prefs.tab.captureTools")
+#if SCREENCAP_PRO
+            case .player: return L10n.t("prefs.tab.player")
+#endif
             }
         }
     }
@@ -72,6 +78,10 @@ struct PreferencesView: View {
                     if #available(macOS 15.0, *) {
                         RecordingTab()
                     }
+#if SCREENCAP_PRO
+                case .player:
+                    PlayerSettingsTab()
+#endif
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -83,9 +93,17 @@ struct PreferencesView: View {
 
     private var availableTabs: [Tab] {
         if #available(macOS 15.0, *) {
-            return [.shortcuts, .capture, .tools, .recording]
+            var tabs: [Tab] = [.shortcuts, .capture, .tools, .recording]
+#if SCREENCAP_PRO
+            tabs.append(.player)
+#endif
+            return tabs
         }
-        return [.shortcuts, .capture, .tools]
+        var tabs: [Tab] = [.shortcuts, .capture, .tools]
+#if SCREENCAP_PRO
+        tabs.append(.player)
+#endif
+        return tabs
     }
 }
 
@@ -305,6 +323,73 @@ private struct CaptureTab: View {
         }
     }
 }
+
+#if SCREENCAP_PRO
+private struct PlayerSettingsTab: View {
+    @EnvironmentObject private var settings: Settings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L10n.t("prefs.player.navigation.title"))
+                .font(.headline)
+            Text(L10n.t("prefs.player.navigation.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            seekRow(
+                title: L10n.t("prefs.player.seek.small"),
+                value: Binding(get: { settings.playerSmallSeek }, set: { settings.playerSmallSeek = $0 })
+            )
+            seekRow(
+                title: L10n.t("prefs.player.seek.medium"),
+                value: Binding(get: { settings.playerMediumSeek }, set: { settings.playerMediumSeek = $0 })
+            )
+            seekRow(
+                title: L10n.t("prefs.player.seek.large"),
+                value: Binding(get: { settings.playerLargeSeek }, set: { settings.playerLargeSeek = $0 })
+            )
+
+            Divider()
+            Text(L10n.t("prefs.player.shortcuts.title"))
+                .font(.headline)
+            Text(L10n.t("prefs.player.shortcuts.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            shortcutRow("Space", L10n.t("prefs.player.shortcut.playPause"))
+            shortcutRow("← / →", L10n.t("prefs.player.shortcut.small"))
+            shortcutRow("⇧ ← / ⇧ →", L10n.t("prefs.player.shortcut.medium"))
+            shortcutRow("⌥ ← / ⌥ →", L10n.t("prefs.player.shortcut.large"))
+            shortcutRow("⌘ ← / ⌘ →", L10n.t("prefs.player.shortcut.previousNext"))
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func seekRow(title: String, value: Binding<Double>) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            TextField("", value: value, format: .number.precision(.fractionLength(1)))
+                .frame(width: 72)
+            Text(L10n.t("prefs.player.seconds"))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func shortcutRow(_ shortcut: String, _ title: String) -> some View {
+        HStack {
+            Text(shortcut)
+                .font(.system(.body, design: .monospaced))
+                .frame(width: 110, alignment: .leading)
+            Text(title)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+#endif
 
 private struct RecordingTab: View {
     @EnvironmentObject private var settings: Settings

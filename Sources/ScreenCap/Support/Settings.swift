@@ -99,6 +99,9 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
 #if SCREENCAP_PRO
         static let playerTranscriptionMode = "playerTranscriptionMode"
+        static let playerSmallSeek = "playerSmallSeek"
+        static let playerMediumSeek = "playerMediumSeek"
+        static let playerLargeSeek = "playerLargeSeek"
 #endif
     }
 
@@ -154,6 +157,9 @@ final class Settings: ObservableObject, @unchecked Sendable {
         ]
 #if SCREENCAP_PRO
         defaults[Key.playerTranscriptionMode] = PlayerTranscriptionMode.onDemand.rawValue
+        defaults[Key.playerSmallSeek] = 5.0
+        defaults[Key.playerMediumSeek] = 30.0
+        defaults[Key.playerLargeSeek] = 60.0
 #endif
         return defaults
     }
@@ -473,6 +479,21 @@ final class Settings: ObservableObject, @unchecked Sendable {
             ) ?? .onDemand
         }
         set { set(newValue.rawValue, Key.playerTranscriptionMode) }
+    }
+
+    var playerSmallSeek: Double {
+        get { max(defaults.double(forKey: Key.playerSmallSeek), 0.5) }
+        set { set(min(max(newValue, 0.5), 600), Key.playerSmallSeek) }
+    }
+
+    var playerMediumSeek: Double {
+        get { max(defaults.double(forKey: Key.playerMediumSeek), 1) }
+        set { set(min(max(newValue, 1), 1800), Key.playerMediumSeek) }
+    }
+
+    var playerLargeSeek: Double {
+        get { max(defaults.double(forKey: Key.playerLargeSeek), 1) }
+        set { set(min(max(newValue, 1), 3600), Key.playerLargeSeek) }
     }
 #endif
 
