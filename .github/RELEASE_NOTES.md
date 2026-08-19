@@ -17,4 +17,12 @@ capability pass documented in `SECURITY.md`.
 - **Final file validation:** ScreenCap now checks the finished movie before confirming that the recording was saved. Incomplete or invalid video is reported instead of being silently accepted.
 - **Better compatibility of saved recordings:** video and audio tracks are checked for consistent duration and timeline integrity.
 
+### Screenshots
+
+![ScreenCap 3 Settings — text recognition tool](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-settings-text-tool.png)
+
+![ScreenCap 3 menu](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-menu.png)
+
+![About ScreenCap 3](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-about.png)
+
 [Full changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md)
