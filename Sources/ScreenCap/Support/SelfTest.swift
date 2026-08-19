@@ -387,8 +387,15 @@ enum SelfTest {
             }
         }
 
-        // 8. Real capture, if the system allows it.
-        if ScreenCapture.hasPermission {
+        // 8. Real capture, if the system allows it. Hosted CI runners can
+        // report a stale/virtual Screen Recording grant while no interactive
+        // WindowServer is available; attempting a live capture there can hang
+        // until the timeout. Keep this environmental probe for local runs,
+        // but make the deterministic CI smoke test explicit.
+        let isHeadlessCI = ProcessInfo.processInfo.environment["CI"] == "true"
+        if isHeadlessCI {
+            print("  ⚠ захват экрана пропущен в headless CI")
+        } else if ScreenCapture.hasPermission {
             let semaphore = DispatchSemaphore(value: 0)
             let resultBox = CaptureResultBox()
             Task {
