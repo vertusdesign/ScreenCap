@@ -52,6 +52,8 @@ BIN_DIR     := $(CONTENTS)/MacOS
 RES_DIR     := $(CONTENTS)/Resources
 BUILD_PATH  := .build/$(BUILD_FLAVOR)
 PRODUCT     := $(BUILD_PATH)/apple/Products/Release/$(APP_NAME)
+ARM64_PRODUCT := $(BUILD_PATH)/arm64/arm64-apple-macosx/release/$(APP_NAME)
+X86_PRODUCT   := $(BUILD_PATH)/x86_64/x86_64-apple-macosx/release/$(APP_NAME)
 ICONSET     := $(DIST)/AppIcon.iconset
 
 # Local builds prefer the project's own certificate so rebuilding does not
@@ -110,7 +112,14 @@ debug: prepare-sources
 	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)"
 
 universal: prepare-sources
-	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)" -c release --arch arm64 --arch x86_64
+	# SwiftPM/Xcode 16.4 rejects a combined multi-architecture invocation for
+	# targets using Swift language mode 6. Build each slice explicitly and merge
+	# the finished executables; this keeps the release artifact universal while
+	# remaining compatible with older and newer Swift 6 toolchains.
+	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/arm64" -c release --arch arm64
+	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/x86_64" -c release --arch x86_64
+	mkdir -p "$(dir $(PRODUCT))"
+	lipo -create "$(ARM64_PRODUCT)" "$(X86_PRODUCT)" -output "$(PRODUCT)"
 
 app: universal icon
 	rm -rf "$(APP)"
