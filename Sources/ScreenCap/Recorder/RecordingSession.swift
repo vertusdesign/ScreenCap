@@ -64,8 +64,9 @@ actor RecordingSession {
                 break
             case .dropped:
                 Log.error("recorder sample queue overflow; stopping before a timeline gap is created")
+                guard let session = self else { return }
                 Task {
-                    await self?.requestInterruption(
+                    await session.requestInterruption(
                         reason: .writerFailure,
                         detail: "recording pipeline overloaded"
                     )
@@ -77,8 +78,9 @@ actor RecordingSession {
             }
         }
         engine.onFailure = { [weak self] error in
+            guard let session = self else { return }
             Task {
-                await self?.requestInterruption(
+                await session.requestInterruption(
                     reason: .captureStreamStopped,
                     detail: error.localizedDescription
                 )

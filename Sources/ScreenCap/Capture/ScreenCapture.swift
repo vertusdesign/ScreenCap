@@ -1,9 +1,13 @@
 import AppKit
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 /// A frozen still of one display, plus everything needed to map between the
 /// image's pixels and Cocoa's global point coordinates.
-struct DisplaySnapshot {
+/// Screen snapshots are created and consumed on the main actor. The unchecked
+/// marker documents that the value is a frozen image plus immutable geometry;
+/// it avoids treating AppKit's legacy NSScreen reference as a transferable
+/// mutable object when Swift 6 checks the async capture boundary.
+struct DisplaySnapshot: @unchecked Sendable {
     let displayID: CGDirectDisplayID
     let screen: NSScreen
     /// `NSScreen.frame` — Cocoa global points.
@@ -146,6 +150,7 @@ enum ScreenCapture {
 
     // MARK: - Capture
 
+    @MainActor
     static func snapshotAllDisplays() async throws -> [DisplaySnapshot] {
         let content = try await shareableContent()
         guard !content.displays.isEmpty else { throw ScreenCaptureError.noDisplays }
@@ -248,6 +253,7 @@ enum ScreenCapture {
 
     /// On-screen windows, front-most first, filtered down to things a user would
     /// actually want to capture.
+    @MainActor
     static func onScreenWindows() async throws -> [WindowTarget] {
         let content = try await shareableContent()
         let ownPID = ProcessInfo.processInfo.processIdentifier

@@ -2,7 +2,7 @@ import AppKit
 import AVFoundation
 import CoreMedia
 import CoreAudio
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 @available(macOS 15.0, *)
 final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
@@ -52,6 +52,7 @@ final class RecorderCaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate, @
         super.init()
     }
 
+    @MainActor
     static func make(
         display: RecorderDisplay,
         captureSystemAudio: Bool,

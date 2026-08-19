@@ -1,6 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
-import VisionKit
+@preconcurrency import VisionKit
 
 @MainActor
 protocol SelectionOverlayViewDelegate: AnyObject {
