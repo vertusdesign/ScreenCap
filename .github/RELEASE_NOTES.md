@@ -3,7 +3,7 @@ tools, click visualization and crash-safe local recording recovery.
 
 The production release bundle identity remains compatible with v2 updates. The current target is
 distributed as a direct-download/DMG build; App Store submission still requires the sandbox and
-capability pass documented in `SECURITY.md`. The private Pro build is not part of this repository.
+capability pass documented in `SECURITY.md`.
 
 ### New since 2.0.0
 
