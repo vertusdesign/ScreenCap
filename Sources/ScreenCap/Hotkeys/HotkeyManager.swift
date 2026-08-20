@@ -132,6 +132,15 @@ final class HotkeyManager: @unchecked Sendable {
         apply(Settings.shared.hotkeys)
     }
 
+    /// Delivers a shortcut selected from the status-item menu through the same
+    /// deduplicated path as Carbon and the local fallback monitor. A menu key
+    /// equivalent and a Carbon notification can describe the same physical
+    /// key press, so keeping one dispatch path prevents a double capture.
+    func triggerFromMenu(_ action: HotkeyAction) {
+        guard !isSuspended else { return }
+        dispatch(action)
+    }
+
     @discardableResult
     private func register(_ hotkey: Hotkey, for action: HotkeyAction) -> Bool {
         let id = nextID

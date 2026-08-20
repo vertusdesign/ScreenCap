@@ -37,6 +37,14 @@ struct Hotkey: Codable, Equatable, Hashable, Sendable {
     var displayString: String {
         KeyCodeNames.modifierGlyphs(cocoaModifiers) + KeyCodeNames.name(for: keyCode)
     }
+
+    /// AppKit key-equivalent representation used while ScreenCap's status-item
+    /// menu is tracking. Carbon remains the global registration path when the
+    /// menu is closed; the menu needs its own equivalent because NSMenu runs a
+    /// nested event loop that can postpone Carbon delivery until it closes.
+    var menuKeyEquivalent: String? {
+        KeyCodeNames.menuEquivalent(for: keyCode)
+    }
 }
 
 enum KeyCodeNames {
@@ -77,6 +85,21 @@ enum KeyCodeNames {
         if flags.contains(.shift) { out += "\u{21E7}" }
         if flags.contains(.command) { out += "\u{2318}" }
         return out
+    }
+
+    /// Returns the character AppKit expects in `NSMenuItem.keyEquivalent` for
+    /// a physical key code. Function keys use AppKit's private-use Unicode
+    /// scalars; printable keys follow the active keyboard layout so shortcuts
+    /// continue to work on non-Latin layouts as well.
+    static func menuEquivalent(for keyCode: UInt16) -> String? {
+        if let special = specialKeys[keyCode], special.hasPrefix("F"),
+           let number = Int(special.dropFirst()), (1...20).contains(number) {
+            return String(UnicodeScalar(0xF704 + number - 1)!)
+        }
+        guard let translated = translate(keyCode: keyCode),
+              translated.count == 1
+        else { return nil }
+        return translated
     }
 
     /// Human-readable name of a key, resolved against the *current* keyboard layout

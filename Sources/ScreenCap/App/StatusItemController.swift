@@ -97,11 +97,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             item.target = self
             item.representedObject = action
             item.image = symbol(symbolName(for: action))
-            if let hotkey = hotkeys[action] {
-                // Shown as a badge: the shortcut is global and handled by Carbon,
-                // not by the menu, so a real key equivalent would be a lie.
-                item.badge = NSMenuItemBadge(string: hotkey.displayString)
-            }
+            configureShortcut(hotkeys[action], on: item)
             if action == .repeatLastArea, !CaptureController.shared.hasLastArea {
                 item.isEnabled = false
             }
@@ -253,9 +249,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         systemAudio.representedObject = "systemAudio"
         systemAudio.state = Settings.shared.recordingSkipSystemAudio ? .on : .off
         systemAudio.isEnabled = !RecorderController.shared.isActive
-        if let hotkey = hotkeys[.toggleRecordingSystemAudio] {
-            systemAudio.badge = NSMenuItemBadge(string: hotkey.displayString)
-        }
+        configureShortcut(hotkeys[.toggleRecordingSystemAudio], on: systemAudio)
         menu.addItem(systemAudio)
 
         let microphone = NSMenuItem(
@@ -267,10 +261,20 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         microphone.representedObject = "microphone"
         microphone.state = Settings.shared.recordingSkipMicrophone ? .on : .off
         microphone.isEnabled = !RecorderController.shared.isActive
-        if let hotkey = hotkeys[.toggleRecordingMicrophone] {
-            microphone.badge = NSMenuItemBadge(string: hotkey.displayString)
-        }
+        configureShortcut(hotkeys[.toggleRecordingMicrophone], on: microphone)
         menu.addItem(microphone)
+    }
+
+    private func configureShortcut(_ hotkey: Hotkey?, on item: NSMenuItem) {
+        guard let hotkey else { return }
+        if let keyEquivalent = hotkey.menuKeyEquivalent {
+            item.keyEquivalent = keyEquivalent
+            item.keyEquivalentModifierMask = hotkey.cocoaModifiers
+        }
+        // Keep the native-looking badge used by the status menu while the
+        // key-equivalent itself makes the shortcut actionable during NSMenu's
+        // nested tracking loop.
+        item.badge = NSMenuItemBadge(string: hotkey.displayString)
     }
 
     private func symbol(_ name: String) -> NSImage? {
@@ -351,7 +355,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard let action = sender.representedObject as? HotkeyAction else { return }
         // Let the menu finish closing so it does not end up in the screenshot.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            CaptureController.shared.perform(action)
+            HotkeyManager.shared.triggerFromMenu(action)
         }
     }
 

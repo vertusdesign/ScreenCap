@@ -18,11 +18,12 @@ was on. Mention both.
 
 If a shortcut does nothing, check Settings first: a shortcut already owned by another app is
 marked with a warning triangle, because macOS gives it to whoever registered first.
-Carbon registrations target ScreenCap's application event queue, so screenshot/recording
-shortcuts continue to fire while the status-item menu, a popover or a context menu is being
-tracked. A local AppKit monitor is retained as a narrow fallback for ordinary key events while
-the app owns keyboard focus; Carbon remains the global registration path when another app is
-focused.
+Carbon registrations remain the global path when another app is focused. While ScreenCap's
+status-item menu is tracking, each registered binding is also installed as a native
+`NSMenuItem.keyEquivalent`; this is what keeps screenshot/recording shortcuts actionable inside
+the menu's nested event loop. A local AppKit monitor remains a narrow fallback for ordinary key
+events while the app owns keyboard focus. Menu and Carbon delivery share one deduplicated dispatch
+path so a single physical key press cannot start two captures.
 
 ## Proposing a change
 
