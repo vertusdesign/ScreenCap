@@ -167,12 +167,16 @@ enum RecorderRecovery {
             guard candidate.pathExtension.lowercased() == "mov" else { return false }
             let name = candidate.deletingPathExtension().lastPathComponent
             return name == "\(stem).composite"
-                || name.hasPrefix("\(stem).recovered")
+                || name.hasPrefix("\(stem)_recovered")
+                || name.hasPrefix("\(stem).recovered") // legacy recovery names
                 || name.hasPrefix("\(stem).repaired")
                 || name.hasPrefix("\(stem).partial.composite")
                 || name.hasPrefix("\(stem).partial.repaired")
-                || name.hasPrefix("\(stem).partial.recovered")
-                || name.hasPrefix("\(stem) (") && name.hasSuffix(").recovered")
+                || name.hasPrefix("\(stem).partial_recovered")
+                || name.hasPrefix("\(stem).partial.recovered") // legacy
+                || name.hasPrefix("\(stem) (") && (
+                    name.hasSuffix(")_recovered") || name.hasSuffix(").recovered")
+                )
         }
         .sorted { lhs, rhs in
             recoveryRank(for: lhs, stem: stem) < recoveryRank(for: rhs, stem: stem)
@@ -370,13 +374,16 @@ enum RecorderRecovery {
 
     private static func uniqueRecoveredURL(for movie: URL) -> URL {
         let base = movie.deletingPathExtension()
-        var candidate = base.appendingPathExtension("recovered.mov")
+        let directory = base.deletingLastPathComponent()
+        let stem = base.lastPathComponent
+        var candidate = directory
+            .appendingPathComponent("\(stem)_recovered")
+            .appendingPathExtension("mov")
         var counter = 2
         while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = base
-                .deletingLastPathComponent()
-                .appendingPathComponent(base.lastPathComponent + " (\(counter))")
-                .appendingPathExtension("recovered.mov")
+            candidate = directory
+                .appendingPathComponent("\(stem)_recovered-\(counter)")
+                .appendingPathExtension("mov")
             counter += 1
         }
         return candidate
@@ -386,7 +393,10 @@ enum RecorderRecovery {
         let name = url.deletingPathExtension().lastPathComponent
         if name == "\(stem).composite" || name.hasPrefix("\(stem).partial.composite") { return 0 }
         if name.hasPrefix("\(stem).repaired") || name.hasPrefix("\(stem).partial.repaired") { return 1 }
-        if name.hasPrefix("\(stem).recovered") || name.hasPrefix("\(stem).partial.recovered") { return 2 }
+        if name.hasPrefix("\(stem)_recovered")
+            || name.hasPrefix("\(stem).recovered")
+            || name.hasPrefix("\(stem).partial_recovered")
+            || name.hasPrefix("\(stem).partial.recovered") { return 2 }
         return 3
     }
 
