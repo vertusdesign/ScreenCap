@@ -101,6 +101,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
 #if SCREENCAP_PRO
         static let playerTranscriptionMode = "playerTranscriptionMode"
         static let playerTranscriptionLocale = "playerTranscriptionLocale"
+        static let playerTranscriptionModel = "playerTranscriptionModel"
         static let playerSmallSeek = "playerSmallSeek"
         static let playerMediumSeek = "playerMediumSeek"
         static let playerLargeSeek = "playerLargeSeek"
@@ -165,7 +166,8 @@ final class Settings: ObservableObject, @unchecked Sendable {
         ]
 #if SCREENCAP_PRO
         defaults[Key.playerTranscriptionMode] = PlayerTranscriptionMode.onDemand.rawValue
-        defaults[Key.playerTranscriptionLocale] = "__system__"
+        defaults[Key.playerTranscriptionLocale] = "auto"
+        defaults[Key.playerTranscriptionModel] = "whisper-small"
         defaults[Key.playerSmallSeek] = 5.0
         defaults[Key.playerMediumSeek] = 30.0
         defaults[Key.playerLargeSeek] = 60.0
@@ -500,8 +502,16 @@ final class Settings: ObservableObject, @unchecked Sendable {
     }
 
     var playerTranscriptionLocale: String {
-        get { defaults.string(forKey: Key.playerTranscriptionLocale) ?? "__system__" }
-        set { set(newValue, Key.playerTranscriptionLocale) }
+        get {
+            let value = defaults.string(forKey: Key.playerTranscriptionLocale) ?? "auto"
+            return value == "__system__" ? "auto" : value
+        }
+        set { set(newValue == "__system__" ? "auto" : newValue, Key.playerTranscriptionLocale) }
+    }
+
+    var playerTranscriptionModel: String {
+        get { defaults.string(forKey: Key.playerTranscriptionModel) ?? "whisper-small" }
+        set { set(newValue, Key.playerTranscriptionModel) }
     }
 
     var playerSmallSeek: Double {

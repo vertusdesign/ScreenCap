@@ -22,6 +22,7 @@ URL_SCHEME      := screencap-pro3
 APP_BUNDLE      := ScreenCap 3 Pro.app
 PLAYER_SOURCE   := $(PRIVATE_DIR)/Player
 PRIVATE_L10N    := $(PRIVATE_DIR)/l10n
+PRIVATE_TRANSCRIPTION_RES := $(PRIVATE_DIR)/Resources/Transcription
 PLIST_TEMPLATE  := $(PRIVATE_DIR)/Info-Pro.plist
 SCREENCAP_PRO   := 1
 PRODUCT_LABEL   := ScreenCap-3-Pro
@@ -132,6 +133,10 @@ app: universal icon
 	cp -R Resources/l10n/*.lproj "$(RES_DIR)/"
 ifeq ($(BUILD_FLAVOR),pro)
 	python3 Scripts/merge_pro_resources.py "$(RES_DIR)" "$(PRIVATE_L10N)"
+	@if [ -d "$(PRIVATE_TRANSCRIPTION_RES)" ]; then \
+		mkdir -p "$(RES_DIR)/Transcription"; \
+		cp -R "$(PRIVATE_TRANSCRIPTION_RES)/." "$(RES_DIR)/Transcription/"; \
+	fi
 endif
 	mkdir -p "$(RES_DIR)/ThirdParty"
 	cp Resources/ThirdParty/RNNoise-LICENSE.txt "$(RES_DIR)/ThirdParty/RNNoise-LICENSE.txt"
