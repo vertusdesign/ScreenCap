@@ -468,12 +468,14 @@ enum RecorderAcousticEchoCanceller {
             Int(((commonStart - microphone.startTime) * analysisRate).rounded())
         )
         let requestedCount = Int(((commonEnd - commonStart) * analysisRate).rounded())
+        let availableSystem = system.samples.count - referenceOffset
+        let availableMicrophone = microphone.samples.count - microphoneOffset
+        guard availableSystem > 0, availableMicrophone > 0, requestedCount > 0 else {
+            throw CancellationError()
+        }
         let count = min(
             requestedCount,
-            min(
-                system.samples.count - referenceOffset,
-                microphone.samples.count - microphoneOffset
-            )
+            min(availableSystem, availableMicrophone)
         )
         guard count > fftSize else { throw CancellationError() }
         var reference = Array(repeating: Float.zero, count: count)
