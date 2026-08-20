@@ -63,6 +63,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     // MARK: - Menu
 
+    func menuWillOpen(_ menu: NSMenu) {
+        // Carbon hot-key registrations consume the original key event before
+        // AppKit can match an NSMenuItem key equivalent. Temporarily release
+        // them while this menu is tracking so the native menu equivalents are
+        // the single event path; they are restored as soon as the menu closes.
+        HotkeyManager.shared.suspend()
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        HotkeyManager.shared.resume()
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         let hotkeys = Settings.shared.hotkeys
@@ -270,11 +282,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         if let keyEquivalent = hotkey.menuKeyEquivalent {
             item.keyEquivalent = keyEquivalent
             item.keyEquivalentModifierMask = hotkey.cocoaModifiers
+            // The native key equivalent is already rendered by AppKit. A
+            // custom badge in addition to it produces two shortcut labels in
+            // the menu (the regression visible in the status-item menu).
+            item.badge = nil
+        } else {
+            // Keep a visible label for a binding AppKit cannot represent as a
+            // key equivalent (for example an unusual keyboard-layout key).
+            item.badge = NSMenuItemBadge(string: hotkey.displayString)
         }
-        // Keep the native-looking badge used by the status menu while the
-        // key-equivalent itself makes the shortcut actionable during NSMenu's
-        // nested tracking loop.
-        item.badge = NSMenuItemBadge(string: hotkey.displayString)
     }
 
     private func symbol(_ name: String) -> NSImage? {

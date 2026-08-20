@@ -137,7 +137,9 @@ final class HotkeyManager: @unchecked Sendable {
     /// equivalent and a Carbon notification can describe the same physical
     /// key press, so keeping one dispatch path prevents a double capture.
     func triggerFromMenu(_ action: HotkeyAction) {
-        guard !isSuspended else { return }
+        // The status-item menu suspends Carbon registrations while it tracks;
+        // this call is the intentional replacement event path during that
+        // interval, so it must remain available while `isSuspended` is true.
         dispatch(action)
     }
 
