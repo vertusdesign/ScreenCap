@@ -62,6 +62,11 @@ enum RecorderAcousticEchoCanceller {
         let bins: Int
         private let log2Size: vDSP_Length
         private let setup: FFTSetup
+        // vDSP's real FFT API accepts the real input packed as N/2 complex
+        // values (even samples in `real`, odd samples in `imag`). Keeping the
+        // packing explicit is important: passing one complex value per sample
+        // and striding by two silently drops every odd sample and makes the
+        // inverse overlap-add amplify/attenuate the microphone unpredictably.
         private let input = UnsafeMutablePointer<DSPComplex>.allocate(capacity: 2048)
         private let inverseOutput = UnsafeMutablePointer<DSPComplex>.allocate(capacity: 2048)
 
@@ -90,10 +95,15 @@ enum RecorderAcousticEchoCanceller {
             real: UnsafeMutablePointer<Float>,
             imaginary: UnsafeMutablePointer<Float>
         ) {
-            for index in 0..<size {
-                input[index] = DSPComplex(real: source[index], imag: 0)
+            for index in 0..<bins {
+                input[index] = DSPComplex(
+                    real: source[index * 2],
+                    imag: source[index * 2 + 1]
+                )
             }
             var split = DSPSplitComplex(realp: real, imagp: imaginary)
+            // The stride is expressed in scalar floats by vDSP. A stride of
+            // two therefore walks the packed complex values one by one.
             vDSP_ctoz(input, 2, &split, 1, vDSP_Length(bins))
             vDSP_fft_zrip(
                 setup,
@@ -118,9 +128,12 @@ enum RecorderAcousticEchoCanceller {
                 FFTDirection(FFT_INVERSE)
             )
             vDSP_ztoc(&split, 1, inverseOutput, 2, vDSP_Length(bins))
-            let scale = 1 / Float(size)
-            for index in 0..<size {
-                output[index] = inverseOutput[index].real * scale
+            // Real FFT inverse output is scaled by 2N by vDSP's packed
+            // representation (not N as in a complex FFT).
+            let scale = 1 / Float(2 * size)
+            for index in 0..<bins {
+                output[index * 2] = inverseOutput[index].real * scale
+                output[index * 2 + 1] = inverseOutput[index].imag * scale
             }
         }
     }
@@ -136,6 +149,34 @@ enum RecorderAcousticEchoCanceller {
     /// Pure signal regression checks used by the headless self-test. No device,
     /// file or user recording is touched.
     static func selfTest() -> Bool {
+        guard let fft = RealFFTWorkspace(size: fftSize) else { return false }
+        var probeFrame = Array(repeating: Float.zero, count: fftSize)
+        for index in 0..<fftSize {
+            let phase = Double(index)
+            probeFrame[index] = Float(
+                sin(phase * 0.13) + 0.2 * cos(phase * 0.71)
+            )
+        }
+        var probeReal = Array(repeating: Float.zero, count: fft.bins)
+        var probeImaginary = Array(repeating: Float.zero, count: fft.bins)
+        var probeOutput = Array(repeating: Float.zero, count: fftSize)
+        fftForward(
+            fft,
+            frame: probeFrame,
+            real: &probeReal,
+            imaginary: &probeImaginary
+        )
+        fftInverse(
+            fft,
+            real: &probeReal,
+            imaginary: &probeImaginary,
+            output: &probeOutput
+        )
+        let roundTripError = zip(probeFrame, probeOutput)
+            .map { abs($0 - $1) }
+            .max() ?? .infinity
+        guard roundTripError < 0.00001 else { return false }
+
         let count = 32_000
         let delay = 320
         var reference = Array(repeating: Float.zero, count: count)
@@ -192,7 +233,7 @@ enum RecorderAcousticEchoCanceller {
                 compositeURL: nil,
                 processedMicrophoneURL: nil,
                 applied: false,
-                warning: nil
+                warning: L10n.t("recording.aec.unsupportedLayout")
             )
         }
 
@@ -210,7 +251,7 @@ enum RecorderAcousticEchoCanceller {
                     compositeURL: nil,
                     processedMicrophoneURL: nil,
                     applied: false,
-                    warning: nil
+                    warning: L10n.t("recording.aec.invalidSource")
                 )
             }
             guard max(
@@ -235,7 +276,7 @@ enum RecorderAcousticEchoCanceller {
                     compositeURL: nil,
                     processedMicrophoneURL: nil,
                     applied: false,
-                    warning: nil
+                    warning: L10n.t("recording.aec.insufficientOverlap")
                 )
             }
             if system.discontinuityCount > 0 || microphone.discontinuityCount > 0 {
@@ -265,6 +306,16 @@ enum RecorderAcousticEchoCanceller {
                   result.afterRMS >= result.beforeRMS * 0.35,
                   result.afterRMS <= max(result.beforeRMS * 1.20, 0.002)
             else {
+                let maximumAllowedRMS = max(result.beforeRMS * 1.20, 0.002)
+                let warning: String
+                if result.afterRMS < result.beforeRMS * 0.35
+                    || result.afterRMS > maximumAllowedRMS {
+                    warning = L10n.t("recording.aec.signalChanged")
+                } else if result.predictedEchoRatio < 0.01 {
+                    warning = L10n.t("recording.aec.noEchoReference")
+                } else {
+                    warning = L10n.t("recording.aec.lowConfidence")
+                }
                 Log.diagnostic(
                     "aec rejected: confidence=" + String(format: "%.3f", result.confidence)
                         + " predictedEchoRatio=" + String(format: "%.3f", result.predictedEchoRatio)
@@ -275,7 +326,7 @@ enum RecorderAcousticEchoCanceller {
                     compositeURL: nil,
                     processedMicrophoneURL: nil,
                     applied: false,
-                    warning: L10n.t("recording.aec.lowConfidence")
+                    warning: warning
                 )
             }
 

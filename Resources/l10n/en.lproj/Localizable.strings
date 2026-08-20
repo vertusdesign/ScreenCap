@@ -243,6 +243,11 @@
 "recording.aec.skipped.long" = "Echo reduction was skipped for a recording longer than 30 minutes.";
 "recording.aec.failed" = "Echo reduction could not be applied; the original microphone track was kept.";
 "recording.aec.lowConfidence" = "Echo reduction was not confident enough; the original microphone track was kept.";
+"recording.aec.unsupportedLayout" = "Echo reduction requires one System Audio track and one raw Microphone track.";
+"recording.aec.invalidSource" = "The recording's audio tracks could not be read safely.";
+"recording.aec.insufficientOverlap" = "The audio tracks do not contain enough synchronized samples for safe echo reduction.";
+"recording.aec.signalChanged" = "Echo reduction was not applied because it would change the microphone level too much; the original track was kept.";
+"recording.aec.noEchoReference" = "No reliable speaker reference was found, so the original microphone track was kept.";
 "recording.track.composite" = "Composite Audio";
 "recording.track.systemAudio" = "System Audio";
 "recording.track.microphone" = "Microphone — Raw";
