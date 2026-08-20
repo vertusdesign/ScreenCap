@@ -7,6 +7,7 @@ final class RecorderWriterService: @unchecked Sendable {
     private let file: RecorderFile
     private let captureSystemAudio: Bool
     private let captureMicrophone: Bool
+    private let echoReduction: Bool
     private let writer: AVAssetWriter
     private let videoCodec: AVVideoCodecType
     private let usesHardwareVideoEncoder: Bool
@@ -37,12 +38,14 @@ final class RecorderWriterService: @unchecked Sendable {
         captureSystemAudio: Bool,
         captureMicrophone: Bool,
         noiseSuppression: Bool,
+        echoReduction: Bool = true,
         videoCodecPreference: RecordingVideoCodec,
         displayID: CGDirectDisplayID? = nil
     ) throws {
         self.file = file
         self.captureSystemAudio = captureSystemAudio
         self.captureMicrophone = captureMicrophone
+        self.echoReduction = echoReduction
         self.microphoneProcessor = MicrophoneAudioProcessor(
             noiseSuppression: noiseSuppression && captureMicrophone
         )
@@ -57,7 +60,7 @@ final class RecorderWriterService: @unchecked Sendable {
             "writer configuration dimensions=\(file.width)x\(file.height) "
                 + "codec=\(codecChoice.codec.rawValue) hardwareEncoder=\(codecChoice.hardware) "
                 + "systemAudio=\(captureSystemAudio) microphone=\(captureMicrophone) "
-                + "noiseSuppression=\(noiseSuppression)"
+                + "noiseSuppression=\(noiseSuppression) echoReduction=\(echoReduction)"
         )
         do {
             writer = try AVAssetWriter(outputURL: file.partialURL, fileType: .mov)
@@ -218,6 +221,7 @@ final class RecorderWriterService: @unchecked Sendable {
         }
         let composite = await RecorderPostProcessor.addCompositeAudioTrack(
             to: sourceURL,
+            echoReduction: echoReduction,
             onProcessingStage: onProcessingStage
         )
         await onProcessingStage?(.checking)

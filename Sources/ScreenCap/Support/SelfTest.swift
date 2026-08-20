@@ -371,6 +371,13 @@ enum SelfTest {
                 print("  ✗ обработка уровня микрофона")
             }
 
+            if RecorderAcousticEchoCanceller.selfTest() {
+                print("  ✓ безопасное подавление акустического эха")
+            } else {
+                failures.append("подавление акустического эха")
+                print("  ✗ подавление акустического эха")
+            }
+
             // Recovery path smoke checks are deliberately structural: they do
             // not simulate kill -9, sleep, display loss or disk exhaustion and
             // they never touch a user's recording directory.

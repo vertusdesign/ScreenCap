@@ -157,16 +157,33 @@ enum RecorderPostProcessor {
     /// cannot be rewritten, the original valid movie remains in place.
     static func addCompositeAudioTrack(
         to url: URL,
+        echoReduction: Bool = true,
         onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
     ) async -> CompositeResult {
         await onProcessingStage?(.processingAudio)
+        let sourceAsset = AVURLAsset(url: url)
+        let sourceTracks = (try? await sourceAsset.load(.tracks)) ?? []
+        let sourceAudioTracks = sourceTracks.filter { $0.mediaType == .audio }
+        let aecPreparation = echoReduction
+            ? await RecorderAcousticEchoCanceller.prepareCompositeAudio(
+                asset: sourceAsset,
+                audioTracks: sourceAudioTracks
+            )
+            : RecorderAcousticEchoCanceller.Preparation(compositeURL: nil, applied: false, warning: nil)
         do {
             try await rewriteWithCompositeAudio(
                 at: url,
+                compositeAudioURL: aecPreparation.compositeURL,
                 onProcessingStage: onProcessingStage
             )
-            return CompositeResult(succeeded: true, warning: nil)
+            if let compositeURL = aecPreparation.compositeURL {
+                try? FileManager.default.removeItem(at: compositeURL)
+            }
+            return CompositeResult(succeeded: true, warning: aecPreparation.warning)
         } catch {
+            if let compositeURL = aecPreparation.compositeURL {
+                try? FileManager.default.removeItem(at: compositeURL)
+            }
             Log.error(
                 "recorder composite audio track failed: " + error.localizedDescription
             )
@@ -179,6 +196,7 @@ enum RecorderPostProcessor {
 
     private static func rewriteWithCompositeAudio(
         at url: URL,
+        compositeAudioURL: URL?,
         onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
     ) async throws {
         let asset = AVURLAsset(url: url)
@@ -235,19 +253,41 @@ enum RecorderPostProcessor {
         videoOutput.alwaysCopiesSampleData = false
         videoReader.add(videoOutput)
 
-        let mixedReader = try AVAssetReader(asset: asset)
-        let mixedOutput = AVAssetReaderAudioMixOutput(
-            audioTracks: audioTracks,
-            audioSettings: linearPCMSettings(sourceFormatHint: nil)
-        )
-        let mix = AVMutableAudioMix()
-        // Leave headroom for the sum of system audio and microphone.
-        mix.inputParameters = audioTracks.map { track in
-            let parameters = AVMutableAudioMixInputParameters(track: track)
-            parameters.setVolume(0.65, at: .zero)
-            return parameters
+        let compositeAsset = compositeAudioURL.map { AVURLAsset(url: $0) }
+        var compositeTrack: AVAssetTrack?
+        if let compositeAsset {
+            compositeTrack = try? await compositeAsset.loadTracks(withMediaType: .audio).first
         }
-        mixedOutput.audioMix = mix
+        let mixedReader: AVAssetReader
+        let mixedOutput: AVAssetReaderOutput
+        if let compositeAsset, let compositeTrack {
+            // The echo-reduced composite is already rendered to one audio
+            // stream. Read it directly while the source system/microphone
+            // tracks continue to be copied unchanged below. Decode it to PCM
+            // before feeding the AAC writer input; passing compressed M4A
+            // samples through here is not portable across AVFoundation
+            // versions and can make the rewrite fail late.
+            mixedReader = try AVAssetReader(asset: compositeAsset)
+            mixedOutput = AVAssetReaderTrackOutput(
+                track: compositeTrack,
+                outputSettings: linearPCMSettings(sourceFormatHint: nil)
+            )
+        } else {
+            mixedReader = try AVAssetReader(asset: asset)
+            let output = AVAssetReaderAudioMixOutput(
+                audioTracks: audioTracks,
+                audioSettings: linearPCMSettings(sourceFormatHint: nil)
+            )
+            let mix = AVMutableAudioMix()
+            // Leave headroom for the sum of system audio and microphone.
+            mix.inputParameters = audioTracks.map { track in
+                let parameters = AVMutableAudioMixInputParameters(track: track)
+                parameters.setVolume(0.65, at: .zero)
+                return parameters
+            }
+            output.audioMix = mix
+            mixedOutput = output
+        }
         mixedOutput.alwaysCopiesSampleData = false
         mixedReader.add(mixedOutput)
 

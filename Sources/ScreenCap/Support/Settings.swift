@@ -93,12 +93,14 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let recordingSkipSystemAudio = "recordingSkipSystemAudio"
         static let recordingSkipMicrophone = "recordingSkipMicrophone"
         static let recordingNoiseSuppression = "recordingNoiseSuppression"
+        static let recordingEchoReduction = "recordingEchoReduction"
         static let recordingAtLogicalSize = "recordingAtLogicalSize"
         static let recordingVideoCodec = "recordingVideoCodec"
         static let recordingShowMouseClicks = "recordingShowMouseClicks"
         static let recordingAfterCaptureAction = "recordingAfterCaptureAction"
 #if SCREENCAP_PRO
         static let playerTranscriptionMode = "playerTranscriptionMode"
+        static let playerTranscriptionLocale = "playerTranscriptionLocale"
         static let playerSmallSeek = "playerSmallSeek"
         static let playerMediumSeek = "playerMediumSeek"
         static let playerLargeSeek = "playerLargeSeek"
@@ -153,12 +155,17 @@ final class Settings: ObservableObject, @unchecked Sendable {
             Key.recordingSkipSystemAudio: false,
             Key.recordingSkipMicrophone: false,
             Key.recordingNoiseSuppression: false,
+            // Echo reduction is post-processing only. The raw microphone and
+            // system tracks are always preserved, and the composite falls
+            // back to the original mix whenever confidence is insufficient.
+            Key.recordingEchoReduction: true,
             Key.recordingAtLogicalSize: false,
             Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
             Key.recordingShowMouseClicks: false
         ]
 #if SCREENCAP_PRO
         defaults[Key.playerTranscriptionMode] = PlayerTranscriptionMode.onDemand.rawValue
+        defaults[Key.playerTranscriptionLocale] = "__system__"
         defaults[Key.playerSmallSeek] = 5.0
         defaults[Key.playerMediumSeek] = 30.0
         defaults[Key.playerLargeSeek] = 60.0
@@ -443,6 +450,11 @@ final class Settings: ObservableObject, @unchecked Sendable {
         set { set(newValue, Key.recordingNoiseSuppression) }
     }
 
+    var recordingEchoReduction: Bool {
+        get { defaults.bool(forKey: Key.recordingEchoReduction) }
+        set { set(newValue, Key.recordingEchoReduction) }
+    }
+
     var recordingAtLogicalSize: Bool {
         get { defaults.bool(forKey: Key.recordingAtLogicalSize) }
         set { set(newValue, Key.recordingAtLogicalSize) }
@@ -485,6 +497,11 @@ final class Settings: ObservableObject, @unchecked Sendable {
             ) ?? .onDemand
         }
         set { set(newValue.rawValue, Key.playerTranscriptionMode) }
+    }
+
+    var playerTranscriptionLocale: String {
+        get { defaults.string(forKey: Key.playerTranscriptionLocale) ?? "__system__" }
+        set { set(newValue, Key.playerTranscriptionLocale) }
     }
 
     var playerSmallSeek: Double {

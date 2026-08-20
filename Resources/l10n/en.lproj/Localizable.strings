@@ -154,6 +154,8 @@
 "prefs.recording.skipMicrophone" = "Do not record microphone";
 "prefs.recording.noiseSuppression" = "Noise suppression";
 "prefs.recording.noiseSuppression.help" = "Uses [RNNoise](https://github.com/xiph/rnnoise) in a gentle mode. It can reduce steady background noise, but may soften quiet speech, miss sudden noise, or use extra CPU; it works with 48 kHz PCM microphone capture.";
+"prefs.recording.echoReduction" = "Echo reduction";
+"prefs.recording.echoReduction.help" = "After recording, ScreenCap can use the captured system-audio track as a reference to reduce speaker bleed in the microphone track. Original tracks are preserved; if confidence is low, the original mix is kept.";
 "prefs.recording.codec" = "Video codec";
 "prefs.recording.codec.help" = "Automatic uses the most compatible hardware path. H.264 and HEVC can be selected when supported by the Mac.";
 "prefs.recording.codec.automatic" = "Automatic (recommended)";
@@ -237,6 +239,9 @@
 "recording.selection.systemAudio" = "System audio";
 "recording.selection.microphone" = "Microphone";
 "recording.selection.noiseSuppression" = "Noise suppression";
+"recording.selection.echoReduction" = "Echo reduction";
+"recording.aec.skipped.long" = "Echo reduction was skipped for a recording longer than 30 minutes.";
+"recording.aec.failed" = "Echo reduction could not be applied; the original microphone track was kept.";
 "recording.selection.showMouseClicks" = "Show clicks";
 "recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 
