@@ -43,19 +43,22 @@ enum ImageOutput {
             return false
         }
 
-        let item = NSPasteboardItem()
-        item.setData(png, forType: .png)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        guard pasteboard.setData(png, forType: .png) else {
+            return false
+        }
         if let tiff = representation.tiffRepresentation {
-            item.setData(tiff, forType: .tiff)
+            _ = pasteboard.setData(tiff, forType: .tiff)
         }
         if let fileURL {
             // `public.file-url` is what Finder places on the pasteboard when a
             // file is copied. Keep it on the same item as the image data so
             // bitmap-only consumers continue to work without special cases.
-            item.setString(fileURL.absoluteString, forType: .fileURL)
+            _ = pasteboard.setString(fileURL.absoluteString, forType: .fileURL)
         }
 
-        return NSPasteboard.general.writeObjects([item])
+        return true
     }
 
     /// Persists a player frame next to its source video. The folder is named
