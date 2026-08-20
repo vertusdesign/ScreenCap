@@ -377,8 +377,8 @@ enum SelfTest {
             let recoveryProbe = outputDirectory.appendingPathComponent("recovery-probe.mov")
             let probeFile = RecorderFile(url: recoveryProbe, width: 1280, height: 720)
             let related = RecorderRecovery.relatedRecordingURLs(for: recoveryProbe)
-            if probeFile.partialURL.lastPathComponent == "recovery-probe.partial.mov",
-               RecorderRecovery.markerURL(for: recoveryProbe).pathExtension == "screencap-recording",
+            if probeFile.partialURL.lastPathComponent == "recovery-probe_partial.mov",
+               RecorderRecovery.markerURL(for: recoveryProbe).lastPathComponent == "recovery-probe_screencap_recording.marker",
                related.contains(where: { $0.standardizedFileURL == probeFile.partialURL.standardizedFileURL }) {
                 print("  ✓ recovery marker и partial-файл используют стабильные sibling-пути")
             } else {

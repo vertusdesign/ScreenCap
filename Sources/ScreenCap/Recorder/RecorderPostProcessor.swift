@@ -263,9 +263,7 @@ enum RecorderPostProcessor {
             )
         }
 
-        let temporaryURL = url
-            .deletingPathExtension()
-            .appendingPathExtension("composite.mov")
+        let temporaryURL = RecorderRecovery.compositeURLs(for: url)[0]
         try? FileManager.default.removeItem(at: temporaryURL)
 
         let writer = try AVAssetWriter(outputURL: temporaryURL, fileType: .mov)

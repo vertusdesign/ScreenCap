@@ -11,7 +11,7 @@
 фактическим URL и постоянный статус post-processing реализованы в рекордере 3.0.0.
 
 Начиная с актуальной реализации, новый восстановленный файл получает имя
-`<имя>_recovered.mov` (при конфликте — `<имя>_recovered-2.mov` и далее). Старые файлы с
+`<имя>_recovered.mov` (при конфликте — `<имя>_recovered_2.mov` и далее). Старые файлы с
 историческим суффиксом `.recovered` по-прежнему распознаются как кандидаты recovery, но
 новые результаты с точечным суффиксом не создаются.
 
@@ -315,7 +315,7 @@ ScreenCap found a playable recording after an interrupted finalization.
 
 Описанный контракт реализован в `Sources/ScreenCap/Recorder`:
 
-- запись идёт в атомарный sibling `*.partial.mov`, а JSON-marker содержит session ID,
+- запись идёт в атомарный sibling `*_partial.mov`, а JSON-marker содержит session ID,
   PID, boot identity, дисплей, размеры, heartbeat и текущий этап;
 - recovery сканирует настроенную папку и ограниченный список ранее использованных папок,
   не удаляет marker при временно недоступном томе и защищает активный PID;

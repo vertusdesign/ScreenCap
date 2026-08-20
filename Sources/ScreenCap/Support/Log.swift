@@ -80,20 +80,27 @@ enum Log {
         // best-effort: diagnostics must never become a reason to lose a recording.
         if maximumArchivedFiles > 1 {
             for index in stride(from: maximumArchivedFiles - 1, through: 1, by: -1) {
-                let source = directory.appendingPathComponent("recorder.log.\(index)")
-                let destination = directory.appendingPathComponent("recorder.log.\(index + 1)")
+                let source = directory.appendingPathComponent("recorder_log_\(index)")
+                let legacySource = directory.appendingPathComponent("recorder.log.\(index)")
+                let destination = directory.appendingPathComponent("recorder_log_\(index + 1)")
                 if fileManager.fileExists(atPath: destination.path) {
                     try? fileManager.removeItem(at: destination)
                 }
                 if fileManager.fileExists(atPath: source.path) {
                     try? fileManager.moveItem(at: source, to: destination)
+                } else if fileManager.fileExists(atPath: legacySource.path) {
+                    try? fileManager.moveItem(at: legacySource, to: destination)
                 }
             }
         }
 
-        let firstArchive = directory.appendingPathComponent("recorder.log.1")
+        let firstArchive = directory.appendingPathComponent("recorder_log_1")
         if fileManager.fileExists(atPath: firstArchive.path) {
             try? fileManager.removeItem(at: firstArchive)
+        }
+        let legacyFirstArchive = directory.appendingPathComponent("recorder.log.1")
+        if fileManager.fileExists(atPath: legacyFirstArchive.path) {
+            try? fileManager.removeItem(at: legacyFirstArchive)
         }
         try? fileManager.moveItem(at: file, to: firstArchive)
         fileManager.createFile(atPath: file.path, contents: nil, attributes: nil)

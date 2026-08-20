@@ -141,7 +141,9 @@ struct RecorderFile {
     /// it atomically to `url`. If the process disappears, the marker still
     /// points at the stable final basename and recovery can find this file.
     var partialURL: URL {
-        url.deletingPathExtension().appendingPathExtension("partial.mov")
+        let base = url.deletingPathExtension()
+        return base.deletingLastPathComponent()
+            .appendingPathComponent("\(base.lastPathComponent)_partial.mov")
     }
 }
 
@@ -159,7 +161,7 @@ enum RecorderFileNaming {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH.mm.ss"
+        timeFormatter.dateFormat = "HH-mm-ss"
         let stampFormatter = DateFormatter()
         stampFormatter.dateFormat = "yyyyMMdd-HHmmss"
 
@@ -172,6 +174,7 @@ enum RecorderFileNaming {
 
         let illegal = CharacterSet(charactersIn: "/:\\?%*|\"<>")
         name = name.components(separatedBy: illegal).joined(separator: "-")
+        name = name.replacingOccurrences(of: ".", with: "_")
         name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { name = "Recording" }
 
@@ -212,6 +215,8 @@ enum RecorderFileNaming {
     private static func isOccupied(_ url: URL) -> Bool {
         FileManager.default.fileExists(atPath: url.path)
             || FileManager.default.fileExists(atPath: RecorderRecovery.partialURL(for: url).path)
+            || FileManager.default.fileExists(atPath: RecorderRecovery.legacyPartialURL(for: url).path)
             || FileManager.default.fileExists(atPath: RecorderRecovery.markerURL(for: url).path)
+            || FileManager.default.fileExists(atPath: RecorderRecovery.legacyMarkerURL(for: url).path)
     }
 }

@@ -54,7 +54,7 @@ there is no server, APNs registration, sound or badge. Notification actions reso
 local target identifier to a file path, so raw paths are not placed in notification payloads.
 
 Recording finalization is crash-safe by design. The writer records into a sibling
-`*.partial.mov`, creates an atomic JSON session marker with PID/boot identity, display geometry,
+`*_partial.mov`, creates an atomic JSON session marker with PID/boot identity, display geometry,
 heartbeat and processing stage, and promotes the partial to the requested `.mov` only after a
 clean finish. Known recording folders are bounded and persisted locally so a remounted external
 volume can be scanned on a later launch. Startup recovery validates the original, partial,

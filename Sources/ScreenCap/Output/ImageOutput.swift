@@ -75,7 +75,7 @@ enum ImageOutput {
         }
 
         let sourceBaseName = sourceURL.deletingPathExtension().lastPathComponent
-        let folderName = sourceBaseName.isEmpty ? "ScreenCap" : sourceBaseName
+        let folderName = spaceFreeFilenameComponent(sourceBaseName.isEmpty ? "ScreenCap" : sourceBaseName)
         let folder = sourceURL
             .deletingLastPathComponent()
             .appendingPathComponent(folderName, isDirectory: true)
@@ -249,6 +249,7 @@ enum ImageOutput {
         )
         let illegal = CharacterSet(charactersIn: "/:\\?%*|\"<>")
         result = result.components(separatedBy: illegal).joined(separator: "-")
+        result = result.replacingOccurrences(of: ".", with: "_")
         result = result.replacingOccurrences(of: "-+", with: "-", options: .regularExpression)
         result = result.trimmingCharacters(in: CharacterSet(charactersIn: "-._"))
         return result.isEmpty ? "ScreenCap" : result
@@ -301,6 +302,7 @@ enum ImageOutput {
         let sanitized = base
             .components(separatedBy: CharacterSet(charactersIn: "/:\\?%*|\"<>") )
             .joined(separator: "-")
+            .replacingOccurrences(of: ".", with: "_")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (sanitized.isEmpty ? L10n.t("filename.fallback") : sanitized) + "_ScreenCap"
     }
@@ -312,7 +314,7 @@ enum ImageOutput {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH.mm.ss"
+        timeFormatter.dateFormat = "HH-mm-ss"
         let stampFormatter = DateFormatter()
         stampFormatter.dateFormat = "yyyyMMdd-HHmmss"
 
@@ -325,6 +327,7 @@ enum ImageOutput {
 
         let illegal = CharacterSet(charactersIn: "/:\\?%*|\"<>")
         name = name.components(separatedBy: illegal).joined(separator: "-")
+        name = name.replacingOccurrences(of: ".", with: "_")
         return name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? L10n.t("filename.fallback") : name
     }
 

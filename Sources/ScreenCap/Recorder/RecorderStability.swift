@@ -93,7 +93,9 @@ enum RecorderDiskSpace {
 
 @available(macOS 15.0, *)
 enum RecorderRecovery {
-    private static let markerExtension = "screencap-recording"
+    private static let markerExtension = "marker"
+    private static let legacyMarkerExtension = "screencap-recording"
+    private static let markerSuffix = "_screencap_recording"
     private static let knownDirectoriesKey = "recorder.recovery.knownDirectories.v1"
     private static let journalKey = "recorder.recovery.journal.v1"
     private static let maximumKnownDirectories = 32
@@ -114,11 +116,44 @@ enum RecorderRecovery {
     }
 
     static func markerURL(for movieURL: URL) -> URL {
-        movieURL.appendingPathExtension(markerExtension)
+        let base = movieURL.deletingPathExtension()
+        return base.deletingLastPathComponent()
+            .appendingPathComponent("\(base.lastPathComponent)\(markerSuffix)")
+            .appendingPathExtension(markerExtension)
+    }
+
+    static func legacyMarkerURL(for movieURL: URL) -> URL {
+        movieURL.appendingPathExtension(legacyMarkerExtension)
+    }
+
+    private static func markerURLs(for movieURL: URL) -> [URL] {
+        [markerURL(for: movieURL), legacyMarkerURL(for: movieURL)]
+    }
+
+    private static func activeMarkerURL(for movieURL: URL) -> URL {
+        markerURLs(for: movieURL).first {
+            FileManager.default.fileExists(atPath: $0.path)
+        } ?? markerURL(for: movieURL)
     }
 
     static func partialURL(for movieURL: URL) -> URL {
+        let base = movieURL.deletingPathExtension()
+        return base.deletingLastPathComponent()
+            .appendingPathComponent("\(base.lastPathComponent)_partial.mov")
+    }
+
+    static func legacyPartialURL(for movieURL: URL) -> URL {
         movieURL.deletingPathExtension().appendingPathExtension("partial.mov")
+    }
+
+    static func compositeURLs(for movieURL: URL) -> [URL] {
+        let base = movieURL.deletingPathExtension()
+        let directory = base.deletingLastPathComponent()
+        let stem = base.lastPathComponent
+        return [
+            directory.appendingPathComponent("\(stem)_composite.mov"),
+            directory.appendingPathComponent("\(stem).composite.mov")
+        ]
     }
 
     static func registerDirectory(_ directory: URL) {
@@ -153,7 +188,7 @@ enum RecorderRecovery {
     static func relatedRecordingURLs(for movieURL: URL) -> [URL] {
         let directory = movieURL.deletingLastPathComponent()
         let stem = movieURL.deletingPathExtension().lastPathComponent
-        var urls = [movieURL, partialURL(for: movieURL)]
+        var urls = [movieURL, partialURL(for: movieURL), legacyPartialURL(for: movieURL)]
 
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: directory,
@@ -166,13 +201,18 @@ enum RecorderRecovery {
         let siblings = entries.filter { candidate in
             guard candidate.pathExtension.lowercased() == "mov" else { return false }
             let name = candidate.deletingPathExtension().lastPathComponent
-            return name == "\(stem).composite"
+            return name == "\(stem)_composite"
+                || name == "\(stem).composite" // legacy
                 || name.hasPrefix("\(stem)_recovered")
                 || name.hasPrefix("\(stem).recovered") // legacy recovery names
-                || name.hasPrefix("\(stem).repaired")
-                || name.hasPrefix("\(stem).partial.composite")
-                || name.hasPrefix("\(stem).partial.repaired")
-                || name.hasPrefix("\(stem).partial_recovered")
+                || name.hasPrefix("\(stem)_repaired")
+                || name.hasPrefix("\(stem).repaired") // legacy
+                || name.hasPrefix("\(stem)_partial_composite")
+                || name.hasPrefix("\(stem).partial.composite") // legacy
+                || name.hasPrefix("\(stem)_partial_repaired")
+                || name.hasPrefix("\(stem).partial.repaired") // legacy
+                || name.hasPrefix("\(stem)_partial_recovered")
+                || name.hasPrefix("\(stem).partial_recovered") // legacy
                 || name.hasPrefix("\(stem).partial.recovered") // legacy
                 || name.hasPrefix("\(stem) (") && (
                     name.hasSuffix(")_recovered") || name.hasSuffix(").recovered")
@@ -237,7 +277,7 @@ enum RecorderRecovery {
     }
 
     static func updateMarker(for movieURL: URL, stage: RecorderProcessingStage) {
-        let marker = markerURL(for: movieURL)
+        let marker = activeMarkerURL(for: movieURL)
         guard var manifest = readManifest(from: marker) else { return }
         manifest.lastActivity = Date()
         manifest.stage = stage.rawValue
@@ -245,14 +285,16 @@ enum RecorderRecovery {
     }
 
     static func touchMarker(for movieURL: URL) {
-        let marker = markerURL(for: movieURL)
+        let marker = activeMarkerURL(for: movieURL)
         guard var manifest = readManifest(from: marker) else { return }
         manifest.lastActivity = Date()
         try? write(manifest, to: marker)
     }
 
     static func clearMarker(for movieURL: URL) {
-        try? FileManager.default.removeItem(at: markerURL(for: movieURL))
+        for marker in markerURLs(for: movieURL) {
+            try? FileManager.default.removeItem(at: marker)
+        }
     }
 
     /// A fragmented .mov remains readable surprisingly often after a process
@@ -284,8 +326,9 @@ enum RecorderRecovery {
             options: [.skipsHiddenFiles]
         ) else { return recoveredResults }
 
-        for marker in entries where marker.pathExtension == markerExtension {
-            let movie = marker.deletingPathExtension()
+        for marker in entries where marker.pathExtension == markerExtension
+            || marker.pathExtension == legacyMarkerExtension {
+            guard let movie = movieURL(forMarker: marker) else { continue }
             let candidates = relatedRecordingURLs(for: movie)
                 .filter { FileManager.default.fileExists(atPath: $0.path) }
             guard !candidates.isEmpty else {
@@ -382,7 +425,7 @@ enum RecorderRecovery {
         var counter = 2
         while FileManager.default.fileExists(atPath: candidate.path) {
             candidate = directory
-                .appendingPathComponent("\(stem)_recovered-\(counter)")
+                .appendingPathComponent("\(stem)_recovered_\(counter)")
                 .appendingPathExtension("mov")
             counter += 1
         }
@@ -391,13 +434,35 @@ enum RecorderRecovery {
 
     private static func recoveryRank(for url: URL, stem: String) -> Int {
         let name = url.deletingPathExtension().lastPathComponent
-        if name == "\(stem).composite" || name.hasPrefix("\(stem).partial.composite") { return 0 }
-        if name.hasPrefix("\(stem).repaired") || name.hasPrefix("\(stem).partial.repaired") { return 1 }
+        if name == "\(stem)_composite"
+            || name == "\(stem).composite"
+            || name.hasPrefix("\(stem)_partial_composite")
+            || name.hasPrefix("\(stem).partial.composite") { return 0 }
+        if name.hasPrefix("\(stem)_repaired")
+            || name.hasPrefix("\(stem).repaired")
+            || name.hasPrefix("\(stem)_partial_repaired")
+            || name.hasPrefix("\(stem).partial.repaired") { return 1 }
         if name.hasPrefix("\(stem)_recovered")
             || name.hasPrefix("\(stem).recovered")
+            || name.hasPrefix("\(stem)_partial_recovered")
             || name.hasPrefix("\(stem).partial_recovered")
             || name.hasPrefix("\(stem).partial.recovered") { return 2 }
         return 3
+    }
+
+    private static func movieURL(forMarker marker: URL) -> URL? {
+        guard marker.pathExtension == markerExtension else {
+            guard marker.pathExtension == legacyMarkerExtension else { return nil }
+            return marker.deletingPathExtension()
+        }
+        let base = marker.deletingPathExtension()
+        let name = base.lastPathComponent
+        guard name.hasSuffix(markerSuffix) else { return nil }
+        let movieStem = String(name.dropLast(markerSuffix.count))
+        guard !movieStem.isEmpty else { return nil }
+        return base.deletingLastPathComponent()
+            .appendingPathComponent(movieStem)
+            .appendingPathExtension("mov")
     }
 
     private static func activeOwner(for marker: URL, movie: URL) -> Bool {

@@ -225,6 +225,11 @@ final class RecorderWriterService: @unchecked Sendable {
         var selected: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
         var playableFallback: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
         var repairedCandidates: [URL] = []
+        let compositeCandidates = [
+            file.url,
+            file.partialURL,
+            RecorderRecovery.legacyPartialURL(for: file.url)
+        ].flatMap(RecorderRecovery.compositeURLs)
         for candidate in RecorderRecovery.relatedRecordingURLs(for: file.url)
             where FileManager.default.fileExists(atPath: candidate.path)
         {
@@ -268,10 +273,7 @@ final class RecorderWriterService: @unchecked Sendable {
             // Keep the marker and any media candidates for a later launch.
             // A container may become repairable after a volume remount or
             // after AVFoundation has flushed its last fragment asynchronously.
-            for candidate in [
-                file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
-                file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
-            ] {
+            for candidate in compositeCandidates {
                 try? FileManager.default.removeItem(at: candidate)
             }
             for candidate in repairedCandidates {
@@ -286,10 +288,7 @@ final class RecorderWriterService: @unchecked Sendable {
         // movie beside a valid source. Do not let that implementation detail
         // become a duplicate recording in the Player library; preserve it only
         // when it is the candidate we are actually returning.
-        for candidate in [
-            file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
-            file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
-        ] where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
+        for candidate in compositeCandidates where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
             try? FileManager.default.removeItem(at: candidate)
         }
         for candidate in repairedCandidates where candidate.standardizedFileURL != chosen.url.standardizedFileURL {

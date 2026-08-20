@@ -17,7 +17,7 @@ All notable changes are recorded here. This project follows
   URL scheme and is not included in this repository.
 - **Recovery race guard**: recording markers identify the active writer process; a second app
   instance no longer moves a live movie into a recovered filename during finalization.
-- **Crash-safe recording recovery**: the writer uses atomic `*.partial.mov` output plus a local
+- **Crash-safe recording recovery**: the writer uses atomic `*_partial.mov` output plus a local
   session manifest/heartbeat. Startup and the manual Recovery command scan configured and recently
   used recording folders, preserve candidates across a temporarily unavailable volume, repair a
   fragmented MOV through passthrough AVFoundation export when possible, and present a local
