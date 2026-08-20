@@ -143,7 +143,12 @@ final class HotkeyManager: @unchecked Sendable {
             UInt32(hotkey.keyCode),
             hotkey.carbonModifiers,
             hotKeyID,
-            GetEventDispatcherTarget(),
+            // Route the hot key through the application event queue. The
+            // dispatcher target can be starved by AppKit's nested menu
+            // tracking loop (status-item, context and popover menus).
+            // Application-target registrations remain global: WindowServer
+            // posts them to this app even when another app has focus.
+            GetApplicationEventTarget(),
             0,
             &ref
         )
@@ -170,7 +175,9 @@ final class HotkeyManager: @unchecked Sendable {
         let context = Unmanaged.passUnretained(self).toOpaque()
 
         InstallEventHandler(
-            GetEventDispatcherTarget(),
+            // Keep the handler on the same target used for registration so it
+            // continues to run while NSMenu is tracking a nested menu.
+            GetApplicationEventTarget(),
             { _, event, userData in
                 guard let event, let userData else { return OSStatus(eventNotHandledErr) }
                 let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()

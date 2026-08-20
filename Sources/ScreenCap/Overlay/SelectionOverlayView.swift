@@ -120,6 +120,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
     private var textAnalysisTask: Task<Void, Never>?
     nonisolated(unsafe) private var textRecognitionKeyMonitor: Any?
     nonisolated(unsafe) private var overlayKeyMonitor: Any?
+    nonisolated(unsafe) private var characterViewerKeyMonitor: Any?
     /// The opened-image editor has a larger canvas around the image. Keeping
     /// this separate from `bounds` lets its panels live in that surrounding
     /// space while annotations remain image-local.
@@ -127,6 +128,11 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
     private var trackingAreaRef: NSTrackingArea?
     nonisolated(unsafe) private var textEditorFocusObserver: NSObjectProtocol?
+    /// The capture session can have one shielding-level overlay per display.
+    /// Keep every overlay below the system Character Viewer while it is open;
+    /// lowering only the active display leaves the palette hidden behind a
+    /// second display's full-screen overlay.
+    private var characterViewerPreviousWindowLevels: [ObjectIdentifier: NSWindow.Level] = [:]
     private let handleRadius: CGFloat = 4.5
     private let handleHitRadius: CGFloat = 9
 
@@ -218,11 +224,12 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             guard let keyWindow = notification.object as? NSWindow else { return }
             Task { @MainActor [weak self] in
                 guard let self,
-                      keyWindow === self.window,
-                      let editor = self.textEditor,
-                      keyWindow.firstResponder !== editor
+                      keyWindow === self.window
                 else { return }
-                keyWindow.makeFirstResponder(editor)
+                self.restoreWindowLevelAfterCharacterViewer()
+                if let editor = self.textEditor, keyWindow.firstResponder !== editor {
+                    keyWindow.makeFirstResponder(editor)
+                }
             }
         }
 
@@ -251,6 +258,9 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         }
         if let overlayKeyMonitor {
             NSEvent.removeMonitor(overlayKeyMonitor)
+        }
+        if let characterViewerKeyMonitor {
+            NSEvent.removeMonitor(characterViewerKeyMonitor)
         }
         if let textEditorFocusObserver {
             NotificationCenter.default.removeObserver(textEditorFocusObserver)
@@ -486,9 +496,21 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
             guard let self, self.window?.isKeyWindow == true else {
                 return event
             }
+            let modifiers = self.normalized(event.modifierFlags)
+            // Control–Command–Space is normally consumed by the system input
+            // source before NSTextView.keyDown is reached. Intercept it at the
+            // app monitor while editing so we can lower the shielding overlays
+            // before AppKit orders the Emoji & Symbols window; otherwise the
+            // palette exists but is painted behind the frozen capture.
+            if self.textEditor != nil,
+               event.keyCode == UInt16(kVK_Space),
+               modifiers == [.control, .command] {
+                self.showCharacterViewer()
+                return nil
+            }
+
             guard self.textEditor == nil else { return event }
 
-            let modifiers = self.normalized(event.modifierFlags)
             if event.keyCode == UInt16(kVK_Escape) {
                 if self.eyedropperActive {
                     self.eyedropperActive = false
@@ -509,6 +531,25 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
 
             self.select(tool: matched)
             return nil
+        }
+
+        // The system input source may consume ⌃⌘Space before AppKit delivers
+        // the event to the local monitor (this is common with an accessory app).
+        // A global observer cannot cancel that event, but it can still lower
+        // our shielding windows immediately after CharacterPalette is opened,
+        // making the already-created palette visible and usable.
+        characterViewerKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            let modifiers = event.modifierFlags
+                .intersection(.deviceIndependentFlagsMask)
+                .subtracting([.capsLock, .function, .numericPad])
+            guard event.keyCode == UInt16(kVK_Space),
+                  modifiers == [.control, .command]
+            else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.textEditor != nil else { return }
+                self.showCharacterViewer()
+            }
         }
     }
 
@@ -1612,6 +1653,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         editor.onCommit = { [weak self] in self?.commitTextEditorIfNeeded() }
         editor.onCancel = { [weak self] in self?.discardTextEditor() }
         editor.onTextChanged = { [weak self] in self?.updateLiveTextDraft() }
+        editor.onCharacterViewerRequested = { [weak self] in self?.showCharacterViewer() }
 
         textEditorOrigin = origin
         // A new label follows the current tool style while it is being typed;
@@ -1622,6 +1664,13 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         if annotationID != nil { rebuildLayer() }
         textEditor = editor
         addSubview(editor)
+
+        // CharacterPalette is a separate system process and the standard
+        // ⌃⌘Space shortcut can be consumed before our key monitor sees it.
+        // Lower the shielding windows for the whole duration of text editing,
+        // so the palette is visible even when AppKit delivers no key event to
+        // this process. The original levels are restored when editing ends.
+        lowerOverlayWindowsForCharacterViewer()
 
         let handle = TextMoveHandle()
         handle.onDrag = { [weak self] delta in self?.moveTextEditor(by: delta) }
@@ -1684,6 +1733,7 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         editingTextID = nil
         draft = nil
         window?.makeFirstResponder(self)
+        restoreWindowLevelAfterCharacterViewer()
 
         guard !text.isEmpty || editingID != nil else { needsDisplay = true; return }
         pushUndoState()
@@ -1716,9 +1766,54 @@ final class SelectionOverlayView: NSView, ImageAnalysisOverlayViewDelegate {
         textEditorStyle = nil
         editingTextID = nil
         draft = nil
+        restoreWindowLevelAfterCharacterViewer()
         if wasEditingExisting { rebuildLayer() }
         window?.makeFirstResponder(self)
         needsDisplay = true
+    }
+
+    private func showCharacterViewer() {
+        // The overlay's shielding level is intentionally above all normal
+        // application windows, but it also hides the system Character Viewer.
+        // Lower every capture window (not just the display that owns the text
+        // editor) to the normal level before asking AppKit to order the
+        // palette. The extra async order is intentional: AppKit creates or
+        // reuses the palette on the next run-loop turn on some macOS releases.
+        lowerOverlayWindowsForCharacterViewer()
+        // Keep the text view as the action sender/first responder. AppKit uses
+        // that context when it creates the palette; passing nil can open the
+        // palette service without giving it a visible, input-capable owner.
+        if let editor = textEditor, let editorWindow = editor.window {
+            editorWindow.makeFirstResponder(editor)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontCharacterPalette(textEditor ?? self)
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.characterViewerPreviousWindowLevels.isEmpty else { return }
+            NSApp.orderFrontCharacterPalette(self.textEditor ?? self)
+        }
+    }
+
+    private func lowerOverlayWindowsForCharacterViewer() {
+        guard characterViewerPreviousWindowLevels.isEmpty else { return }
+        for overlayWindow in NSApp.windows.compactMap({ $0 as? OverlayWindow }) {
+            characterViewerPreviousWindowLevels[ObjectIdentifier(overlayWindow)] = overlayWindow.level
+            // Emoji & Symbols uses a system panel level above floating palettes.
+            // Floating keeps the frozen capture visible while allowing that
+            // panel to be ordered in front.
+            overlayWindow.level = .floating
+        }
+    }
+
+    private func restoreWindowLevelAfterCharacterViewer() {
+        guard !characterViewerPreviousWindowLevels.isEmpty else { return }
+        let previousLevels = characterViewerPreviousWindowLevels
+        characterViewerPreviousWindowLevels.removeAll()
+        for overlayWindow in NSApp.windows.compactMap({ $0 as? OverlayWindow }) {
+            if let previousLevel = previousLevels[ObjectIdentifier(overlayWindow)] {
+                overlayWindow.level = previousLevel
+            }
+        }
     }
 
     // MARK: - Keyboard
@@ -2641,6 +2736,7 @@ private final class MagnifierOverlayView: NSView {
 final class AnnotationTextView: NSTextView {
     var onCommit: (() -> Void)?
     var onCancel: (() -> Void)?
+    var onCharacterViewerRequested: (() -> Void)?
     /// Fired after the string OR the frame changes, so the live styled preview
     /// and the move handle can follow.
     var onTextChanged: (() -> Void)?
@@ -2650,12 +2746,25 @@ final class AnnotationTextView: NSTextView {
     /// order, so caret rectangles for later lines do not appear above the
     /// corresponding rendered line.
     override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
 
     override func cancelOperation(_ sender: Any?) {
         onCancel?()
     }
 
     override func keyDown(with event: NSEvent) {
+        // Accessory/overlay windows do not always expose the standard
+        // Character Viewer menu item. Handle its documented shortcut directly
+        // while keeping insertion on NSTextView's normal input-method path.
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == UInt16(kVK_Space), modifiers == [.control, .command] {
+            if let onCharacterViewerRequested {
+                onCharacterViewerRequested()
+            } else {
+                NSApp.orderFrontCharacterPalette(nil)
+            }
+            return
+        }
         // ⌘↩ commits; a bare ↩ inserts a newline so multi-line labels work.
         if event.keyCode == UInt16(kVK_Return), event.modifierFlags.contains(.command) {
             onCommit?()
@@ -2664,43 +2773,21 @@ final class AnnotationTextView: NSTextView {
         super.keyDown(with: event)
     }
 
-    /// Character Viewer can send either a String or an attributed string to
-    /// the first responder. Normalize both forms explicitly: the editor is
-    /// intentionally plain text, and forwarding only the default AppKit path
-    /// can lose the insertion when the overlay regains key status after the
-    /// Character Viewer closes.
+    /// Keep insertion on NSTextView's standard input-method path. Character
+    /// Viewer and other Unicode/IME sources can carry marked text and use
+    /// replacementRange == NSNotFound; manually calling replaceCharacters
+    /// loses that state and can drop the selected glyph. NSTextView also keeps
+    /// the correct undo, selection and marked-text bookkeeping.
     override func insertText(_ insertString: Any, replacementRange: NSRange) {
-        let string: String
-        if let value = insertString as? String {
-            string = value
-        } else if let value = insertString as? NSAttributedString {
-            string = value.string
-        } else if let value = insertString as? NSString {
-            string = value as String
-        } else {
-            super.insertText(insertString, replacementRange: replacementRange)
-            return
-        }
-
-        let currentRange = replacementRange.location == NSNotFound
-            ? selectedRange
-            : replacementRange
-        guard currentRange.location != NSNotFound else { return }
-        replaceCharacters(in: currentRange, with: string)
-        setSelectedRange(NSRange(
-            location: currentRange.location + (string as NSString).length,
-            length: 0
-        ))
-        scrollRangeToVisible(selectedRange)
-
-        // `replaceCharacters(in:with:)` is also used for Character Viewer
-        // input, but it does not consistently deliver NSTextView's
-        // `didChangeText()` callback on every macOS version. Keep the overlay
-        // draft synchronized explicitly so newly typed text is visible
-        // immediately, without requiring a later style change to trigger a
-        // redraw.
+        super.insertText(insertString, replacementRange: replacementRange)
         relayoutToContent()
         onTextChanged?()
+    }
+
+    /// Older input sources still call the replacementRange-less NSText API.
+    /// Forward that form too instead of letting a custom editor swallow it.
+    override func insertText(_ insertString: Any) {
+        insertText(insertString, replacementRange: selectedRange)
     }
 
     override func didChangeText() {

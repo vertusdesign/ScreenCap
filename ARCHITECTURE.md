@@ -354,6 +354,10 @@ The minimum automated checks for every platform implementation are:
 - verify PNG/JPEG encoding and filename-template expansion;
 - verify coordinate conversions with negative display origins and different scales;
 - verify hotkey serialization and invalid-binding handling;
+- verify each registered global hotkey while the status-item menu, a context menu and a player
+  popover are actively tracking;
+- verify the Text tool accepts Character Viewer/Unicode insertion in both a fresh capture and an
+  opened-image editing session;
 - verify recent-color ordering, deduplication and the nine-entry limit;
 - verify session history restores a selection after moving between display views;
 - verify the final image uses the same compositing result as the live preview.
