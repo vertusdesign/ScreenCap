@@ -3,6 +3,9 @@ import UniformTypeIdentifiers
 
 /// Everything that happens to a finished capture: clipboard, disk, printer.
 enum ImageOutput {
+    enum PlayerFrameSaveError: Error {
+        case encodingFailed
+    }
 
     // MARK: - Clipboard
 
@@ -25,6 +28,65 @@ enum ImageOutput {
         }
         items.append(item)
         pasteboard.writeObjects(items.compactMap { $0 as NSPasteboardWriting })
+    }
+
+    /// Copies a player frame in the formats expected by native macOS image
+    /// consumers. When `fileURL` is supplied, the same pasteboard item also
+    /// advertises the PNG as a file. Apps such as Figma then use the file's
+    /// basename for the imported layer instead of a generic "Image" name.
+    @MainActor
+    @discardableResult
+    static func copyPlayerFrameToClipboard(_ image: CGImage, fileURL: URL? = nil) -> Bool {
+        let representation = NSBitmapImageRep(cgImage: image)
+        representation.size = NSSize(width: image.width, height: image.height)
+        guard let png = representation.representation(using: .png, properties: [:]) else {
+            return false
+        }
+
+        let item = NSPasteboardItem()
+        item.setData(png, forType: .png)
+        if let tiff = representation.tiffRepresentation {
+            item.setData(tiff, forType: .tiff)
+        }
+        if let fileURL {
+            // `public.file-url` is what Finder places on the pasteboard when a
+            // file is copied. Keep it on the same item as the image data so
+            // bitmap-only consumers continue to work without special cases.
+            item.setString(fileURL.absoluteString, forType: .fileURL)
+        }
+
+        return NSPasteboard.general.writeObjects([item])
+    }
+
+    /// Persists a player frame next to its source video. The folder is named
+    /// after the video (without its extension), and the file name is stable,
+    /// space-free and based on the frame timestamp. Existing files are never
+    /// overwritten; a numeric suffix is used only for a same-millisecond copy.
+    static func savePlayerFrame(
+        _ image: CGImage,
+        sourceURL: URL,
+        seconds: Double
+    ) throws -> URL {
+        guard let data = pngData(from: image) else {
+            throw PlayerFrameSaveError.encodingFailed
+        }
+
+        let sourceBaseName = sourceURL.deletingPathExtension().lastPathComponent
+        let folderName = sourceBaseName.isEmpty ? "ScreenCap" : sourceBaseName
+        let folder = sourceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(folderName, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: folder,
+            withIntermediateDirectories: true
+        )
+
+        let fileStem = spaceFreeFilenameComponent(sourceBaseName.isEmpty ? "ScreenCap" : sourceBaseName)
+        let timestamp = playerFrameTimestamp(seconds)
+        let requestedName = "\(fileStem)-\(timestamp)"
+        let url = uniquePlayerFrameURL(in: folder, name: requestedName)
+        try data.write(to: url, options: .atomic)
+        return url
     }
 
     // MARK: - Saving
@@ -174,6 +236,42 @@ enum ImageOutput {
         let representation = NSBitmapImageRep(cgImage: image)
         representation.size = NSSize(width: image.width, height: image.height)
         return representation.representation(using: .png, properties: [:])
+    }
+
+    private static func spaceFreeFilenameComponent(_ value: String) -> String {
+        var result = value.replacingOccurrences(
+            of: "\\s+",
+            with: "-",
+            options: .regularExpression
+        )
+        let illegal = CharacterSet(charactersIn: "/:\\?%*|\"<>")
+        result = result.components(separatedBy: illegal).joined(separator: "-")
+        result = result.replacingOccurrences(of: "-+", with: "-", options: .regularExpression)
+        result = result.trimmingCharacters(in: CharacterSet(charactersIn: "-._"))
+        return result.isEmpty ? "ScreenCap" : result
+    }
+
+    private static func playerFrameTimestamp(_ seconds: Double) -> String {
+        let safeSeconds = seconds.isFinite ? max(seconds, 0) : 0
+        let totalMilliseconds = max(Int((safeSeconds * 1_000).rounded()), 0)
+        let hours = totalMilliseconds / 3_600_000
+        let minutes = (totalMilliseconds / 60_000) % 60
+        let seconds = (totalMilliseconds / 1_000) % 60
+        let milliseconds = totalMilliseconds % 1_000
+        return String(format: "%02d-%02d-%02d-%03d", hours, minutes, seconds, milliseconds)
+    }
+
+    private static func uniquePlayerFrameURL(in directory: URL, name: String) -> URL {
+        let fileManager = FileManager.default
+        var candidate = directory.appendingPathComponent(name).appendingPathExtension("png")
+        var counter = 2
+        while fileManager.fileExists(atPath: candidate.path) {
+            candidate = directory
+                .appendingPathComponent("\(name)-\(counter)")
+                .appendingPathExtension("png")
+            counter += 1
+        }
+        return candidate
     }
 
     static func encode(_ captured: CapturedImage, as format: ImageFormat) -> Data? {

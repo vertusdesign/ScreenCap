@@ -115,6 +115,12 @@
 "menu.player.speed" = "Playback Speed";
 "menu.player.autoplay" = "Automatically Play Next Video";
 
+"player.frame.copy.success" = "Frame copied to clipboard";
+"player.frame.copy.saved" = "Frame copied and saved";
+"player.frame.copy.fileFailed" = "The frame was copied, but the PNG could not be saved beside the video.";
+"player.frame.copy.failed" = "Could not copy the frame";
+"player.frame.copy.noSelection" = "Select a video first";
+
 "prefs.title" = "%@ Settings";
 "prefs.tab.shortcuts" = "Shortcuts";
 "prefs.tab.capture" = "Capture";
