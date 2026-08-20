@@ -1,33 +1,47 @@
 @preconcurrency import AVFoundation
+import Accelerate
 import CoreMedia
 import Foundation
 
-/// Conservative, offline acoustic echo reduction for ScreenCap recordings.
+/// Timestamp-aware, offline acoustic echo reduction for ScreenCap recordings.
 ///
-/// This is intentionally a post-processing stage, not a modification of the
-/// microphone callback. ScreenCap always retains the original system and
-/// microphone streams. The stage produces a temporary echo-reduced microphone
-/// stream, renders a derived composite, and is committed only after the new
-/// movie has been written successfully. Any uncertainty (no reference signal,
-/// route/timeline mismatch, excessive duration, weak confidence or a writer
-/// failure) returns the original-mix path instead of changing user audio.
+/// The recorder never overwrites the captured microphone stream. The stage
+/// decodes the system and microphone tracks onto a common timestamp grid,
+/// applies a conservative frequency-domain adaptive filter with double-talk
+/// protection, and returns both a derived microphone stream and a derived
+/// composite. Any uncertainty falls back to the raw mix and keeps the source
+/// tracks unchanged.
 @available(macOS 15.0, *)
 enum RecorderAcousticEchoCanceller {
     private final class QueueConfined<Value>: @unchecked Sendable {
         var value: Value
-        init(_ value: Value) { self.value = value }
+
+        init(_ value: Value) {
+            self.value = value
+        }
     }
 
     struct Preparation: Sendable {
         let compositeURL: URL?
+        let processedMicrophoneURL: URL?
         let applied: Bool
         let warning: String?
     }
 
     private struct DecodedTrack {
         let samples: [Float]
+        let valid: [Bool]
         let sampleRate: Double
-        let duration: Double
+        let startTime: Double
+        let endTime: Double
+        let discontinuityCount: Int
+    }
+
+    private struct AlignedSignals {
+        let reference: [Float]
+        let microphone: [Float]
+        let valid: [Bool]
+        let microphoneOffset: Int
     }
 
     private struct SignalResult {
@@ -35,93 +49,246 @@ enum RecorderAcousticEchoCanceller {
         let confidence: Double
         let beforeRMS: Float
         let afterRMS: Float
+        let envelopeReduction: Double
+        let predictedEchoRatio: Double
+        let adaptedFrames: Int
+    }
+
+    /// A real-input FFT workspace. vDSP's packed real FFT stores the Nyquist
+    /// component in `imagp[0]`; DC/Nyquist are passed through, while all
+    /// interior bins receive independent adaptive complex gains.
+    private final class RealFFTWorkspace {
+        let size: Int
+        let bins: Int
+        private let log2Size: vDSP_Length
+        private let setup: FFTSetup
+        private let input = UnsafeMutablePointer<DSPComplex>.allocate(capacity: 2048)
+        private let inverseOutput = UnsafeMutablePointer<DSPComplex>.allocate(capacity: 2048)
+
+        init?(size: Int) {
+            guard size > 0, size.isPowerOfTwo else { return nil }
+            self.size = size
+            self.bins = size / 2
+            self.log2Size = vDSP_Length(log2(Float(size)))
+            guard let setup = vDSP_create_fftsetup(
+                self.log2Size,
+                FFTRadix(kFFTRadix2)
+            ) else {
+                return nil
+            }
+            self.setup = setup
+        }
+
+        deinit {
+            input.deallocate()
+            inverseOutput.deallocate()
+            vDSP_destroy_fftsetup(setup)
+        }
+
+        func forward(
+            _ source: UnsafePointer<Float>,
+            real: UnsafeMutablePointer<Float>,
+            imaginary: UnsafeMutablePointer<Float>
+        ) {
+            for index in 0..<size {
+                input[index] = DSPComplex(real: source[index], imag: 0)
+            }
+            var split = DSPSplitComplex(realp: real, imagp: imaginary)
+            vDSP_ctoz(input, 2, &split, 1, vDSP_Length(bins))
+            vDSP_fft_zrip(
+                setup,
+                &split,
+                1,
+                log2Size,
+                FFTDirection(FFT_FORWARD)
+            )
+        }
+
+        func inverse(
+            real: UnsafeMutablePointer<Float>,
+            imaginary: UnsafeMutablePointer<Float>,
+            output: UnsafeMutablePointer<Float>
+        ) {
+            var split = DSPSplitComplex(realp: real, imagp: imaginary)
+            vDSP_fft_zrip(
+                setup,
+                &split,
+                1,
+                log2Size,
+                FFTDirection(FFT_INVERSE)
+            )
+            vDSP_ztoc(&split, 1, inverseOutput, 2, vDSP_Length(bins))
+            let scale = 1 / Float(size)
+            for index in 0..<size {
+                output[index] = inverseOutput[index].real * scale
+            }
+        }
     }
 
     private static let analysisRate = 16_000.0
     private static let maximumDuration: Double = 30 * 60
     private static let maximumSamples = Int(analysisRate * maximumDuration)
-    private static let maximumDelaySamples = Int(analysisRate * 0.5)
-    private static let subtractionStrength: Float = 0.78
+    private static let fftSize = 1_024
+    private static let hopSize = fftSize / 2
+    private static let adaptationRate: Float = 0.16
+    private static let maximumFilterGain: Float = 2.0
 
-    /// Deterministic signal-only regression probe. It never touches a device,
-    /// file or user's recording and is suitable for the existing headless
-    /// self-test command.
+    /// Pure signal regression checks used by the headless self-test. No device,
+    /// file or user recording is touched.
     static func selfTest() -> Bool {
-        let count = 16_000
+        let count = 32_000
         let delay = 320
         var reference = Array(repeating: Float.zero, count: count)
         var microphone = Array(repeating: Float.zero, count: count)
         for index in 0..<count {
             let t = Double(index) / analysisRate
-            let render = Float(sin(t * 2 * .pi * 380) * 0.35)
+            let render = Float(
+                sin(t * 2 * .pi * 380) * 0.30
+                    + sin(t * 2 * .pi * 1_100) * 0.14
+            )
             reference[index] = render
-            let echo = index >= delay ? reference[index - delay] * 0.42 : 0
-            microphone[index] = Float(sin(t * 2 * .pi * 170) * 0.06) + echo
+            let echo = index >= delay ? reference[index - delay] * 0.52 : 0
+            let nearSpeech = Float(sin(t * 2 * .pi * 170) * 0.045)
+            microphone[index] = nearSpeech + echo
         }
-        guard let result = cancelEcho(reference: reference, microphone: microphone) else { return false }
-        return result.confidence >= 0.08
+        let valid = Array(repeating: true, count: count)
+        guard let result = cancelEcho(
+            reference: reference,
+            microphone: microphone,
+            valid: valid
+        ) else {
+            return false
+        }
+        let gapValid = valid.enumerated().map { index, value in
+            index < 2_000 || index >= 3_000 ? value : false
+        }
+        guard let gapResult = cancelEcho(
+            reference: reference,
+            microphone: microphone,
+            valid: gapValid
+        ) else {
+            return false
+        }
+        let gapChanged = zip(
+            gapResult.samples[2_000..<3_000],
+            microphone[2_000..<3_000]
+        ).contains { abs($0 - $1) > 0.0001 }
+        return result.confidence >= 0.05
             && result.afterRMS.isFinite
-            && result.afterRMS >= result.beforeRMS * 0.30
-            && result.afterRMS < result.beforeRMS
+            && result.afterRMS < result.beforeRMS * 0.98
+            && result.predictedEchoRatio > 0.01
+            && !gapChanged
     }
 
-    /// Attempts to prepare a mixed audio file from exactly two raw streams:
-    /// system audio followed by microphone. A source with a different track
-    /// layout is deliberately left to the existing raw-mix implementation.
+    /// Attempts to produce a derived microphone stream and a derived
+    /// composite. The source layout is intentionally strict: exactly two
+    /// audio tracks means system audio followed by raw microphone audio.
     static func prepareCompositeAudio(
         asset: AVAsset,
         audioTracks: [AVAssetTrack]
     ) async -> Preparation {
         guard audioTracks.count == 2 else {
-            return Preparation(compositeURL: nil, applied: false, warning: nil)
+            return Preparation(
+                compositeURL: nil,
+                processedMicrophoneURL: nil,
+                applied: false,
+                warning: nil
+            )
         }
 
         do {
             let system = try await decode(audioTracks[0], in: asset)
             let microphone = try await decode(audioTracks[1], in: asset)
-            guard system.duration.isFinite, microphone.duration.isFinite,
-                  system.duration > 0.1, microphone.duration > 0.1
+            guard system.sampleRate == analysisRate,
+                  microphone.sampleRate == analysisRate,
+                  system.endTime.isFinite,
+                  microphone.endTime.isFinite,
+                  system.endTime > system.startTime + 0.1,
+                  microphone.endTime > microphone.startTime + 0.1
             else {
-                return Preparation(compositeURL: nil, applied: false, warning: nil)
+                return Preparation(
+                    compositeURL: nil,
+                    processedMicrophoneURL: nil,
+                    applied: false,
+                    warning: nil
+                )
             }
-            guard max(system.duration, microphone.duration) <= maximumDuration else {
+            guard max(
+                system.endTime - system.startTime,
+                microphone.endTime - microphone.startTime
+            ) <= maximumDuration else {
                 Log.diagnostic(
                     "aec skipped: recording duration exceeds safe offline limit "
                         + String(format: "%.1f", maximumDuration) + "s"
                 )
                 return Preparation(
                     compositeURL: nil,
+                    processedMicrophoneURL: nil,
                     applied: false,
                     warning: L10n.t("recording.aec.skipped.long")
                 )
             }
-            guard abs(system.duration - microphone.duration) <= 1.0 else {
-                Log.diagnostic(
-                    "aec skipped: raw track duration mismatch system="
-                        + String(format: "%.3f", system.duration)
-                        + " microphone=" + String(format: "%.3f", microphone.duration)
+
+            let aligned = try align(system: system, microphone: microphone)
+            guard aligned.valid.filter({ $0 }).count > fftSize * 4 else {
+                return Preparation(
+                    compositeURL: nil,
+                    processedMicrophoneURL: nil,
+                    applied: false,
+                    warning: nil
                 )
-                return Preparation(compositeURL: nil, applied: false, warning: nil)
+            }
+            if system.discontinuityCount > 0 || microphone.discontinuityCount > 0 {
+                Log.diagnostic(
+                    "aec timestamp gaps: system=" + String(system.discontinuityCount)
+                        + " microphone=" + String(microphone.discontinuityCount)
+                )
             }
 
             guard let result = cancelEcho(
-                reference: system.samples,
-                microphone: microphone.samples
+                reference: aligned.reference,
+                microphone: aligned.microphone,
+                valid: aligned.valid
             ) else {
-                return Preparation(compositeURL: nil, applied: false, warning: nil)
+                Log.diagnostic("aec skipped: insufficient stable reference")
+                return Preparation(
+                    compositeURL: nil,
+                    processedMicrophoneURL: nil,
+                    applied: false,
+                    warning: L10n.t("recording.aec.lowConfidence")
+                )
             }
-            guard result.confidence >= 0.08,
+            guard result.confidence >= 0.05,
+                  result.predictedEchoRatio >= 0.01,
                   result.afterRMS.isFinite,
                   result.beforeRMS.isFinite,
-                  result.afterRMS >= result.beforeRMS * 0.30,
-                  result.afterRMS <= max(result.beforeRMS * 1.35, 0.002)
+                  result.afterRMS >= result.beforeRMS * 0.35,
+                  result.afterRMS <= max(result.beforeRMS * 1.20, 0.002)
             else {
                 Log.diagnostic(
                     "aec rejected: confidence=" + String(format: "%.3f", result.confidence)
+                        + " predictedEchoRatio=" + String(format: "%.3f", result.predictedEchoRatio)
                         + " beforeRMS=" + String(format: "%.5f", result.beforeRMS)
                         + " afterRMS=" + String(format: "%.5f", result.afterRMS)
                 )
-                return Preparation(compositeURL: nil, applied: false, warning: nil)
+                return Preparation(
+                    compositeURL: nil,
+                    processedMicrophoneURL: nil,
+                    applied: false,
+                    warning: L10n.t("recording.aec.lowConfidence")
+                )
+            }
+
+            var processedFull = microphone.samples
+            let alignedStart = aligned.microphoneOffset
+            let alignedEnd = min(
+                processedFull.count,
+                alignedStart + result.samples.count
+            )
+            if alignedEnd > alignedStart {
+                for index in alignedStart..<alignedEnd {
+                    processedFull[index] = result.samples[index - alignedStart]
+                }
             }
 
             let temporaryMic = FileManager.default.temporaryDirectory
@@ -129,19 +296,26 @@ enum RecorderAcousticEchoCanceller {
             let temporaryComposite = FileManager.default.temporaryDirectory
                 .appendingPathComponent("screencap_aec_composite_\(UUID().uuidString).m4a")
             do {
-                try writeMonoAudio(result.samples, to: temporaryMic)
+                try writeMonoAudio(processedFull, to: temporaryMic)
                 try await renderComposite(
                     asset: asset,
                     systemTrack: audioTracks[0],
                     processedMicrophoneURL: temporaryMic,
                     destination: temporaryComposite
                 )
-                try? FileManager.default.removeItem(at: temporaryMic)
                 Log.diagnostic(
                     "aec applied: confidence=" + String(format: "%.3f", result.confidence)
-                        + " delay-estimated and source microphone preserved"
+                        + " predictedEchoRatio=" + String(format: "%.3f", result.predictedEchoRatio)
+                        + " envelopeReduction=" + String(format: "%.3f", result.envelopeReduction)
+                        + " adaptedFrames=" + String(result.adaptedFrames)
+                        + " timestamp-aware processed microphone preserved"
                 )
-                return Preparation(compositeURL: temporaryComposite, applied: true, warning: nil)
+                return Preparation(
+                    compositeURL: temporaryComposite,
+                    processedMicrophoneURL: temporaryMic,
+                    applied: true,
+                    warning: nil
+                )
             } catch {
                 try? FileManager.default.removeItem(at: temporaryMic)
                 try? FileManager.default.removeItem(at: temporaryComposite)
@@ -154,6 +328,7 @@ enum RecorderAcousticEchoCanceller {
             )
             return Preparation(
                 compositeURL: nil,
+                processedMicrophoneURL: nil,
                 applied: false,
                 warning: L10n.t("recording.aec.failed")
             )
@@ -162,8 +337,19 @@ enum RecorderAcousticEchoCanceller {
 
     private static func decode(_ track: AVAssetTrack, in asset: AVAsset) async throws -> DecodedTrack {
         let sourceRange = try await track.load(.timeRange)
+        let startTime = sourceRange.start.seconds.isFinite ? sourceRange.start.seconds : 0
         let duration = sourceRange.duration.seconds
         guard duration.isFinite, duration > 0 else { throw CancellationError() }
+
+        let expectedSamples = min(
+            max(Int(ceil(duration * analysisRate)) + Int(analysisRate), fftSize),
+            maximumSamples
+        )
+        var samples = Array(repeating: Float.zero, count: expectedSamples)
+        var valid = Array(repeating: false, count: expectedSamples)
+        var maxWritten = 0
+        var previousEnd: Double?
+        var discontinuityCount = 0
 
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
@@ -183,14 +369,19 @@ enum RecorderAcousticEchoCanceller {
             throw reader.error ?? CancellationError()
         }
 
-        var samples: [Float] = []
-        samples.reserveCapacity(min(max(Int(duration * analysisRate), 1), maximumSamples))
         while let sample = output.copyNextSampleBuffer() {
-            guard samples.count < maximumSamples else {
-                throw NSError(domain: "ScreenCap.AEC", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "Audio exceeds the safe AEC buffer limit."
-                ])
+            let presentationTime = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+            let sampleDuration = CMSampleBufferGetDuration(sample).seconds
+            guard presentationTime.isFinite else { continue }
+            let relativeTime = presentationTime - startTime
+            let baseIndex = Int((relativeTime * analysisRate).rounded())
+            if let previousEnd {
+                let gap = presentationTime - previousEnd
+                if abs(gap) > 0.020 {
+                    discontinuityCount += 1
+                }
             }
+
             var listSize = 0
             let sizeStatus = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
                 sample,
@@ -221,153 +412,394 @@ enum RecorderAcousticEchoCanceller {
                 blockBufferOut: &retained
             )
             guard status == noErr else { continue }
+
+            var offset = 0
             let buffers = UnsafeMutableAudioBufferListPointer(list)
             for buffer in buffers {
                 guard let data = buffer.mData else { continue }
                 let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
                 let values = data.assumingMemoryBound(to: Float.self)
-                for index in 0..<count where samples.count < maximumSamples {
+                for index in 0..<count {
+                    let destination = baseIndex + offset + index
+                    guard destination >= 0, destination < samples.count else { continue }
                     let value = values[index]
-                    samples.append(value.isFinite ? min(max(value, -1), 1) : 0)
+                    samples[destination] = value.isFinite ? min(max(value, -1), 1) : 0
+                    valid[destination] = value.isFinite
+                    maxWritten = max(maxWritten, destination + 1)
                 }
+                offset += count
             }
+            let frameCount = max(0, offset)
+            previousEnd = presentationTime + (sampleDuration.isFinite
+                ? sampleDuration
+                : Double(frameCount) / analysisRate)
         }
         guard reader.status == .completed || reader.status == .reading else {
             throw reader.error ?? CancellationError()
         }
-        return DecodedTrack(samples: samples, sampleRate: analysisRate, duration: Double(samples.count) / analysisRate)
+        let expectedEnd = Int(ceil(duration * analysisRate))
+        let trimCount = min(max(maxWritten, expectedEnd), samples.count)
+        guard trimCount > 0 else { throw CancellationError() }
+        return DecodedTrack(
+            samples: Array(samples[0..<trimCount]),
+            valid: Array(valid[0..<trimCount]),
+            sampleRate: analysisRate,
+            startTime: startTime,
+            endTime: startTime + Double(trimCount) / analysisRate,
+            discontinuityCount: discontinuityCount
+        )
     }
 
-    private static func cancelEcho(reference: [Float], microphone: [Float]) -> SignalResult? {
-        guard !reference.isEmpty, !microphone.isEmpty else { return nil }
-        let referenceRMS = rms(reference)
-        let microphoneRMS = rms(microphone)
-        guard referenceRMS >= 0.001, microphoneRMS >= 0.0005 else { return nil }
-
-        let delay = estimateDelay(reference: reference, microphone: microphone)
-        let beforeCorrelation = correlation(
+    private static func align(
+        system: DecodedTrack,
+        microphone: DecodedTrack
+    ) throws -> AlignedSignals {
+        let commonStart = max(system.startTime, microphone.startTime)
+        let commonEnd = min(system.endTime, microphone.endTime)
+        guard commonEnd > commonStart + Double(fftSize) / analysisRate else {
+            throw CancellationError()
+        }
+        let referenceOffset = max(
+            0,
+            Int(((commonStart - system.startTime) * analysisRate).rounded())
+        )
+        let microphoneOffset = max(
+            0,
+            Int(((commonStart - microphone.startTime) * analysisRate).rounded())
+        )
+        let requestedCount = Int(((commonEnd - commonStart) * analysisRate).rounded())
+        let count = min(
+            requestedCount,
+            min(
+                system.samples.count - referenceOffset,
+                microphone.samples.count - microphoneOffset
+            )
+        )
+        guard count > fftSize else { throw CancellationError() }
+        var reference = Array(repeating: Float.zero, count: count)
+        var microphoneSamples = Array(repeating: Float.zero, count: count)
+        var valid = Array(repeating: false, count: count)
+        for index in 0..<count {
+            let systemIndex = referenceOffset + index
+            let microphoneIndex = microphoneOffset + index
+            reference[index] = system.samples[systemIndex]
+            microphoneSamples[index] = microphone.samples[microphoneIndex]
+            valid[index] = system.valid[systemIndex] && microphone.valid[microphoneIndex]
+        }
+        return AlignedSignals(
             reference: reference,
-            microphone: microphone,
-            delay: delay
-        )
-        guard beforeCorrelation >= 0.08 else { return nil }
-
-        var output = Array(repeating: Float.zero, count: microphone.count)
-        // A full WebRTC-style frequency-domain AEC is intentionally not
-        // reimplemented here. This bounded blockwise single-path canceller is
-        // conservative and O(n), so long recordings cannot turn post-processing
-        // into an unbounded quadratic job. It estimates a slowly changing
-        // reference gain per 32 ms block and freezes adaptation during
-        // double-talk.
-        let blockSize = 512
-        var smoothedGain: Float = 0
-        var adaptedBlocks = 0
-        for blockStart in stride(from: 0, to: microphone.count, by: blockSize) {
-            let blockEnd = min(microphone.count, blockStart + blockSize)
-            var dot: Float = 0
-            var referenceEnergy: Float = 0
-            var microphoneEnergy: Float = 0
-            var validSamples = 0
-            for index in blockStart..<blockEnd {
-                let referenceIndex = index - delay
-                guard referenceIndex >= 0, referenceIndex < reference.count else { continue }
-                let render = reference[referenceIndex]
-                let near = microphone[index]
-                dot += render * near
-                referenceEnergy += render * render
-                microphoneEnergy += near * near
-                validSamples += 1
-            }
-            let referenceRMS = validSamples > 0
-                ? sqrt(referenceEnergy / Float(validSamples))
-                : 0
-            let microphoneRMS = validSamples > 0
-                ? sqrt(microphoneEnergy / Float(validSamples))
-                : 0
-            let doubleTalk = microphoneRMS > max(referenceRMS * 4, 0.025)
-            if !doubleTalk, referenceEnergy > 0.0001, validSamples > 0 {
-                let candidate = min(max(dot / referenceEnergy, -0.9), 0.9)
-                smoothedGain += (candidate - smoothedGain) * 0.12
-                adaptedBlocks += 1
-            }
-            let subtraction = min(max(smoothedGain * subtractionStrength, -0.8), 0.8)
-            for index in blockStart..<blockEnd {
-                let referenceIndex = index - delay
-                guard referenceIndex >= 0, referenceIndex < reference.count else {
-                    output[index] = microphone[index]
-                    continue
-                }
-                output[index] = min(
-                    max(microphone[index] - reference[referenceIndex] * subtraction, -1),
-                    1
-                )
-            }
-        }
-
-        guard adaptedBlocks > 2 else { return nil }
-        let afterCorrelation = correlation(reference: reference, microphone: output, delay: delay)
-        let reduction = max(0, beforeCorrelation - afterCorrelation)
-        let confidence = min(1, reduction * 2.5 + beforeCorrelation * 0.15)
-        guard reduction >= 0.025 else { return nil }
-        return SignalResult(
-            samples: output,
-            confidence: Double(confidence),
-            beforeRMS: microphoneRMS,
-            afterRMS: rms(output)
+            microphone: microphoneSamples,
+            valid: valid,
+            microphoneOffset: microphoneOffset
         )
     }
 
-    private static func estimateDelay(reference: [Float], microphone: [Float]) -> Int {
-        let coarseStep = 160 // 10 ms at 16 kHz
-        let refineStep = 16 // 1 ms at 16 kHz
-        let maxDelay = min(maximumDelaySamples, max(reference.count, 1) - 1)
-        var bestDelay = 0
-        var bestScore = -Float.infinity
-        for delay in stride(from: 0, through: maxDelay, by: coarseStep) {
-            let score = correlation(reference: reference, microphone: microphone, delay: delay, stride: 16)
-            if score > bestScore { bestScore = score; bestDelay = delay }
-        }
-        let lower = max(0, bestDelay - coarseStep)
-        let upper = min(maxDelay, bestDelay + coarseStep)
-        for delay in stride(from: lower, through: upper, by: refineStep) {
-            let score = correlation(reference: reference, microphone: microphone, delay: delay, stride: 8)
-            if score > bestScore { bestScore = score; bestDelay = delay }
-        }
-        return bestDelay
-    }
-
-    private static func correlation(
+    private static func cancelEcho(
         reference: [Float],
         microphone: [Float],
-        delay: Int,
-        stride: Int = 16
-    ) -> Float {
-        let start = max(delay, 0)
-        let end = min(microphone.count, reference.count + delay)
-        guard end - start > 512 else { return 0 }
-        var xy: Double = 0
-        var xx: Double = 0
-        var yy: Double = 0
+        valid: [Bool]
+    ) -> SignalResult? {
+        guard reference.count == microphone.count,
+              microphone.count == valid.count,
+              !reference.isEmpty
+        else { return nil }
+        let validCount = valid.filter { $0 }.count
+        guard validCount > fftSize * 4 else { return nil }
+        let referenceRMS = rms(reference, valid: valid)
+        let microphoneRMS = rms(microphone, valid: valid)
+        guard referenceRMS >= 0.0005, microphoneRMS >= 0.0002 else { return nil }
+        guard let fft = RealFFTWorkspace(size: fftSize) else { return nil }
+
+        var processed = Array(repeating: Float.zero, count: microphone.count)
+        var weights = Array(repeating: Float.zero, count: microphone.count)
+        var referenceFrame = Array(repeating: Float.zero, count: fftSize)
+        var microphoneFrame = Array(repeating: Float.zero, count: fftSize)
+        var errorFrame = Array(repeating: Float.zero, count: fftSize)
+        var realReference = Array(repeating: Float.zero, count: fft.bins)
+        var imaginaryReference = Array(repeating: Float.zero, count: fft.bins)
+        var realMicrophone = Array(repeating: Float.zero, count: fft.bins)
+        var imaginaryMicrophone = Array(repeating: Float.zero, count: fft.bins)
+        var realError = Array(repeating: Float.zero, count: fft.bins)
+        var imaginaryError = Array(repeating: Float.zero, count: fft.bins)
+        var filterReal = Array(repeating: Float.zero, count: fft.bins)
+        var filterImaginary = Array(repeating: Float.zero, count: fft.bins)
+        let window = sqrtHannWindow(count: fftSize)
+        let windowSquared = window.map { $0 * $0 }
+
+        var predictedEnergy: Double = 0
+        var microphoneEnergy: Double = 0
+        var adaptedFrames = 0
+        var activeFrames = 0
+
+        for frameStart in stride(from: 0, to: microphone.count, by: hopSize) {
+            var validInFrame = 0
+            var referenceFrameRMS: Float = 0
+            var microphoneFrameRMS: Float = 0
+            for offset in 0..<fftSize {
+                let index = frameStart + offset
+                if index < microphone.count, valid[index] {
+                    validInFrame += 1
+                    let referenceValue = reference[index]
+                    let microphoneValue = microphone[index]
+                    referenceFrame[offset] = referenceValue
+                    microphoneFrame[offset] = microphoneValue
+                    referenceFrameRMS += referenceValue * referenceValue
+                    microphoneFrameRMS += microphoneValue * microphoneValue
+                } else {
+                    referenceFrame[offset] = 0
+                    microphoneFrame[offset] = index < microphone.count ? microphone[index] : 0
+                }
+            }
+            let validity = Float(validInFrame) / Float(fftSize)
+            let bypass = validity < 0.75
+            if !bypass {
+                let safeValidCount = validInFrame > 0 ? validInFrame : 1
+                let validFrameCount = Float(safeValidCount)
+                referenceFrameRMS = sqrt(referenceFrameRMS / validFrameCount)
+                microphoneFrameRMS = sqrt(microphoneFrameRMS / validFrameCount)
+            }
+            for offset in 0..<fftSize {
+                referenceFrame[offset] *= window[offset]
+                microphoneFrame[offset] *= window[offset]
+            }
+
+            if bypass {
+                for offset in 0..<fftSize {
+                    let index = frameStart + offset
+                    errorFrame[offset] = index < microphone.count ? microphone[index] : 0
+                }
+            } else {
+                fftForward(
+                    fft,
+                    frame: referenceFrame,
+                    real: &realReference,
+                    imaginary: &imaginaryReference
+                )
+                fftForward(
+                    fft,
+                    frame: microphoneFrame,
+                    real: &realMicrophone,
+                    imaginary: &imaginaryMicrophone
+                )
+
+                let doubleTalk = microphoneFrameRMS > max(referenceFrameRMS * 2.2, 0.018)
+                let adaptationWeight: Float = doubleTalk
+                    ? 0
+                    : min(1, referenceFrameRMS / max(microphoneFrameRMS, 0.001))
+                var frameReferencePower: Double = 0
+                var frameMicrophonePower: Double = 0
+                var framePredictedPower: Double = 0
+                for bin in 1..<fft.bins {
+                    let referenceReal = realReference[bin]
+                    let referenceImaginary = imaginaryReference[bin]
+                    let microphoneReal = realMicrophone[bin]
+                    let microphoneImaginary = imaginaryMicrophone[bin]
+                    let referencePower = referenceReal * referenceReal
+                        + referenceImaginary * referenceImaginary
+                    let microphonePower = microphoneReal * microphoneReal
+                        + microphoneImaginary * microphoneImaginary
+                    let predictedReal = filterReal[bin] * referenceReal
+                        - filterImaginary[bin] * referenceImaginary
+                    let predictedImaginary = filterReal[bin] * referenceImaginary
+                        + filterImaginary[bin] * referenceReal
+                    if adaptationWeight > 0, referencePower > 0.00001 {
+                        let step = adaptationRate * adaptationWeight
+                        let errorReal = microphoneReal - predictedReal
+                        let errorImaginary = microphoneImaginary - predictedImaginary
+                        let denominator = referencePower + 0.00001
+                        filterReal[bin] += step
+                            * (errorReal * referenceReal + errorImaginary * referenceImaginary)
+                            / denominator
+                        filterImaginary[bin] += step
+                            * (errorImaginary * referenceReal - errorReal * referenceImaginary)
+                            / denominator
+                        let gainSquared = filterReal[bin] * filterReal[bin]
+                            + filterImaginary[bin] * filterImaginary[bin]
+                        let maximumSquared = maximumFilterGain * maximumFilterGain
+                        if gainSquared > maximumSquared {
+                            let scale = maximumFilterGain / sqrt(gainSquared)
+                            filterReal[bin] *= scale
+                            filterImaginary[bin] *= scale
+                        }
+                    }
+                    let updatedPredictedReal = filterReal[bin] * referenceReal
+                        - filterImaginary[bin] * referenceImaginary
+                    let updatedPredictedImaginary = filterReal[bin] * referenceImaginary
+                        + filterImaginary[bin] * referenceReal
+                    let subtraction: Float = doubleTalk ? 0.80 : 1.0
+                    realError[bin] = microphoneReal - updatedPredictedReal * subtraction
+                    imaginaryError[bin] = microphoneImaginary - updatedPredictedImaginary * subtraction
+                    frameReferencePower += Double(referencePower)
+                    frameMicrophonePower += Double(microphonePower)
+                    framePredictedPower += Double(
+                        updatedPredictedReal * updatedPredictedReal
+                            + updatedPredictedImaginary * updatedPredictedImaginary
+                    )
+                }
+                realError[0] = realMicrophone[0]
+                imaginaryError[0] = imaginaryMicrophone[0]
+                fftInverse(
+                    fft,
+                    real: &realError,
+                    imaginary: &imaginaryError,
+                    output: &errorFrame
+                )
+                if frameReferencePower > 0.0001, frameMicrophonePower > 0.0001 {
+                    activeFrames += 1
+                    predictedEnergy += framePredictedPower
+                    microphoneEnergy += frameMicrophonePower
+                    if !doubleTalk {
+                        adaptedFrames += 1
+                    }
+                }
+            }
+
+            for offset in 0..<fftSize {
+                let index = frameStart + offset
+                guard index < microphone.count else { continue }
+                let value = bypass
+                    ? errorFrame[offset] * windowSquared[offset]
+                    : errorFrame[offset] * window[offset]
+                processed[index] += value
+                weights[index] += windowSquared[offset]
+            }
+        }
+
+        for index in processed.indices {
+            if valid[index], weights[index] > 0.0001 {
+                processed[index] = min(max(processed[index] / weights[index], -1), 1)
+            } else {
+                processed[index] = microphone[index]
+            }
+        }
+        guard activeFrames > 4, microphoneEnergy > 0.0001 else { return nil }
+        let afterRMS = rms(processed, valid: valid)
+        let predictedRatio = min(1, predictedEnergy / microphoneEnergy)
+        let beforeEnvelope = energyEnvelopeCorrelation(
+            reference: reference,
+            microphone: microphone,
+            valid: valid
+        )
+        let afterEnvelope = energyEnvelopeCorrelation(
+            reference: reference,
+            microphone: processed,
+            valid: valid
+        )
+        let envelopeReduction = max(0, beforeEnvelope - afterEnvelope)
+        let confidence = min(
+            1,
+            predictedRatio * 0.55
+                + envelopeReduction * 0.35
+                + min(Double(adaptedFrames) / Double(max(activeFrames, 1)), 1) * 0.10
+        )
+        return SignalResult(
+            samples: processed,
+            confidence: confidence,
+            beforeRMS: microphoneRMS,
+            afterRMS: afterRMS,
+            envelopeReduction: envelopeReduction,
+            predictedEchoRatio: predictedRatio,
+            adaptedFrames: adaptedFrames
+        )
+    }
+
+    private static func fftForward(
+        _ fft: RealFFTWorkspace,
+        frame: [Float],
+        real: inout [Float],
+        imaginary: inout [Float]
+    ) {
+        frame.withUnsafeBufferPointer { framePointer in
+            real.withUnsafeMutableBufferPointer { realPointer in
+                imaginary.withUnsafeMutableBufferPointer { imaginaryPointer in
+                    fft.forward(
+                        framePointer.baseAddress!,
+                        real: realPointer.baseAddress!,
+                        imaginary: imaginaryPointer.baseAddress!
+                    )
+                }
+            }
+        }
+    }
+
+    private static func fftInverse(
+        _ fft: RealFFTWorkspace,
+        real: inout [Float],
+        imaginary: inout [Float],
+        output: inout [Float]
+    ) {
+        real.withUnsafeMutableBufferPointer { realPointer in
+            imaginary.withUnsafeMutableBufferPointer { imaginaryPointer in
+                output.withUnsafeMutableBufferPointer { outputPointer in
+                    fft.inverse(
+                        real: realPointer.baseAddress!,
+                        imaginary: imaginaryPointer.baseAddress!,
+                        output: outputPointer.baseAddress!
+                    )
+                }
+            }
+        }
+    }
+
+    private static func sqrtHannWindow(count: Int) -> [Float] {
+        guard count > 1 else { return [1] }
+        return (0..<count).map { index in
+            let phase = 2 * Double.pi * Double(index) / Double(count - 1)
+            return Float(sqrt(max(0, 0.5 - 0.5 * cos(phase))))
+        }
+    }
+
+    private static func rms(_ samples: [Float], valid: [Bool]) -> Float {
+        var sum: Double = 0
         var count = 0
-        for index in Swift.stride(from: start, to: end, by: max(stride, 1)) {
-            let x = Double(reference[index - delay])
-            let y = Double(microphone[index])
+        for index in samples.indices where index < valid.count && valid[index] {
+            let value = samples[index]
+            guard value.isFinite else { continue }
+            sum += Double(value * value)
+            count += 1
+        }
+        return count > 0 ? Float(sqrt(sum / Double(count))) : 0
+    }
+
+    private static func energyEnvelopeCorrelation(
+        reference: [Float],
+        microphone: [Float],
+        valid: [Bool]
+    ) -> Double {
+        let frameSize = 320
+        var referenceEnvelope: [Double] = []
+        var microphoneEnvelope: [Double] = []
+        for start in stride(from: 0, to: min(reference.count, microphone.count), by: frameSize) {
+            let end = min(min(reference.count, microphone.count), start + frameSize)
+            var referenceEnergy = 0.0
+            var microphoneEnergy = 0.0
+            var count = 0
+            for index in start..<end where index < valid.count && valid[index] {
+                referenceEnergy += Double(reference[index] * reference[index])
+                microphoneEnergy += Double(microphone[index] * microphone[index])
+                count += 1
+            }
+            guard count > frameSize / 2 else { continue }
+            referenceEnvelope.append(sqrt(referenceEnergy / Double(count)))
+            microphoneEnvelope.append(sqrt(microphoneEnergy / Double(count)))
+        }
+        guard referenceEnvelope.count == microphoneEnvelope.count,
+              referenceEnvelope.count > 4
+        else { return 0 }
+        let referenceMean = referenceEnvelope.reduce(0, +) / Double(referenceEnvelope.count)
+        let microphoneMean = microphoneEnvelope.reduce(0, +) / Double(microphoneEnvelope.count)
+        var xy = 0.0
+        var xx = 0.0
+        var yy = 0.0
+        for index in referenceEnvelope.indices {
+            let x = referenceEnvelope[index] - referenceMean
+            let y = microphoneEnvelope[index] - microphoneMean
             xy += x * y
             xx += x * x
             yy += y * y
-            count += 1
         }
-        guard count > 0, xx > 0.000001, yy > 0.000001 else { return 0 }
-        return Float(xy / sqrt(xx * yy))
-    }
-
-    private static func rms(_ samples: [Float]) -> Float {
-        guard !samples.isEmpty else { return 0 }
-        var sum: Double = 0
-        for sample in samples where sample.isFinite {
-            sum += Double(sample * sample)
-        }
-        return Float(sqrt(sum / Double(samples.count)))
+        guard xx > 0.000001, yy > 0.000001 else { return 0 }
+        return max(0, min(1, xy / sqrt(xx * yy)))
     }
 
     private static func writeMonoAudio(_ samples: [Float], to url: URL) throws {
@@ -416,9 +848,10 @@ enum RecorderAcousticEchoCanceller {
         microphoneParameters.setVolume(0.65, at: .zero)
         mix.inputParameters = [systemParameters, microphoneParameters]
 
-        guard let exporter = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetAppleM4A) else {
-            throw CancellationError()
-        }
+        guard let exporter = AVAssetExportSession(
+            asset: composition,
+            presetName: AVAssetExportPresetAppleM4A
+        ) else { throw CancellationError() }
         exporter.audioMix = mix
         exporter.outputURL = destination
         exporter.outputFileType = .m4a
@@ -427,11 +860,20 @@ enum RecorderAcousticEchoCanceller {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             exporterBox.value.exportAsynchronously {
                 switch exporterBox.value.status {
-                case .completed: continuation.resume()
-                case .cancelled: continuation.resume(throwing: CancellationError())
-                default: continuation.resume(throwing: exporterBox.value.error ?? CancellationError())
+                case .completed:
+                    continuation.resume()
+                case .cancelled:
+                    continuation.resume(throwing: CancellationError())
+                default:
+                    continuation.resume(
+                        throwing: exporterBox.value.error ?? CancellationError()
+                    )
                 }
             }
         }
     }
+}
+
+private extension Int {
+    var isPowerOfTwo: Bool { self > 0 && (self & (self - 1)) == 0 }
 }

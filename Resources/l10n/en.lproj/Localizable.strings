@@ -242,6 +242,11 @@
 "recording.selection.echoReduction" = "Echo reduction";
 "recording.aec.skipped.long" = "Echo reduction was skipped for a recording longer than 30 minutes.";
 "recording.aec.failed" = "Echo reduction could not be applied; the original microphone track was kept.";
+"recording.aec.lowConfidence" = "Echo reduction was not confident enough; the original microphone track was kept.";
+"recording.track.composite" = "Composite Audio";
+"recording.track.systemAudio" = "System Audio";
+"recording.track.microphone" = "Microphone — Raw";
+"recording.track.microphoneEchoReduced" = "Microphone — Echo Reduced";
 "recording.selection.showMouseClicks" = "Show clicks";
 "recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 
