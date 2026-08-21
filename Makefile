@@ -137,6 +137,9 @@ ifeq ($(BUILD_FLAVOR),pro)
 		mkdir -p "$(RES_DIR)/Transcription"; \
 		cp -R "$(PRIVATE_TRANSCRIPTION_RES)/." "$(RES_DIR)/Transcription/"; \
 	fi
+	@if [ -f "$(RES_DIR)/Transcription/sherpa-onnx-offline-speaker-diarization" ]; then \
+		codesign --force --sign "$(SIGN_ID)" "$(RES_DIR)/Transcription/libonnxruntime.1.27.0.dylib" "$(RES_DIR)/Transcription/sherpa-onnx-offline-speaker-diarization"; \
+	fi
 endif
 	mkdir -p "$(RES_DIR)/ThirdParty"
 	cp Resources/ThirdParty/RNNoise-LICENSE.txt "$(RES_DIR)/ThirdParty/RNNoise-LICENSE.txt"
