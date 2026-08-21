@@ -383,7 +383,11 @@ enum RecorderPostProcessor {
                 "could not add composite audio input"
             )
         }
-        setTrackName(L10n.t("recording.track.composite"), on: compositeInput)
+        ScreenCapTrackMetadata.apply(
+            role: .compositeAudio,
+            displayName: L10n.t("recording.track.composite"),
+            to: compositeInput
+        )
         writer.add(compositeInput)
 
         var originalAudioInputs: [AVAssetWriterInput] = []
@@ -411,7 +415,11 @@ enum RecorderPostProcessor {
             default:
                 title = L10n.t("recording.track.microphone") + " " + String(index + 1)
             }
-            setTrackName(title, on: input)
+            ScreenCapTrackMetadata.apply(
+                role: index == 0 ? .systemAudio : .microphoneRaw,
+                displayName: title,
+                to: input
+            )
             writer.add(input)
             originalAudioInputs.append(input)
         }
@@ -432,7 +440,11 @@ enum RecorderPostProcessor {
                     "could not add processed microphone track"
                 )
             }
-            setTrackName(L10n.t("recording.track.microphoneEchoReduced"), on: input)
+            ScreenCapTrackMetadata.apply(
+                role: .microphoneEchoReduced,
+                displayName: L10n.t("recording.track.microphoneEchoReduced"),
+                to: input
+            )
             writer.add(input)
             processedMicrophoneInput = input
         }
@@ -624,14 +636,6 @@ enum RecorderPostProcessor {
             AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: channelCount
         ]
-    }
-
-    private static func setTrackName(_ title: String, on input: AVAssetWriterInput) {
-        let item = AVMutableMetadataItem()
-        item.keySpace = .quickTimeUserData
-        item.key = AVMetadataKey.quickTimeUserDataKeyTrackName as NSString
-        item.value = title as NSString
-        input.metadata = [item]
     }
 
     private struct VideoTimelineReport {

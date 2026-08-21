@@ -412,6 +412,11 @@ final class RecorderWriterService: @unchecked Sendable {
                     sourceFormatHint: firstSystemAudio.formatDescription
                 )
                 systemAudioInput.expectsMediaDataInRealTime = true
+                ScreenCapTrackMetadata.apply(
+                    role: .systemAudio,
+                    displayName: L10n.t("recording.track.systemAudio"),
+                    to: systemAudioInput
+                )
                 inputs[.systemAudio] = systemAudioInput
                 writer.add(systemAudioInput)
             }
@@ -423,6 +428,11 @@ final class RecorderWriterService: @unchecked Sendable {
                     sourceFormatHint: firstMicrophone.formatDescription
                 )
                 microphoneInput.expectsMediaDataInRealTime = true
+                ScreenCapTrackMetadata.apply(
+                    role: .microphoneRaw,
+                    displayName: L10n.t("recording.track.microphone"),
+                    to: microphoneInput
+                )
                 inputs[.microphone] = microphoneInput
                 writer.add(microphoneInput)
             }
