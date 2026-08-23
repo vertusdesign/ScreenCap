@@ -60,8 +60,12 @@ ICONSET     := $(DIST)/AppIcon.iconset
 # Local builds prefer the project's own certificate so rebuilding does not
 # create a new TCC identity on every run. Distribution DMGs remain ad-hoc.
 LOCAL_CERT  := ScreenCap Local Signing
-DETECTED_ID := $(shell security find-identity -p codesigning 2>/dev/null | \
-	grep -F "$(LOCAL_CERT)" >/dev/null 2>&1 && echo "$(LOCAL_CERT)")
+# `security find-identity` omits an otherwise usable self-signed certificate
+# when it is not trusted by the system. Presence in the keychain is the right
+# signal here: codesign can use the certificate's private key, while TCC can
+# then bind permissions to the stable certificate requirement instead of a
+# per-build ad-hoc cdhash.
+DETECTED_ID := $(shell security find-certificate -c "$(LOCAL_CERT)" >/dev/null 2>&1 && echo "$(LOCAL_CERT)")
 ifeq ($(strip $(DETECTED_ID)),)
 DETECTED_ID := -
 endif
