@@ -102,6 +102,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let playerTranscriptionMode = "playerTranscriptionMode"
         static let playerTranscriptionLocale = "playerTranscriptionLocale"
         static let playerTranscriptionModel = "playerTranscriptionModel"
+        static let playerTranscriptionSourceMode = "playerTranscriptionSourceMode"
         static let playerSmallSeek = "playerSmallSeek"
         static let playerMediumSeek = "playerMediumSeek"
         static let playerLargeSeek = "playerLargeSeek"
@@ -168,6 +169,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         defaults[Key.playerTranscriptionMode] = PlayerTranscriptionMode.onDemand.rawValue
         defaults[Key.playerTranscriptionLocale] = "auto"
         defaults[Key.playerTranscriptionModel] = "whisper-small"
+        defaults[Key.playerTranscriptionSourceMode] = "composite"
         defaults[Key.playerSmallSeek] = 5.0
         defaults[Key.playerMediumSeek] = 30.0
         defaults[Key.playerLargeSeek] = 60.0
@@ -512,6 +514,11 @@ final class Settings: ObservableObject, @unchecked Sendable {
     var playerTranscriptionModel: String {
         get { defaults.string(forKey: Key.playerTranscriptionModel) ?? "whisper-small" }
         set { set(newValue, Key.playerTranscriptionModel) }
+    }
+
+    var playerTranscriptionSourceMode: String {
+        get { defaults.string(forKey: Key.playerTranscriptionSourceMode) ?? "composite" }
+        set { set(newValue, Key.playerTranscriptionSourceMode) }
     }
 
     var playerSmallSeek: Double {
