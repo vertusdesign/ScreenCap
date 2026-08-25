@@ -309,6 +309,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             redo.action = Selector(("redo:"))
         }
         editMenu.addItem(.separator())
+        if playerVisible {
+            let copyFrame = editMenu.addItem(
+                withTitle: L10n.t("player.frame.copyWithFile"),
+                action: #selector(PlayerWindowController.copyCurrentFrameFromMenu(_:)),
+                keyEquivalent: "c"
+            )
+            copyFrame.target = PlayerWindowController.shared
+            let copyFrameOnly = editMenu.addItem(
+                withTitle: L10n.t("player.frame.copyWithoutFile"),
+                action: #selector(PlayerWindowController.copyCurrentFrameWithoutFileFromMenu(_:)),
+                keyEquivalent: "c"
+            )
+            copyFrameOnly.target = PlayerWindowController.shared
+            copyFrameOnly.keyEquivalentModifierMask = [.command, .option]
+            editMenu.addItem(.separator())
+        }
         editMenu.addItem(withTitle: L10n.t("action.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         editMenu.addItem(withTitle: L10n.t("action.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: L10n.t("action.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
