@@ -73,7 +73,7 @@ SIGN_ID     ?= $(DETECTED_ID)
 dmg: SIGN_ID = -
 
 .PHONY: all app run debug clean dmg install icon universal prepare-sources \
-	private-status private-sync-check
+	private-status private-sync-check private-localization-check
 
 all: app
 
@@ -83,6 +83,8 @@ ifeq ($(BUILD_FLAVOR),pro)
 	@test -d "$(PLAYER_SOURCE)" || (echo "Missing private Pro sources: $(PLAYER_SOURCE)" >&2; exit 1)
 	@test -f "$(PLIST_TEMPLATE)" || (echo "Missing private Pro Info.plist: $(PLIST_TEMPLATE)" >&2; exit 1)
 	@test "$$(git -C "$(PRIVATE_DIR)" rev-parse --is-inside-work-tree 2>/dev/null)" = true || (echo "Private Pro source directory is not a Git worktree: $(PRIVATE_DIR)" >&2; echo "Initialize it and configure its private remote before building Pro." >&2; exit 1)
+	@test -f "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py" || (echo "Missing Pro localization validator: $(PRIVATE_DIR)/Scripts/validate_pro_localizations.py" >&2; exit 1)
+	@python3 "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py"
 	mkdir -p "Sources/ScreenCap/Player"
 	find "Sources/ScreenCap/Player" -type f ! -name .gitkeep -delete
 	cp -R "$(PLAYER_SOURCE)/." "Sources/ScreenCap/Player/"
@@ -112,6 +114,11 @@ private-sync-check:
 	@test -z "$$(git -C "$(PRIVATE_DIR)" status --porcelain)" || (echo "Private Pro checkout has uncommitted changes; commit them before syncing." >&2; exit 1)
 	@set -- $$(git -C "$(PRIVATE_DIR)" rev-list --left-right --count HEAD...@{u}); test "$$1" = 0 && test "$$2" = 0 || (echo "Private Pro checkout is not synchronized with its upstream (ahead $$1, behind $$2)." >&2; exit 1)
 	@echo "Private Pro checkout is clean and synchronized with $(PRIVATE_REMOTE)."
+
+# Validate the private Pro catalog without staging Player sources or building.
+private-localization-check:
+	@test -f "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py" || (echo "Missing Pro localization validator: $(PRIVATE_DIR)/Scripts/validate_pro_localizations.py" >&2; exit 1)
+	@python3 "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py"
 
 debug: prepare-sources
 	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)"

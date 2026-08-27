@@ -27,10 +27,9 @@ def main() -> int:
     if not private_files:
         return 0
 
-    # Pro currently ships approved translations only for English. Use those
-    # English values as an explicit fallback in every locale rather than
-    # leaking raw localization keys when a user runs Pro in another language.
-    # A future locale-specific Pro file automatically overrides the fallback.
+    # Pro ships a locale-specific file for every locale currently supported by
+    # the public bundle. Keep the English file as a safe fallback for a locale
+    # that is added to the public app before its Pro translation is available.
     english_file = private_root / "en.lproj" / "Localizable.strings"
     fallback_lines = (
         english_file.read_text(encoding="utf-8").splitlines()
