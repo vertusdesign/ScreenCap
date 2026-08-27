@@ -180,14 +180,29 @@ install: app
 ifeq ($(BUILD_FLAVOR),pro)
 	-pkill -f '/Applications/ScreenCap 3 Pro\.app/Contents/MacOS/ScreenCap$$' || true
 	-rm -rf "/Applications/ScreenCap 3 Pro.app"
-	cp -R "$(APP)" "/Applications/ScreenCap 3 Pro.app"
+	@if [ -d "/Applications/ScreenCap 3 Pro.app/$(APP_BUNDLE)/Contents" ]; then \
+		find "/Applications/ScreenCap 3 Pro.app/$(APP_BUNDLE)" -depth -delete; \
+	fi
+	@if [ -d "/Applications/ScreenCap 3 Pro.app/Contents" ]; then \
+		cp -R "$(APP)/Contents/." "/Applications/ScreenCap 3 Pro.app/Contents/"; \
+	else \
+		mkdir -p "/Applications/ScreenCap 3 Pro.app"; \
+		cp -R "$(APP)/Contents" "/Applications/ScreenCap 3 Pro.app/"; \
+	fi
+	@codesign --force --deep --options runtime --entitlements Resources/ScreenCap.entitlements --sign "$(SIGN_ID)" "/Applications/ScreenCap 3 Pro.app"
 	@echo "Installed /Applications/ScreenCap 3 Pro.app"
 else
 	-pkill -f '/Applications/ScreenCap 3\.app/Contents/MacOS/ScreenCap$$' || true
 	-pkill -f '/Applications/ScreenCap\.app/Contents/MacOS/ScreenCap$$' || true
 	-rm -rf "/Applications/ScreenCap.app"
 	-rm -rf "/Applications/ScreenCap 3.app"
-	cp -R "$(APP)" "/Applications/ScreenCap 3.app"
+	@if [ -d "/Applications/ScreenCap 3.app/Contents" ]; then \
+		cp -R "$(APP)/Contents/." "/Applications/ScreenCap 3.app/Contents/"; \
+	else \
+		mkdir -p "/Applications/ScreenCap 3.app"; \
+		cp -R "$(APP)/Contents" "/Applications/ScreenCap 3.app/"; \
+	fi
+	@codesign --force --deep --options runtime --entitlements Resources/ScreenCap.entitlements --sign "$(SIGN_ID)" "/Applications/ScreenCap 3.app"
 	@echo "Installed /Applications/ScreenCap 3.app"
 endif
 
