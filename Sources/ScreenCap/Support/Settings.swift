@@ -103,6 +103,8 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let playerTranscriptionLocale = "playerTranscriptionLocale"
         static let playerTranscriptionModel = "playerTranscriptionModel"
         static let playerTranscriptionSourceMode = "playerTranscriptionSourceMode"
+        static let playerSpeakerCountMode = "playerSpeakerCountMode"
+        static let playerExpectedSpeakerCount = "playerExpectedSpeakerCount"
         static let playerSmallSeek = "playerSmallSeek"
         static let playerMediumSeek = "playerMediumSeek"
         static let playerLargeSeek = "playerLargeSeek"
@@ -170,6 +172,8 @@ final class Settings: ObservableObject, @unchecked Sendable {
         defaults[Key.playerTranscriptionLocale] = "auto"
         defaults[Key.playerTranscriptionModel] = "whisper-small"
         defaults[Key.playerTranscriptionSourceMode] = "composite"
+        defaults[Key.playerSpeakerCountMode] = "automatic"
+        defaults[Key.playerExpectedSpeakerCount] = 2
         defaults[Key.playerSmallSeek] = 5.0
         defaults[Key.playerMediumSeek] = 30.0
         defaults[Key.playerLargeSeek] = 60.0
@@ -519,6 +523,18 @@ final class Settings: ObservableObject, @unchecked Sendable {
     var playerTranscriptionSourceMode: String {
         get { defaults.string(forKey: Key.playerTranscriptionSourceMode) ?? "composite" }
         set { set(newValue, Key.playerTranscriptionSourceMode) }
+    }
+
+    /// Optional diarization hint. Automatic is deliberately the default: an
+    /// incorrect hard count can merge distinct speakers or split one speaker.
+    var playerSpeakerCountMode: String {
+        get { defaults.string(forKey: Key.playerSpeakerCountMode) ?? "automatic" }
+        set { set(newValue, Key.playerSpeakerCountMode) }
+    }
+
+    var playerExpectedSpeakerCount: Int {
+        get { min(max(defaults.integer(forKey: Key.playerExpectedSpeakerCount), 1), 20) }
+        set { set(min(max(newValue, 1), 20), Key.playerExpectedSpeakerCount) }
     }
 
     var playerSmallSeek: Double {
