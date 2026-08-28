@@ -326,7 +326,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             editMenu.addItem(.separator())
         }
         editMenu.addItem(withTitle: L10n.t("action.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: L10n.t("action.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        // The Player's primary Cmd+C item above routes transcript/table
+        // selections, native text selections and frame capture in that order.
+        // Do not register a second Cmd+C key equivalent here: AppKit otherwise
+        // chooses between the two Copy commands nondeterministically and the
+        // visible transcript selection can end up beeping instead of copying.
+        editMenu.addItem(withTitle: L10n.t("action.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "")
         editMenu.addItem(withTitle: L10n.t("action.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: L10n.t("action.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editMenuItem.submenu = editMenu
