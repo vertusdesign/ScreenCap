@@ -26,6 +26,18 @@ can match it. A local AppKit monitor remains a narrow fallback for ordinary key 
 app owns keyboard focus. Menu and Carbon delivery share one deduplicated dispatch path so a single
 physical key press cannot start two captures.
 
+When a Player command intentionally shares a key with a standard AppKit command, keep one
+key-equivalent owner per build flavor. Route the command explicitly from that owner based on the
+current responder/selection state; do not register duplicate `NSMenuItem` equivalents and rely on
+validation to disambiguate them. This is especially important for Pro transcript copying, where
+`Cmd+C` must remain usable after repeated table selections while the public build must retain the
+ordinary text-copy equivalent.
+
+Image-capture actions chosen from the status-item menu take a synchronous compositor snapshot
+before AppKit closes the menu. The selection overlay is presented on the next run-loop turn, so a
+user can capture and annotate the ScreenCap menu itself; recording and preference actions keep the
+ordinary deferred dispatch path.
+
 ## Proposing a change
 
 Open an issue before a large pull request, so the design can be agreed before you spend the
@@ -160,6 +172,18 @@ To add a language, add its `.lproj` folder, add the code to `AppLanguage` in
 
 Corrections from native speakers are especially welcome — the existing set was not reviewed
 by one for every language.
+
+ScreenCap 3 Pro adds its private Player strings during a Pro build. Those 240 keys are kept in
+the separate `ScreenCap-Pro-Private` checkout for every locale supported by the public bundle;
+they are never copied into this repository. Validate that catalog before a Pro build with:
+
+```bash
+make private-localization-check PRIVATE_DIR=../ScreenCap-Pro-Private
+```
+
+The Pro validator checks exact key coverage, placeholders, syntax and that maintainer-only
+translation markers cannot leak into the shipped app. Static translation generation is a
+maintainer task; neither flavor contacts a translation service at runtime.
 
 ## Release checklist
 
