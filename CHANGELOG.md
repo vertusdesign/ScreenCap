@@ -3,7 +3,7 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [3.0.1] — 2026-11-04
+## [3.0.1] — 2026-11-05
 
 ### Fixed
 
@@ -28,6 +28,8 @@ All notable changes are recorded here. This project follows
 - Added synthetic encoding/decoding regressions for AAC fallback, Bluetooth
   timing, black-frame prevention, audio preservation and passthrough export.
   CI and release builds run these checks alongside localization validation.
+- Release packaging resolves the executable paths through SwiftPM to support
+  both the older native output layout and Xcode 27's Swift Build backend.
 - Player remains outside the public product. Existing screenshot behavior,
   macOS requirements and the public bundle identifier are preserved.
 

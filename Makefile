@@ -53,8 +53,11 @@ RES_DIR     := $(CONTENTS)/Resources
 BUILD_PATH  := .build/$(BUILD_FLAVOR)
 SWIFT_BUILD_JOBS ?= 2
 PRODUCT     := $(BUILD_PATH)/apple/Products/Release/$(APP_NAME)
-ARM64_PRODUCT := $(BUILD_PATH)/arm64/arm64-apple-macosx/release/$(APP_NAME)
-X86_PRODUCT   := $(BUILD_PATH)/x86_64/x86_64-apple-macosx/release/$(APP_NAME)
+# Ask SwiftPM instead of assuming its output layout. Xcode 27's Swift Build
+# backend uses out/Products/Release, while older native builds use a triple.
+# Keep these recursive so lookup occurs after the corresponding builds.
+ARM64_PRODUCT = $(shell SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/arm64" -c release --arch arm64 --show-bin-path)/$(APP_NAME)
+X86_PRODUCT   = $(shell SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/x86_64" -c release --arch x86_64 --show-bin-path)/$(APP_NAME)
 ICONSET     := $(DIST)/AppIcon.iconset
 
 # Local builds prefer the project's own certificate so rebuilding does not
