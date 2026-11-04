@@ -3,6 +3,34 @@
 All notable changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.1] — 2026-11-04
+
+### Fixed
+
+- Prevented empty leading video intervals from appearing as black frames when
+  audio starts before the first complete screen image. Early audio and all
+  subsequent media timestamps are preserved.
+- Corrected malformed and overlapping Bluetooth PCM buffers which could make
+  recordings appear much longer than their real duration. Valid variable-sized
+  packets and audio-device format changes retain their original sample counts.
+- Added a bounded AAC startup fallback for unsupported audio encoding settings,
+  preserving every available requested source track and the recording clock.
+- Added stable audio-track names and roles to distinguish the composite mix,
+  system audio and raw microphone after saving or recovery.
+- Standardized generated recovery and temporary filenames with underscores,
+  retaining compatibility with recordings created by older versions.
+
+### Recording and validation
+
+- Optional local echo reduction preserves raw source tracks and falls back to
+  the original mix when processing is unavailable or confidence is insufficient.
+  It is off by default in the public release.
+- Added synthetic encoding/decoding regressions for AAC fallback, Bluetooth
+  timing, black-frame prevention, audio preservation and passthrough export.
+  CI and release builds run these checks alongside localization validation.
+- Player remains outside the public product. Existing screenshot behavior,
+  macOS requirements and the public bundle identifier are preserved.
+
 ## [3.0.0] — 2026-08-17
 
 ### Added

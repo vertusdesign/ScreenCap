@@ -1,5 +1,5 @@
 APP_NAME    := ScreenCap
-VERSION     ?= 3.0.0
+VERSION     ?= 3.0.1
 
 # `base` is the public ScreenCap 3 product. `pro` adds the private Player
 # source layer from a sibling checkout. The two bundle identifiers are distinct,
@@ -51,6 +51,7 @@ CONTENTS    := $(APP)/Contents
 BIN_DIR     := $(CONTENTS)/MacOS
 RES_DIR     := $(CONTENTS)/Resources
 BUILD_PATH  := .build/$(BUILD_FLAVOR)
+SWIFT_BUILD_JOBS ?= 2
 PRODUCT     := $(BUILD_PATH)/apple/Products/Release/$(APP_NAME)
 ARM64_PRODUCT := $(BUILD_PATH)/arm64/arm64-apple-macosx/release/$(APP_NAME)
 X86_PRODUCT   := $(BUILD_PATH)/x86_64/x86_64-apple-macosx/release/$(APP_NAME)
@@ -68,7 +69,7 @@ SIGN_ID     ?= $(DETECTED_ID)
 dmg: SIGN_ID = -
 
 .PHONY: all app run debug clean dmg install icon universal prepare-sources \
-	private-status private-sync-check
+	private-status private-sync-check localization-check private-localization-check recorder-startup-check
 
 all: app
 
@@ -91,6 +92,7 @@ endif
 private-status:
 	@test -d "$(PRIVATE_DIR)" || (echo "Missing private Pro checkout: $(PRIVATE_DIR)" >&2; exit 1)
 	@test "$$(git -C "$(PRIVATE_DIR)" rev-parse --is-inside-work-tree 2>/dev/null)" = true || (echo "Private Pro source directory is not a Git worktree: $(PRIVATE_DIR)" >&2; exit 1)
+	@python3 "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py"
 	@echo "Private Pro checkout: $(PRIVATE_DIR)"
 	@git -C "$(PRIVATE_DIR)" status --short --branch
 	@git -C "$(PRIVATE_DIR)" remote -v
@@ -108,16 +110,32 @@ private-sync-check:
 	@set -- $$(git -C "$(PRIVATE_DIR)" rev-list --left-right --count HEAD...@{u}); test "$$1" = 0 && test "$$2" = 0 || (echo "Private Pro checkout is not synchronized with its upstream (ahead $$1, behind $$2)." >&2; exit 1)
 	@echo "Private Pro checkout is clean and synchronized with $(PRIVATE_REMOTE)."
 
-debug: prepare-sources
-	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)"
+localization-check:
+	@python3 Scripts/validate_localizations.py
 
-universal: prepare-sources
+private-localization-check:
+	@python3 "$(PRIVATE_DIR)/Scripts/validate_pro_localizations.py"
+
+recorder-startup-check:
+	mkdir -p .build/recorder-tests
+	swiftc -swift-version 6 -parse-as-library \
+		Sources/ScreenCap/Recorder/RecorderWriterStartup.swift \
+		Sources/ScreenCap/Recorder/RecorderAudioTimelineNormalizer.swift \
+		Sources/ScreenCap/Recorder/RecorderVideoTimeline.swift \
+		Sources/ScreenCap/Recorder/ScreenCapTrackMetadata.swift \
+		Scripts/test-recorder-startup.swift -o .build/recorder-tests/startup
+	.build/recorder-tests/startup
+
+debug: localization-check prepare-sources
+	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)" -j "$(SWIFT_BUILD_JOBS)"
+
+universal: localization-check prepare-sources
 	# SwiftPM/Xcode 16.4 rejects a combined multi-architecture invocation for
 	# targets using Swift language mode 6. Build each slice explicitly and merge
 	# the finished executables; this keeps the release artifact universal while
 	# remaining compatible with older and newer Swift 6 toolchains.
-	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/arm64" -c release --arch arm64
-	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/x86_64" -c release --arch x86_64
+	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/arm64" -c release --arch arm64 -j "$(SWIFT_BUILD_JOBS)"
+	SCREENCAP_PRO=$(SCREENCAP_PRO) swift build --build-path "$(BUILD_PATH)/x86_64" -c release --arch x86_64 -j "$(SWIFT_BUILD_JOBS)"
 	mkdir -p "$(dir $(PRODUCT))"
 	lipo -create "$(ARM64_PRODUCT)" "$(X86_PRODUCT)" -output "$(PRODUCT)"
 

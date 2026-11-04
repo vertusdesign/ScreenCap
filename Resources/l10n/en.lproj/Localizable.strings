@@ -29,6 +29,7 @@
 "obfuscation.shape.rectangle" = "Rectangle";
 "obfuscation.shape.ellipse" = "Ellipse";
 "obfuscation.shape.brush" = "Brush";
+
 "marker.shape.rectangle" = "Rectangle highlighter";
 "marker.shape.ellipse" = "Oval highlighter";
 "marker.shape.brush" = "Brush highlighter";
@@ -72,6 +73,7 @@
 "style.shapeFilled" = "Filled";
 "style.arrowSingle" = "Single head";
 "style.arrowDouble" = "Double head";
+
 "text.moveHandle" = "Drag to move";
 
 "overlay.hint.area" = "Drag to select an area · Esc to cancel";
@@ -115,6 +117,7 @@
 "menu.player.speed" = "Playback Speed";
 "menu.player.autoplay" = "Automatically Play Next Video";
 
+
 "prefs.title" = "%@ Settings";
 "prefs.tab.shortcuts" = "Shortcuts";
 "prefs.tab.capture" = "Capture";
@@ -148,6 +151,8 @@
 "prefs.recording.skipMicrophone" = "Do not record microphone";
 "prefs.recording.noiseSuppression" = "Noise suppression";
 "prefs.recording.noiseSuppression.help" = "Uses [RNNoise](https://github.com/xiph/rnnoise) in a gentle mode. It can reduce steady background noise, but may soften quiet speech, miss sudden noise, or use extra CPU; it works with 48 kHz PCM microphone capture.";
+"prefs.recording.echoReduction" = "Echo reduction";
+"prefs.recording.echoReduction.help" = "After recording, ScreenCap can use the captured system-audio track as a reference to reduce speaker bleed in the microphone track. Original tracks are preserved; if confidence is low, the original mix is kept.";
 "prefs.recording.codec" = "Video codec";
 "prefs.recording.codec.help" = "Automatic uses the most compatible hardware path. H.264 and HEVC can be selected when supported by the Mac.";
 "prefs.recording.codec.automatic" = "Automatic (recommended)";
@@ -231,6 +236,19 @@
 "recording.selection.systemAudio" = "System audio";
 "recording.selection.microphone" = "Microphone";
 "recording.selection.noiseSuppression" = "Noise suppression";
+"recording.selection.echoReduction" = "Echo reduction";
+"recording.aec.skipped.long" = "Echo reduction was skipped for a recording longer than 30 minutes.";
+"recording.aec.failed" = "Echo reduction could not be applied; the original microphone track was kept.";
+"recording.aec.lowConfidence" = "Echo reduction was not confident enough; the original microphone track was kept.";
+"recording.aec.unsupportedLayout" = "Echo reduction requires one System Audio track and one raw Microphone track.";
+"recording.aec.invalidSource" = "The recording's audio tracks could not be read safely.";
+"recording.aec.insufficientOverlap" = "The audio tracks do not contain enough synchronized samples for safe echo reduction.";
+"recording.aec.signalChanged" = "Echo reduction was not applied because it would change the microphone level too much; the original track was kept.";
+"recording.aec.noEchoReference" = "No reliable speaker reference was found, so the original microphone track was kept.";
+"recording.track.composite" = "Composite Audio";
+"recording.track.systemAudio" = "System Audio";
+"recording.track.microphone" = "Microphone — Raw";
+"recording.track.microphoneEchoReduced" = "Microphone — Echo Reduced";
 "recording.selection.showMouseClicks" = "Show clicks";
 "recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
 

@@ -290,6 +290,7 @@ final class RecorderController {
                     captureSystemAudio: captureSystemAudio,
                     captureMicrophone: microphone,
                     noiseSuppression: options.noiseSuppression,
+                    echoReduction: options.echoReduction,
                     videoCodecPreference: Settings.shared.recordingVideoCodec,
                     displayID: display.displayID
                 )

@@ -371,14 +371,28 @@ enum SelfTest {
                 print("  ✗ обработка уровня микрофона")
             }
 
+            if RecorderAudioTimelineNormalizer.selfTest() {
+                print("  ✓ нормализация таймлайна аудио")
+            } else {
+                failures.append("нормализация таймлайна аудио")
+                print("  ✗ нормализация таймлайна аудио")
+            }
+
+            if RecorderAcousticEchoCanceller.selfTest() {
+                print("  ✓ безопасное подавление акустического эха")
+            } else {
+                failures.append("подавление акустического эха")
+                print("  ✗ подавление акустического эха")
+            }
+
             // Recovery path smoke checks are deliberately structural: they do
             // not simulate kill -9, sleep, display loss or disk exhaustion and
             // they never touch a user's recording directory.
             let recoveryProbe = outputDirectory.appendingPathComponent("recovery-probe.mov")
             let probeFile = RecorderFile(url: recoveryProbe, width: 1280, height: 720)
             let related = RecorderRecovery.relatedRecordingURLs(for: recoveryProbe)
-            if probeFile.partialURL.lastPathComponent == "recovery-probe.partial.mov",
-               RecorderRecovery.markerURL(for: recoveryProbe).pathExtension == "screencap-recording",
+            if probeFile.partialURL.lastPathComponent == "recovery-probe_partial.mov",
+               RecorderRecovery.markerURL(for: recoveryProbe).lastPathComponent == "recovery-probe_screencap_recording.marker",
                related.contains(where: { $0.standardizedFileURL == probeFile.partialURL.standardizedFileURL }) {
                 print("  ✓ recovery marker и partial-файл используют стабильные sibling-пути")
             } else {

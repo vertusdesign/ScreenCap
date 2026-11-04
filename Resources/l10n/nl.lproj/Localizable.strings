@@ -1,6 +1,7 @@
 /* nl — ScreenCap */
 
 "tool.move" = "Verplaatsen";
+"tool.recognizeText" = "Herken tekst";
 "tool.pen" = "Potlood";
 "tool.marker" = "Markeerstift";
 "tool.line" = "Lijn";
@@ -16,6 +17,10 @@
 "hotkey.repeatLastArea" = "Laatste gebied herhalen";
 "hotkey.captureWindow" = "Venster onder de aanwijzer vastleggen";
 "hotkey.captureFullScreen" = "Volledig scherm vastleggen";
+"hotkey.toggleRecording" = "Start/stop de opname op het display onder de aanwijzer";
+"hotkey.chooseRecordingDisplay" = "Kies weergave en opname";
+"hotkey.toggleRecordingMicrophone" = "Schakel de opnamemicrofoon in";
+"hotkey.toggleRecordingSystemAudio" = "Schakel opnamesysteemaudio in of uit";
 "hotkey.recording" = "Druk op een toetscombinatie…";
 "hotkey.unset" = "Niet ingesteld";
 
@@ -25,6 +30,10 @@
 "obfuscation.shape.ellipse" = "Ovaal";
 "obfuscation.shape.brush" = "Kwast";
 
+"marker.shape.rectangle" = "Rechthoekige markeerstift";
+"marker.shape.ellipse" = "Ovale markeerstift";
+"marker.shape.brush" = "Borstel markeerstift";
+
 "text.backdrop.none" = "Geen achtergrond";
 "text.backdrop.solid" = "Volle achtergrond";
 "text.backdrop.translucent" = "Doorschijnende achtergrond";
@@ -32,8 +41,9 @@
 
 "action.copy" = "Kopieer";
 "action.save" = "Bewaar";
-"action.print" = "Print";
+"action.print" = "Afdrukken";
 "action.cancel" = "Annuleer";
+"action.remove" = "Artikel verwijderen";
 "action.undo" = "Herstel";
 "action.redo" = "Opnieuw";
 "action.style" = "Kleur en opties";
@@ -57,18 +67,21 @@
 "style.brushSize" = "Kwastgrootte";
 "style.intensity" = "Intensiteit";
 "style.eraserSize" = "Gumgrootte";
-"style.eraserMode.pixels" = "Erase pixels";
-"style.eraserMode.objects" = "Delete";
+"style.eraserMode.pixels" = "Wis pixels";
+"style.eraserMode.objects" = "Objecten verwijderen";
 "style.shapeOutline" = "Omtrek";
 "style.shapeFilled" = "Gevuld";
 "style.arrowSingle" = "Enkele punt";
 "style.arrowDouble" = "Dubbele punt";
+
 "text.moveHandle" = "Sleep om te verplaatsen";
 
 "overlay.hint.area" = "Sleep om een gebied te kiezen · Esc annuleert";
 "overlay.hint.window" = "Wijs een venster aan en klik · Esc annuleert";
+"overlay.hint.commandToggle" = "Houd ⌘ ingedrukt om te schakelen tussen gebieds- en vensteropname";
 
 "toast.copied" = "Gekopieerd naar het klembord";
+"toast.textCopied" = "Tekst gekopieerd naar klembord";
 "toast.saved" = "Bewaard";
 "toast.color.copied" = "Kleur %@ gekopieerd";
 "toast.noLastArea" = "Nog geen gebied bewaard";
@@ -79,13 +92,37 @@
 "menu.launchAtLogin" = "Open bij inloggen";
 "menu.settings" = "Instellingen…";
 "menu.about" = "Over %@";
+"menu.recoverRecordings" = "Herstel onderbroken opnamen…";
 "menu.checkForUpdates" = "Zoek naar updates…";
 "menu.quit" = "Stop %@";
 "menu.edit" = "Wijzig";
+"menu.file" = "Bestand";
+"menu.view" = "Weergave";
+"menu.window" = "Raam";
+"menu.help" = "Hulp";
+"menu.closeWindow" = "Sluit venster";
+"menu.minimize" = "Minimaliseer";
+"menu.zoom" = "Zoom";
+"menu.bringAllToFront" = "Breng alles naar voren";
+"menu.support" = "ScreenCap-ondersteuning";
+"menu.player.export" = "Exporteren";
+"menu.player.resetEdits" = "Bewerkingen opnieuw instellen";
+"menu.player.playlist" = "Opnamebibliotheek tonen/verbergen";
+"menu.player.trackEditor" = "Track-editor tonen/verbergen";
+"menu.player.transcript" = "Transcriptie tonen/verbergen";
+"menu.player.zoom" = "Videozoom";
+"menu.player.fullscreen" = "Ga naar volledig scherm";
+"menu.player.playback" = "Afspelen";
+"menu.player.playPause" = "Afspelen/pauzeren";
+"menu.player.speed" = "Afspeelsnelheid";
+"menu.player.autoplay" = "Speel volgende video automatisch af";
+
 
 "prefs.title" = "%@-instellingen";
 "prefs.tab.shortcuts" = "Sneltoetsen";
 "prefs.tab.capture" = "Opnamen";
+"prefs.tab.captureTools" = "Gereedschappen vastleggen";
+"prefs.tab.recording" = "Opname-instellingen";
 "prefs.tab.tools" = "Gereedschap";
 "prefs.launchAtLogin" = "Open bij inloggen";
 "prefs.shortcut.help" = "Klik op een veld en druk op een combinatie. Delete wist hem, Esc annuleert het opnemen.";
@@ -106,6 +143,26 @@
 "prefs.dimming" = "Achtergrond dimmen";
 "prefs.imageFormat" = "Afbeeldingsformaat";
 "prefs.resetCapture" = "Opnamevoorkeuren terugzetten";
+"prefs.recording.logicalSize" = "Neem op met de logische weergavegrootte (niet Retina 2x).";
+"prefs.recording.logicalSize.help" = "Gebruikt de logische resolutie van het scherm in plaats van elke Retina-pixel op te nemen. Dit vermindert de video-afmetingen en bestandsgrootte.";
+"prefs.recording.showMouseClicks" = "Toon muisklikken";
+"prefs.recording.showMouseClicks.help" = "Tekent een native macOS-klikindicator rond de aanwijzer in de opname. Dit wordt lokaal weergegeven en verandert niets aan het bureaublad.";
+"prefs.recording.skipSystemAudio" = "Systeemaudio niet opnemen";
+"prefs.recording.skipMicrophone" = "Microfoon niet opnemen";
+"prefs.recording.noiseSuppression" = "Ruisonderdrukking";
+"prefs.recording.noiseSuppression.help" = "Gebruikt [RNNNoise](https://github.com/xiph/rnnoise) in een zachte modus. Het kan constante achtergrondruis verminderen, maar kan stille spraak verzachten, plotselinge ruis missen of extra CPU gebruiken; het werkt met 48 kHz PCM-microfoonopname.";
+"prefs.recording.echoReduction" = "Echoreductie";
+"prefs.recording.echoReduction.help" = "Na de opname kan ScreenCap de vastgelegde systeemaudiotrack als referentie gebruiken om luidsprekerbloedingen in de microfoontrack te verminderen. Originele nummers zijn bewaard gebleven; als het vertrouwen laag is, wordt de oorspronkelijke mix behouden.";
+"prefs.recording.codec" = "Videocodec";
+"prefs.recording.codec.help" = "De automatische optie gebruikt het meest compatibele hardwarepad. H.264 en HEVC kunnen worden geselecteerd als dit door de Mac wordt ondersteund.";
+"prefs.recording.codec.automatic" = "Automatisch (aanbevolen)";
+"prefs.recording.afterCapture" = "Na opname";
+"prefs.recording.afterCapture.ask" = "Vraag na de eerste opname";
+"prefs.recording.afterCapture.nothing" = "Niets doen";
+"prefs.recording.afterCapture.showInFolder" = "Tonen in Finder";
+"prefs.recording.afterCapture.openWith" = "Openen met %@";
+"prefs.recording.afterCapture.help" = "In deze lijst staan ​​geïnstalleerde apps waarmee macOS meldt dat ze videobestanden kunnen openen.";
+"prefs.recording.reset" = "Opname-instellingen terugzetten naar standaardwaarden";
 "prefs.tools.explainer" = "De tekenopties zitten in de overlay, vlak naast de tekening: kleur, dikte, onleesbaar maken en tekststijl staan in het paneel achter de kleurstip.";
 "prefs.tools.reset" = "Zet gereedschap terug op standaard";
 "prefs.overlayShortcuts" = "Sneltoetsen in de overlay";
@@ -115,12 +172,97 @@
 "save.format" = "Formaat:";
 
 "permission.title" = "Toestemming voor schermopname nodig";
-"permission.body" = "Open Systeeminstellingen → Privacy en beveiliging → Schermopname en zet %@ aan.\n\nDaarna moet de app opnieuw worden gestart.";
+"permission.body" = "Open Systeeminstellingen → Privacy en beveiliging → Schermopname en schakel %@ in. Daarna moet de app opnieuw worden opgestart.";
 "permission.open" = "Open instellingen";
 "permission.toast" = "Geen toegang tot schermopname";
 "permission.toast.detail" = "Zet de app aan bij ‘Schermopname’ en start hem opnieuw";
 
 "common.later" = "Later";
+
+"recording.start" = "Opname starten (huidige weergave)";
+"recording.stop" = "Stop met opnemen";
+"recording.preparing" = "Opname voorbereiden…";
+"recording.stopping" = "Opname voltooien…";
+"recording.saving" = "Opname opslaan…";
+"recording.processingAudio" = "Audio verwerken…";
+"recording.finalizingVideo" = "Video finaliseren…";
+"recording.checking" = "Opname controleren…";
+"recording.processing.detail" = "ScreenCap beëindigt de opname. Lange opnames kunnen enkele minuten duren.";
+"recording.processing.elapsed" = "Verstreken %@";
+"recording.saved" = "Opname succesvol opgeslagen";
+"recording.saved.warning" = "Opname opgeslagen met waarschuwing";
+"recording.saved.warning.detail" = "De video kan worden afgespeeld, maar de aanvullende verwerking kan niet worden voltooid.";
+"recording.recovered" = "Opname hersteld";
+"recording.recovered.detail" = "Er is een afspeelbare opname gevonden nadat het finaliseren was onderbroken.";
+"recording.interrupted.displayDisconnected" = "De opgenomen weergave is losgekoppeld. Het speelbare gedeelte is opgeslagen.";
+"recording.interrupted.displayChanged" = "De opgenomen weergave is gewijzigd. Het speelbare gedeelte is opgeslagen.";
+"recording.interrupted.systemSleep" = "De opname stopte voordat het systeem in de slaapstand ging. Het speelbare gedeelte is opgeslagen.";
+"recording.interrupted.session" = "De opname is gestopt omdat de gebruikerssessie werd onderbroken. Het speelbare gedeelte is opgeslagen.";
+"recording.interrupted.volumeUnavailable" = "Het opnamevolume was niet meer beschikbaar. Het afspeelbare deel kan mogelijk worden hersteld.";
+"recording.recovery.none" = "Er zijn geen onderbroken opnames gevonden.";
+"recording.recovery.title" = "Herstelde opname";
+"recording.recovery.message" = "ScreenCap herstelde %@ (%@). Wat zou je graag willen doen?";
+"recording.recovery.showInFinder" = "Toon herstelde opname in Finder";
+"recording.recovery.discard" = "Gooi de herstelde opname weg";
+"recording.recovery.discard.title" = "Herstelde opname verwijderen?";
+"recording.recovery.discard.message" = "Hiermee wordt de herstelde kopie %@ verwijderd. De afspeelbare opname is daarna niet meer beschikbaar in ScreenCap.";
+"recording.recovery.discard.confirm" = "Weggooien";
+"recording.recovery.discard.failed" = "Kan de herstelde opname niet verwijderen.";
+"recording.afterCapture.choose.title" = "Wat moet er gebeuren na de opname?";
+"recording.afterCapture.choose.message" = "Kies een standaardactie. Je kunt dit later wijzigen in Opname-instellingen.";
+"recording.afterCapture.choose.save" = "Gebruik deze actie";
+"recording.failed" = "Opname mislukt";
+"recording.unavailable" = "Voor schermopnamen is macOS 15 of nieuwer vereist.";
+"recording.microphoneOff" = "Schakel de opnamemicrofoon uit";
+"recording.microphoneOn" = "Schakel de opnamemicrofoon in";
+"recording.microphoneStatusRole" = "Schakelaar voor opnamemicrofoon";
+"recording.microphoneDenied" = "Microfoontoegang is niet verleend; opnemen zonder microfoonaudio.";
+"recording.noMicrophone" = "Er is geen microfoon beschikbaar; opnemen zonder microfoonaudio.";
+"recording.diskSpaceLow" = "Onvoldoende vrije schijfruimte voor opname (alleen %@ GB blijft over) .";
+"recording.diskSpaceWarning" = "De opname is veilig gestopt omdat er weinig vrije schijfruimte is.";
+"recording.bluetoothHFP" = "De microfoon van de Bluetooth-headset is actief. macOS kan de afspeelkwaliteit van de hoofdtelefoon verminderen tijdens het opnemen.";
+"recording.systemAudioOff" = "Schakel systeemaudio-opname uit";
+"recording.systemAudioOn" = "Schakel systeemaudio-opname in";
+"recording.systemAudioStatusRole" = "Audioschakelaar voor opnamesysteem";
+"recording.skipSystemAudio" = "Systeemaudio niet opnemen";
+"recording.skipMicrophone" = "Microfoon niet opnemen";
+"recording.chooseDestination" = "Kies waar u de opname wilt opslaan";
+"recording.chooseDestinationPrompt" = "Kiezen";
+"recording.selection.cancel" = "Annuleren";
+"recording.selection.start" = "Opname starten";
+"recording.selection.title" = "Leg dit scherm vast";
+"recording.selection.display" = "Weergave · %@ × %@ pixels";
+"recording.selection.audio" = "Audio";
+"recording.selection.systemAudio" = "Systeemaudio";
+"recording.selection.microphone" = "Microfoon";
+"recording.selection.noiseSuppression" = "Ruisonderdrukking";
+"recording.selection.echoReduction" = "Echoreductie";
+"recording.aec.skipped.long" = "Echoreductie werd overgeslagen bij een opname langer dan 30 minuten.";
+"recording.aec.failed" = "Echoreductie kon niet worden toegepast; de originele microfoontrack bleef behouden.";
+"recording.aec.lowConfidence" = "Echoreductie was niet zelfverzekerd genoeg; de originele microfoontrack bleef behouden.";
+"recording.aec.unsupportedLayout" = "Voor echoreductie zijn één systeemaudiotrack en één onbewerkt microfoontrack vereist.";
+"recording.aec.invalidSource" = "De audiotracks van de opname konden niet veilig worden gelezen.";
+"recording.aec.insufficientOverlap" = "De audiotracks bevatten niet voldoende gesynchroniseerde samples voor een veilige echoreductie.";
+"recording.aec.signalChanged" = "Echoreductie werd niet toegepast omdat dit het microfoonniveau te veel zou veranderen; het originele nummer werd behouden.";
+"recording.aec.noEchoReference" = "Er werd geen betrouwbare sprekerreferentie gevonden, dus de originele microfoontrack werd behouden.";
+"recording.track.composite" = "Samengestelde audiotrack";
+"recording.track.systemAudio" = "Systeemaudiotrack";
+"recording.track.microphone" = "Ruwe microfoontrack";
+"recording.track.microphoneEchoReduced" = "Microfoon — Echo verminderd";
+"recording.selection.showMouseClicks" = "Klikken weergeven";
+"recording.selection.hint" = "Verplaats de aanwijzer om een ​​ander beeldscherm te kiezen. Druk op Esc om te annuleren. Druk op Terug om te beginnen.";
+
+"notification.action.open" = "Open";
+"notification.action.showInFinder" = "Toon in Finder";
+"notification.recording.saved.title" = "Opname opgeslagen";
+"notification.recording.saved.body" = "%@ is klaar.";
+"notification.recording.warning.title" = "Opname opgeslagen met waarschuwing";
+"notification.recording.warning.body" = "%@ is afspeelbaar, maar aanvullende verwerking kon niet worden voltooid.";
+"notification.recording.recovered.title" = "Opname hersteld";
+"notification.recording.recovered.body" = "Er werd een speelbare versie van %@ gevonden nadat het finaliseren werd onderbroken.";
+"notification.recording.failed.title" = "Opname mislukt";
+"notification.recording.failed.body" = "ScreenCap kon geen afspeelbare opname maken.";
+"notification.recording.unavailable" = "De opname is niet langer beschikbaar.";
 
 "error.permissionDenied" = "Geen toestemming voor schermopname.";
 "error.noDisplays" = "Geen scherm gevonden.";
@@ -130,6 +272,9 @@
 "error.encodePNG" = "Kon de PNG niet coderen";
 "error.encodeJPEG" = "Kan de JPEG niet coderen";
 "error.saveFile" = "Kon het bestand niet bewaren";
+"error.openImage" = "Kan afbeelding niet openen.";
+"error.textRecognition" = "Tekstherkenning is niet beschikbaar op deze Mac";
+"error.textRecognitionFailed" = "Kan tekst in deze afbeelding niet herkennen.";
 
 "filename.fallback" = "Schermafbeelding";
 
@@ -142,62 +287,3 @@
 "about.link.license" = "Licentie";
 "about.link.issues" = "Meld een probleem";
 "about.copyright" = "MIT-licentie · © 2026 ScreenCap-bijdragers";
-
-/* English fallback for newly added strings */
-"tool.recognizeText" = "Recognize text";
-"hotkey.toggleRecording" = "Start/stop recording on display under pointer";
-"hotkey.chooseRecordingDisplay" = "Choose display and record";
-"hotkey.toggleRecordingMicrophone" = "Toggle recording microphone";
-"hotkey.toggleRecordingSystemAudio" = "Toggle recording system audio";
-"toast.textCopied" = "Text copied to clipboard";
-"prefs.tab.captureTools" = "Capture tools";
-"prefs.tab.recording" = "Recording";
-"prefs.recording.logicalSize" = "Record at logical size (no Retina ×2)";
-"prefs.recording.logicalSize.help" = "Uses the display's logical resolution instead of recording every Retina pixel. This reduces the video dimensions and file size.";
-"prefs.recording.skipSystemAudio" = "Do not record system audio";
-"prefs.recording.skipMicrophone" = "Do not record microphone";
-"prefs.recording.noiseSuppression" = "Noise suppression";
-"prefs.recording.noiseSuppression.help" = "Uses [RNNoise](https://github.com/xiph/rnnoise) in a gentle mode. It can reduce steady background noise, but may soften quiet speech, miss sudden noise, or use extra CPU; it works with 48 kHz PCM microphone capture.";
-"prefs.recording.codec" = "Video codec";
-"prefs.recording.codec.help" = "Automatic uses the most compatible hardware path. H.264 and HEVC can be selected when supported by the Mac.";
-"prefs.recording.codec.automatic" = "Automatic (recommended)";
-"prefs.recording.afterCapture" = "After recording";
-"prefs.recording.afterCapture.nothing" = "Do nothing";
-"prefs.recording.afterCapture.showInFolder" = "Show in Finder";
-"prefs.recording.afterCapture.openWith" = "Open with %@";
-"prefs.recording.afterCapture.help" = "The list contains installed apps that macOS reports as able to open video files.";
-"prefs.recording.reset" = "Reset recording settings to defaults";
-"recording.start" = "Start recording (current display)";
-"recording.stop" = "Stop recording";
-"recording.preparing" = "Preparing recording…";
-"recording.stopping" = "Finishing recording…";
-"recording.saved" = "Recording saved";
-"recording.failed" = "Recording failed";
-"recording.unavailable" = "Screen recording requires macOS 15 or newer.";
-"recording.microphoneOff" = "Turn recording microphone off";
-"recording.microphoneOn" = "Turn recording microphone on";
-"recording.microphoneStatusRole" = "Recording microphone toggle";
-"recording.microphoneDenied" = "Microphone access was not granted; recording without microphone audio.";
-"recording.noMicrophone" = "No microphone is available; recording without microphone audio.";
-"recording.diskSpaceLow" = "Not enough free disk space for recording (only %@ GB remains).";
-"recording.diskSpaceWarning" = "Recording stopped safely because free disk space is low.";
-"recording.bluetoothHFP" = "Bluetooth headset microphone is active; macOS may reduce headphone playback quality while recording.";
-"recording.systemAudioOff" = "Turn recording system audio off";
-"recording.systemAudioOn" = "Turn recording system audio on";
-"recording.systemAudioStatusRole" = "Recording system audio toggle";
-"recording.skipSystemAudio" = "Do not record system audio";
-"recording.skipMicrophone" = "Do not record microphone";
-"recording.chooseDestination" = "Choose where to save the recording";
-"recording.chooseDestinationPrompt" = "Choose";
-"recording.selection.cancel" = "Cancel";
-"recording.selection.start" = "Start recording";
-"recording.selection.title" = "Record this display";
-"recording.selection.display" = "Display · %@ × %@ pixels";
-"recording.selection.audio" = "Audio";
-"recording.selection.systemAudio" = "System audio";
-"recording.selection.microphone" = "Microphone";
-"recording.selection.noiseSuppression" = "Noise suppression";
-"recording.selection.hint" = "Move the pointer to choose another display · Esc to cancel · Return to start";
-"error.openImage" = "Could not open image";
-"error.textRecognition" = "Text recognition is not available on this Mac";
-"error.textRecognitionFailed" = "Could not recognize text in this image";

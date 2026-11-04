@@ -1,28 +1,12 @@
-ScreenCap 3.0.0 is the public screenshot and screen-recording release, with native annotation
-tools, click visualization and crash-safe local recording recovery.
+ScreenCap 3.0.1 improves screen-recording reliability.
 
-The production release bundle identity remains compatible with v2 updates. The current target is
-distributed as a direct-download/DMG build; App Store submission still requires the sandbox and
-capability pass documented in `SECURITY.md`.
+- Fixed black frames at the beginning of recordings when audio starts before the first screen image.
+- Fixed incorrect recording duration caused by malformed or overlapping Bluetooth microphone audio buffers.
+- Added a safe AAC startup fallback for unsupported audio settings that could cause recording to fail immediately.
+- Improved identification and preservation of original audio tracks during saving and recovery.
+- Standardized recovery filenames while retaining support for older recordings.
+- Added optional local echo reduction, disabled by default, with original audio tracks preserved.
 
-### New since 2.0.0
+Includes complete translations for all 24 supported interface languages and a universal build for Apple Silicon and Intel.
 
-- **Text recognition:** a dedicated toolbar tool uses macOS Live Text to recognize text on the image. Recognized text can be selected and looked-up, translated, or copied. The image itself is not modified.
-- **Open images from Finder:** use **Open With → ScreenCap** from Finder to annotate an existing image. Among other features: the image edges can be expanded, which creates additional editable canvas filled with the selected color.
-
-### Screen recording improvements
-
-- **More reliable recordings:** reduced the risk of lost video samples during lengthy or high-resolution recordings.
-- **Improved MOV saving:** fixed cases where a recording could be saved with invalid video timing and then appear frozen or behave incorrectly in some third-party video players (such as VLC), even though it played correctly in QuickTime.
-- **Final file validation:** ScreenCap now checks the finished movie before confirming that the recording was saved. Incomplete or invalid video is reported instead of being silently accepted.
-- **Better compatibility of saved recordings:** video and audio tracks are checked for consistent duration and timeline integrity.
-
-### Screenshots
-
-![ScreenCap 3 Settings — text recognition tool](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-settings-text-tool.png)
-
-![ScreenCap 3 menu](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-menu.png)
-
-![About ScreenCap 3](https://raw.githubusercontent.com/vertusdesign/ScreenCap/v3.0.0/.github/release-assets/screencap-3-about.png)
-
-[Full changelog](https://github.com/vertusdesign/ScreenCap/blob/main/CHANGELOG.md)
+Requires macOS 14+ for screenshots and macOS 15+ for screen recording.

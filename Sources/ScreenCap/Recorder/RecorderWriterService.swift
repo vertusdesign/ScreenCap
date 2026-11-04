@@ -7,7 +7,8 @@ final class RecorderWriterService: @unchecked Sendable {
     private let file: RecorderFile
     private let captureSystemAudio: Bool
     private let captureMicrophone: Bool
-    private let writer: AVAssetWriter
+    private let echoReduction: Bool
+    private var writer: AVAssetWriter
     private let videoCodec: AVVideoCodecType
     private let usesHardwareVideoEncoder: Bool
 
@@ -19,6 +20,8 @@ final class RecorderWriterService: @unchecked Sendable {
     private var microphoneEnabled = true
     private var systemAudioEnabled = true
     private let microphoneProcessor: MicrophoneAudioProcessor
+    private let microphoneTimelineNormalizer: RecorderAudioTimelineNormalizer
+    private let systemAudioTimelineNormalizer: RecorderAudioTimelineNormalizer
     private var silentSampleFailureLogged = Set<RecorderOutputType>()
     private let sessionID: String
 
@@ -37,14 +40,22 @@ final class RecorderWriterService: @unchecked Sendable {
         captureSystemAudio: Bool,
         captureMicrophone: Bool,
         noiseSuppression: Bool,
+        echoReduction: Bool = true,
         videoCodecPreference: RecordingVideoCodec,
         displayID: CGDirectDisplayID? = nil
     ) throws {
         self.file = file
         self.captureSystemAudio = captureSystemAudio
         self.captureMicrophone = captureMicrophone
+        self.echoReduction = echoReduction
         self.microphoneProcessor = MicrophoneAudioProcessor(
             noiseSuppression: noiseSuppression && captureMicrophone
+        )
+        self.microphoneTimelineNormalizer = RecorderAudioTimelineNormalizer(
+            label: "microphone"
+        )
+        self.systemAudioTimelineNormalizer = RecorderAudioTimelineNormalizer(
+            label: "system audio"
         )
         let codecChoice = Self.videoCodec(
             for: file.width,
@@ -57,7 +68,7 @@ final class RecorderWriterService: @unchecked Sendable {
             "writer configuration dimensions=\(file.width)x\(file.height) "
                 + "codec=\(codecChoice.codec.rawValue) hardwareEncoder=\(codecChoice.hardware) "
                 + "systemAudio=\(captureSystemAudio) microphone=\(captureMicrophone) "
-                + "noiseSuppression=\(noiseSuppression)"
+                + "noiseSuppression=\(noiseSuppression) echoReduction=\(echoReduction)"
         )
         do {
             writer = try AVAssetWriter(outputURL: file.partialURL, fileType: .mov)
@@ -86,11 +97,21 @@ final class RecorderWriterService: @unchecked Sendable {
         // hole that AVAssetWriter may compact when it encodes AAC, causing the
         // next enabled fragment to play immediately after the previous one
         // instead of at its original video time.
+        let normalizedBuffer: CMSampleBuffer
+        switch type {
+        case .microphone:
+            normalizedBuffer = microphoneTimelineNormalizer.normalize(sampleBuffer)
+        case .systemAudio:
+            normalizedBuffer = systemAudioTimelineNormalizer.normalize(sampleBuffer)
+        case .screen:
+            normalizedBuffer = sampleBuffer
+        }
+
         let bufferToAppend: CMSampleBuffer
         let shouldMute = (type == .microphone && !microphoneEnabled)
             || (type == .systemAudio && !systemAudioEnabled)
         if shouldMute {
-            guard let silentBuffer = makeSilentSampleBuffer(from: sampleBuffer) else {
+            guard let silentBuffer = makeSilentSampleBuffer(from: normalizedBuffer) else {
                 if silentSampleFailureLogged.insert(type).inserted {
                     Log.error("recorder could not create a silent \(type) sample")
                 }
@@ -98,9 +119,9 @@ final class RecorderWriterService: @unchecked Sendable {
             }
             bufferToAppend = silentBuffer
         } else if type == .microphone {
-            bufferToAppend = microphoneProcessor.process(sampleBuffer)
+            bufferToAppend = microphoneProcessor.process(normalizedBuffer)
         } else {
-            bufferToAppend = sampleBuffer
+            bufferToAppend = normalizedBuffer
         }
 
         if !hasStarted {
@@ -218,6 +239,7 @@ final class RecorderWriterService: @unchecked Sendable {
         }
         let composite = await RecorderPostProcessor.addCompositeAudioTrack(
             to: sourceURL,
+            echoReduction: echoReduction,
             onProcessingStage: onProcessingStage
         )
         await onProcessingStage?(.checking)
@@ -225,6 +247,11 @@ final class RecorderWriterService: @unchecked Sendable {
         var selected: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
         var playableFallback: (url: URL, validation: RecorderPostProcessor.ValidationResult)?
         var repairedCandidates: [URL] = []
+        let compositeCandidates = [
+            file.url,
+            file.partialURL,
+            RecorderRecovery.legacyPartialURL(for: file.url)
+        ].flatMap(RecorderRecovery.compositeURLs)
         for candidate in RecorderRecovery.relatedRecordingURLs(for: file.url)
             where FileManager.default.fileExists(atPath: candidate.path)
         {
@@ -268,10 +295,7 @@ final class RecorderWriterService: @unchecked Sendable {
             // Keep the marker and any media candidates for a later launch.
             // A container may become repairable after a volume remount or
             // after AVFoundation has flushed its last fragment asynchronously.
-            for candidate in [
-                file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
-                file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
-            ] {
+            for candidate in compositeCandidates {
                 try? FileManager.default.removeItem(at: candidate)
             }
             for candidate in repairedCandidates {
@@ -286,10 +310,7 @@ final class RecorderWriterService: @unchecked Sendable {
         // movie beside a valid source. Do not let that implementation detail
         // become a duplicate recording in the Player library; preserve it only
         // when it is the candidate we are actually returning.
-        for candidate in [
-            file.url.deletingPathExtension().appendingPathExtension("composite.mov"),
-            file.partialURL.deletingPathExtension().appendingPathExtension("composite.mov")
-        ] where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
+        for candidate in compositeCandidates where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
             try? FileManager.default.removeItem(at: candidate)
         }
         for candidate in repairedCandidates where candidate.standardizedFileURL != chosen.url.standardizedFileURL {
@@ -393,40 +414,24 @@ final class RecorderWriterService: @unchecked Sendable {
         }
 
         do {
-            let videoInput = AVAssetWriterInput(
-                mediaType: .video,
-                outputSettings: videoSettings,
-                sourceFormatHint: firstScreen.formatDescription
-            )
-            videoInput.expectsMediaDataInRealTime = true
-            inputs[.screen] = videoInput
-            writer.add(videoInput)
-
-            if captureSystemAudio, let firstSystemAudio {
-                let systemAudioInput = AVAssetWriterInput(
-                    mediaType: .audio,
-                    outputSettings: audioSettings(bitRate: 256_000),
-                    sourceFormatHint: firstSystemAudio.formatDescription
+            // Keep inputs local until an attempt starts successfully. A rejected
+            // AAC configuration must not drain pending samples or remove tracks.
+            var startupWriter = writer
+            defer { writer = startupWriter }
+            inputs = try RecorderWriterStartup.start(
+                writer: &startupWriter,
+                hasAudio: (captureSystemAudio && firstSystemAudio != nil)
+                    || (useMicrophone && pending[.microphone]?.first != nil)
+            ) { candidate, profile in
+                try makeInputs(
+                    writer: candidate,
+                    profile: profile,
+                    firstScreen: firstScreen,
+                    firstSystemAudio: firstSystemAudio,
+                    firstMicrophone: useMicrophone ? pending[.microphone]?.first : nil
                 )
-                systemAudioInput.expectsMediaDataInRealTime = true
-                inputs[.systemAudio] = systemAudioInput
-                writer.add(systemAudioInput)
             }
-
-            if useMicrophone, let firstMicrophone = pending[.microphone]?.first {
-                let microphoneInput = AVAssetWriterInput(
-                    mediaType: .audio,
-                    outputSettings: audioSettings(bitRate: 192_000),
-                    sourceFormatHint: firstMicrophone.formatDescription
-                )
-                microphoneInput.expectsMediaDataInRealTime = true
-                inputs[.microphone] = microphoneInput
-                writer.add(microphoneInput)
-            }
-
-            guard writer.startWriting() else {
-                throw RecorderError.writerFailed(writer.error?.localizedDescription ?? "could not start writer")
-            }
+            writer = startupWriter
 
             let firstTimes = inputs.keys.compactMap { pending[$0]?.first?.presentationTimeStamp }
             guard let firstTime = firstTimes.min(by: { CMTimeCompare($0, $1) < 0 }) else {
@@ -438,6 +443,22 @@ final class RecorderWriterService: @unchecked Sendable {
 
             let buffers = pending
             pending.removeAll(keepingCapacity: true)
+            // Filtering ScreenCaptureKit's startup surfaces is not enough:
+            // early audio can put the first complete image after movie time
+            // zero. MOV represents that interval as an empty video edit and
+            // players synthesize black. Hold the first accepted image across
+            // that interval; leave the common clock and every source sample
+            // unchanged, including early speech and Bluetooth PCM timing.
+            if let leadingFrame = try RecorderVideoTimeline.leadingFrame(
+                from: firstScreen,
+                origin: firstTime
+            ) {
+                await appendRetimed(leadingFrame, type: .screen)
+                Log.diagnostic(
+                    "recorder covered leading video gap seconds=\(leadingFrame.duration.seconds) "
+                        + "with first complete image; audio timeline unchanged"
+                )
+            }
             for (type, samples) in buffers {
                 guard inputs[type] != nil else { continue }
                 for sample in samples {
@@ -445,16 +466,93 @@ final class RecorderWriterService: @unchecked Sendable {
                 }
             }
         } catch {
-            failure = error
+            failure = error as? RecorderError ?? RecorderError.writerFailed(error.localizedDescription)
             writer.cancelWriting()
             pending.removeAll(keepingCapacity: false)
-            if let recorderError = error as? RecorderError {
-                Log.debug("recorder writer failed: \(recorderError.localizedDescription)")
-            } else {
-                Log.debug("recorder writer failed: \(error.localizedDescription)")
-            }
-            Log.error("recorder writer start failed: \(error.localizedDescription)")
+            Log.error("recorder writer start failed: \(error.localizedDescription) \(describe(error))")
         }
+    }
+
+    private func makeInputs(
+        writer: AVAssetWriter,
+        profile: RecorderWriterStartup.AudioProfile,
+        firstScreen: CMSampleBuffer,
+        firstSystemAudio: CMSampleBuffer?,
+        firstMicrophone: CMSampleBuffer?
+    ) throws -> [RecorderOutputType: AVAssetWriterInput] {
+        var inputs: [RecorderOutputType: AVAssetWriterInput] = [:]
+        let videoInput = AVAssetWriterInput(
+            mediaType: .video,
+            outputSettings: videoSettings,
+            sourceFormatHint: firstScreen.formatDescription
+        )
+        videoInput.expectsMediaDataInRealTime = true
+        guard writer.canAdd(videoInput) else {
+            throw NSError(domain: AVFoundationErrorDomain, code: AVError.unsupportedOutputSettings.rawValue,
+                userInfo: [AVErrorMediaTypeKey: AVMediaType.video.rawValue])
+        }
+        inputs[.screen] = videoInput
+        writer.add(videoInput)
+
+        if captureSystemAudio, let firstSystemAudio {
+            let systemAudioInput = AVAssetWriterInput(
+                mediaType: .audio,
+                outputSettings: profile.settings(
+                    bitRate: 256_000,
+                    sourceFormat: firstSystemAudio.formatDescription
+                ),
+                sourceFormatHint: firstSystemAudio.formatDescription
+            )
+            logAudioFormat(firstSystemAudio, type: .systemAudio, profile: profile)
+            systemAudioInput.expectsMediaDataInRealTime = true
+            ScreenCapTrackMetadata.apply(
+                role: .systemAudio,
+                displayName: L10n.t("recording.track.systemAudio"),
+                to: systemAudioInput
+            )
+            inputs[.systemAudio] = systemAudioInput
+            guard writer.canAdd(systemAudioInput) else {
+                throw NSError(domain: AVFoundationErrorDomain, code: AVError.unsupportedOutputSettings.rawValue,
+                    userInfo: [AVErrorMediaTypeKey: AVMediaType.audio.rawValue])
+            }
+            writer.add(systemAudioInput)
+        }
+
+        if let firstMicrophone {
+            let microphoneInput = AVAssetWriterInput(
+                mediaType: .audio,
+                outputSettings: profile.settings(
+                    bitRate: 192_000,
+                    sourceFormat: firstMicrophone.formatDescription
+                ),
+                sourceFormatHint: firstMicrophone.formatDescription
+            )
+            logAudioFormat(firstMicrophone, type: .microphone, profile: profile)
+            microphoneInput.expectsMediaDataInRealTime = true
+            ScreenCapTrackMetadata.apply(
+                role: .microphoneRaw,
+                displayName: L10n.t("recording.track.microphone"),
+                to: microphoneInput
+            )
+            inputs[.microphone] = microphoneInput
+            guard writer.canAdd(microphoneInput) else {
+                throw NSError(domain: AVFoundationErrorDomain, code: AVError.unsupportedOutputSettings.rawValue,
+                    userInfo: [AVErrorMediaTypeKey: AVMediaType.audio.rawValue])
+            }
+            writer.add(microphoneInput)
+        }
+        return inputs
+    }
+
+    private func logAudioFormat(
+        _ sample: CMSampleBuffer,
+        type: RecorderOutputType,
+        profile: RecorderWriterStartup.AudioProfile
+    ) {
+        guard let description = sample.formatDescription,
+              let format = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee else { return }
+        Log.diagnostic("recorder audio input type=\(type) sampleRate=\(format.mSampleRate) "
+            + "channels=\(format.mChannelsPerFrame) profile=\(profile.rawValue)")
     }
 
     private var videoSettings: [String: Any] {
@@ -563,13 +661,6 @@ final class RecorderWriterService: @unchecked Sendable {
             supportedPropertiesOut: &properties
         )
         return status == noErr
-    }
-
-    private func audioSettings(bitRate: Int) -> [String: Any] {
-        [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVEncoderBitRateKey: bitRate
-        ]
     }
 
     private func describe(_ error: Error?) -> String {

@@ -5,7 +5,7 @@ display with system audio and microphone tracks. A menu-bar screenshot and scree
 recorder for macOS, built because [Lightshot](https://app.prntscr.com/) — the one that did
 this well — is no longer maintained.
 
-**Version 3.0.0 — screenshots and reliable local screen recording.** ScreenCap 3 includes
+**Version 3.0.1 — screenshots and improved recording reliability.** ScreenCap 3 includes
 the native macOS 15+ recorder and local recovery of interrupted recordings.
 See [Known limitations](#known-limitations) for the remaining intentional boundaries.
 
@@ -392,6 +392,11 @@ shortcut round-trips, and captures the screen if permission allows. It is what C
 ```
 
 ## Documentation
+
+Recorder startup, Bluetooth timing and leading-frame regressions can be checked
+without capturing the screen or microphone using `make recorder-startup-check`.
+The diagnosis and acceptance scenarios are documented in
+[Recorder startup reliability](specs/recorder-aac-startup.md).
 
 | Document | Contents |
 |---|---|

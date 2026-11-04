@@ -93,6 +93,7 @@ final class Settings: ObservableObject, @unchecked Sendable {
         static let recordingSkipSystemAudio = "recordingSkipSystemAudio"
         static let recordingSkipMicrophone = "recordingSkipMicrophone"
         static let recordingNoiseSuppression = "recordingNoiseSuppression"
+        static let recordingEchoReduction = "recordingEchoReduction"
         static let recordingAtLogicalSize = "recordingAtLogicalSize"
         static let recordingVideoCodec = "recordingVideoCodec"
         static let recordingShowMouseClicks = "recordingShowMouseClicks"
@@ -153,6 +154,9 @@ final class Settings: ObservableObject, @unchecked Sendable {
             Key.recordingSkipSystemAudio: false,
             Key.recordingSkipMicrophone: false,
             Key.recordingNoiseSuppression: false,
+            // Optional post-processing must be explicitly enabled. Always
+            // preserve the captured system-audio and microphone streams.
+            Key.recordingEchoReduction: false,
             Key.recordingAtLogicalSize: false,
             Key.recordingVideoCodec: RecordingVideoCodec.automatic.rawValue,
             Key.recordingShowMouseClicks: false
@@ -441,6 +445,11 @@ final class Settings: ObservableObject, @unchecked Sendable {
     var recordingNoiseSuppression: Bool {
         get { defaults.bool(forKey: Key.recordingNoiseSuppression) }
         set { set(newValue, Key.recordingNoiseSuppression) }
+    }
+
+    var recordingEchoReduction: Bool {
+        get { defaults.bool(forKey: Key.recordingEchoReduction) }
+        set { set(newValue, Key.recordingEchoReduction) }
     }
 
     var recordingAtLogicalSize: Bool {

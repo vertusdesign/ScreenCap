@@ -80,13 +80,12 @@ enum RecorderRepairService {
 
     private static func uniqueDestination(for sourceURL: URL) -> URL {
         let base = sourceURL.deletingPathExtension()
-        var candidate = base.appendingPathExtension("repaired.mov")
+        let directory = base.deletingLastPathComponent()
+        let stem = base.lastPathComponent
+        var candidate = directory.appendingPathComponent("\(stem)_repaired.mov")
         var counter = 2
         while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = base
-                .deletingLastPathComponent()
-                .appendingPathComponent(base.lastPathComponent + " (\(counter))")
-                .appendingPathExtension("repaired.mov")
+            candidate = directory.appendingPathComponent("\(stem)_repaired_\(counter).mov")
             counter += 1
         }
         return candidate

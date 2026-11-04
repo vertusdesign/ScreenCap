@@ -456,6 +456,15 @@ private struct RecordingTab: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Toggle(L10n.t("prefs.recording.echoReduction"), isOn: Binding(
+                get: { settings.recordingEchoReduction },
+                set: { settings.recordingEchoReduction = $0 }
+            ))
+            Text(L10n.t("prefs.recording.echoReduction.help"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             Divider()
 
             Toggle(L10n.t("prefs.recording.logicalSize"), isOn: Binding(

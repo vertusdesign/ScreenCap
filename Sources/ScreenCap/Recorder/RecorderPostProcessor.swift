@@ -150,23 +150,53 @@ enum RecorderPostProcessor {
         }
     }
 
-    /// Adds one mixed audio track before the original system-audio and
-    /// microphone tracks. The source movie is otherwise passed through.
+    /// Adds a mixed audio track before the original source tracks and, when
+    /// available, appends a separately labelled echo-reduced microphone track.
+    /// The source movie is otherwise passed through.
     ///
     /// This is deliberately a best-effort enhancement: if a finished capture
     /// cannot be rewritten, the original valid movie remains in place.
     static func addCompositeAudioTrack(
         to url: URL,
+        echoReduction: Bool = true,
         onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
     ) async -> CompositeResult {
         await onProcessingStage?(.processingAudio)
+        let sourceAsset = AVURLAsset(url: url)
+        let sourceTracks = (try? await sourceAsset.load(.tracks)) ?? []
+        let sourceAudioTracks = sourceTracks.filter { $0.mediaType == .audio }
+        let aecPreparation = echoReduction
+            ? await RecorderAcousticEchoCanceller.prepareCompositeAudio(
+                asset: sourceAsset,
+                audioTracks: sourceAudioTracks
+            )
+            : RecorderAcousticEchoCanceller.Preparation(
+                compositeURL: nil,
+                processedMicrophoneURL: nil,
+                applied: false,
+                warning: nil
+            )
         do {
             try await rewriteWithCompositeAudio(
                 at: url,
+                compositeAudioURL: aecPreparation.compositeURL,
+                processedMicrophoneURL: aecPreparation.processedMicrophoneURL,
                 onProcessingStage: onProcessingStage
             )
-            return CompositeResult(succeeded: true, warning: nil)
+            if let compositeURL = aecPreparation.compositeURL {
+                try? FileManager.default.removeItem(at: compositeURL)
+            }
+            if let processedMicrophoneURL = aecPreparation.processedMicrophoneURL {
+                try? FileManager.default.removeItem(at: processedMicrophoneURL)
+            }
+            return CompositeResult(succeeded: true, warning: aecPreparation.warning)
         } catch {
+            if let compositeURL = aecPreparation.compositeURL {
+                try? FileManager.default.removeItem(at: compositeURL)
+            }
+            if let processedMicrophoneURL = aecPreparation.processedMicrophoneURL {
+                try? FileManager.default.removeItem(at: processedMicrophoneURL)
+            }
             Log.error(
                 "recorder composite audio track failed: " + error.localizedDescription
             )
@@ -179,6 +209,8 @@ enum RecorderPostProcessor {
 
     private static func rewriteWithCompositeAudio(
         at url: URL,
+        compositeAudioURL: URL?,
+        processedMicrophoneURL: URL?,
         onProcessingStage: (@Sendable (RecorderProcessingStage) async -> Void)? = nil
     ) async throws {
         let asset = AVURLAsset(url: url)
@@ -219,8 +251,48 @@ enum RecorderPostProcessor {
                 OriginalAudioSource(
                     reader: originalReader,
                     output: originalOutput,
-                    firstSample: firstSample
+                    firstSample: firstSample,
+                    role: await ScreenCapTrackMetadata.role(of: track)
                 )
+            )
+        }
+
+        // The processed microphone is a separate derived source. Keep it
+        // alongside the untouched physical tracks so users can compare it,
+        // mute it, or rebuild the composite without losing the recording.
+        var processedMicrophoneSource: OriginalAudioSource?
+        if let processedMicrophoneURL {
+            let processedAsset = AVURLAsset(url: processedMicrophoneURL)
+            let processedTracks = try await processedAsset.loadTracks(withMediaType: .audio)
+            guard let processedTrack = processedTracks.first else {
+                throw RecorderPostProcessorError.readerFailed(
+                    "processed microphone output has no audio track"
+                )
+            }
+            let descriptions = try await processedTrack.load(.formatDescriptions)
+            let processedReader = try AVAssetReader(asset: processedAsset)
+            let processedOutput = AVAssetReaderTrackOutput(
+                track: processedTrack,
+                outputSettings: linearPCMSettings(sourceFormatHint: descriptions.first)
+            )
+            processedOutput.alwaysCopiesSampleData = false
+            guard processedReader.canAdd(processedOutput) else {
+                throw RecorderPostProcessorError.readerFailed("could not add processed microphone reader output")
+            }
+            processedReader.add(processedOutput)
+            guard processedReader.startReading(),
+                  let firstSample = processedOutput.copyNextSampleBuffer()
+            else {
+                throw RecorderPostProcessorError.readerFailed(
+                    processedReader.error?.localizedDescription
+                        ?? "could not read processed microphone audio"
+                )
+            }
+            processedMicrophoneSource = OriginalAudioSource(
+                reader: processedReader,
+                output: processedOutput,
+                firstSample: firstSample,
+                role: .microphoneEchoReduced
             )
         }
 
@@ -235,19 +307,41 @@ enum RecorderPostProcessor {
         videoOutput.alwaysCopiesSampleData = false
         videoReader.add(videoOutput)
 
-        let mixedReader = try AVAssetReader(asset: asset)
-        let mixedOutput = AVAssetReaderAudioMixOutput(
-            audioTracks: audioTracks,
-            audioSettings: linearPCMSettings(sourceFormatHint: nil)
-        )
-        let mix = AVMutableAudioMix()
-        // Leave headroom for the sum of system audio and microphone.
-        mix.inputParameters = audioTracks.map { track in
-            let parameters = AVMutableAudioMixInputParameters(track: track)
-            parameters.setVolume(0.65, at: .zero)
-            return parameters
+        let compositeAsset = compositeAudioURL.map { AVURLAsset(url: $0) }
+        var compositeTrack: AVAssetTrack?
+        if let compositeAsset {
+            compositeTrack = try? await compositeAsset.loadTracks(withMediaType: .audio).first
         }
-        mixedOutput.audioMix = mix
+        let mixedReader: AVAssetReader
+        let mixedOutput: AVAssetReaderOutput
+        if let compositeAsset, let compositeTrack {
+            // The echo-reduced composite is already rendered to one audio
+            // stream. Read it directly while the source system/microphone
+            // tracks continue to be copied unchanged below. Decode it to PCM
+            // before feeding the AAC writer input; passing compressed M4A
+            // samples through here is not portable across AVFoundation
+            // versions and can make the rewrite fail late.
+            mixedReader = try AVAssetReader(asset: compositeAsset)
+            mixedOutput = AVAssetReaderTrackOutput(
+                track: compositeTrack,
+                outputSettings: linearPCMSettings(sourceFormatHint: nil)
+            )
+        } else {
+            mixedReader = try AVAssetReader(asset: asset)
+            let output = AVAssetReaderAudioMixOutput(
+                audioTracks: audioTracks,
+                audioSettings: linearPCMSettings(sourceFormatHint: nil)
+            )
+            let mix = AVMutableAudioMix()
+            // Leave headroom for the sum of system audio and microphone.
+            mix.inputParameters = audioTracks.map { track in
+                let parameters = AVMutableAudioMixInputParameters(track: track)
+                parameters.setVolume(0.65, at: .zero)
+                return parameters
+            }
+            output.audioMix = mix
+            mixedOutput = output
+        }
         mixedOutput.alwaysCopiesSampleData = false
         mixedReader.add(mixedOutput)
 
@@ -263,9 +357,7 @@ enum RecorderPostProcessor {
             )
         }
 
-        let temporaryURL = url
-            .deletingPathExtension()
-            .appendingPathExtension("composite.mov")
+        let temporaryURL = RecorderRecovery.compositeURLs(for: url)[0]
         try? FileManager.default.removeItem(at: temporaryURL)
 
         let writer = try AVAssetWriter(outputURL: temporaryURL, fileType: .mov)
@@ -296,10 +388,15 @@ enum RecorderPostProcessor {
                 "could not add composite audio input"
             )
         }
+        ScreenCapTrackMetadata.apply(
+            role: .compositeAudio,
+            displayName: L10n.t("recording.track.composite"),
+            to: compositeInput
+        )
         writer.add(compositeInput)
 
         var originalAudioInputs: [AVAssetWriterInput] = []
-        for source in originalAudioSources {
+        for (index, source) in originalAudioSources.enumerated() {
             let input = AVAssetWriterInput(
                 mediaType: .audio,
                 outputSettings: audioSettings(
@@ -314,8 +411,52 @@ enum RecorderPostProcessor {
                     "could not add original audio track"
                 )
             }
+            // Track position does not identify a source: when system audio
+            // is disabled the first original stream is the raw microphone.
+            let role = source.role ?? (index == 0 ? .systemAudio : .microphoneRaw)
+            let title: String
+            switch role {
+            case .systemAudio:
+                title = L10n.t("recording.track.systemAudio")
+            case .microphoneRaw:
+                title = L10n.t("recording.track.microphone")
+            case .compositeAudio:
+                title = L10n.t("recording.track.composite")
+            case .microphoneEchoReduced:
+                title = L10n.t("recording.track.microphoneEchoReduced")
+            }
+            ScreenCapTrackMetadata.apply(
+                role: role,
+                displayName: title,
+                to: input
+            )
             writer.add(input)
             originalAudioInputs.append(input)
+        }
+
+        var processedMicrophoneInput: AVAssetWriterInput?
+        if let processedMicrophoneSource {
+            let input = AVAssetWriterInput(
+                mediaType: .audio,
+                outputSettings: audioSettings(
+                    bitRate: 192_000,
+                    sourceFormatHint: processedMicrophoneSource.firstSample.formatDescription
+                ),
+                sourceFormatHint: processedMicrophoneSource.firstSample.formatDescription
+            )
+            input.expectsMediaDataInRealTime = false
+            guard writer.canAdd(input) else {
+                throw RecorderPostProcessorError.writerFailed(
+                    "could not add processed microphone track"
+                )
+            }
+            ScreenCapTrackMetadata.apply(
+                role: .microphoneEchoReduced,
+                displayName: L10n.t("recording.track.microphoneEchoReduced"),
+                to: input
+            )
+            writer.add(input)
+            processedMicrophoneInput = input
         }
 
         guard writer.startWriting() else {
@@ -341,6 +482,13 @@ enum RecorderPostProcessor {
         }
         let originalInputBoxes = originalAudioInputs.map { QueueConfined($0) }
         let originalSampleBoxes = originalAudioSources.map {
+            QueueConfined<CMSampleBuffer?>($0.firstSample)
+        }
+        let processedOutputBox = processedMicrophoneSource.map {
+            QueueConfined<AVAssetReaderOutput>($0.output)
+        }
+        let processedInputBox = processedMicrophoneInput.map { QueueConfined($0) }
+        let processedSampleBox = processedMicrophoneSource.map {
             QueueConfined<CMSampleBuffer?>($0.firstSample)
         }
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -374,6 +522,19 @@ enum RecorderPostProcessor {
                     Log.debug(
                         "composite source audio[" + String(index) + "] samples="
                             + String(count)
+                    )
+                }
+            }
+            if let processedOutputBox,
+               let processedInputBox,
+               let processedSampleBox {
+                group.addTask {
+                    _ = try await appendAll(
+                        label: "processed-microphone",
+                        from: processedOutputBox,
+                        to: processedInputBox,
+                        writer: writerBox,
+                        initialSample: processedSampleBox
                     )
                 }
             }
@@ -602,8 +763,9 @@ enum RecorderPostProcessor {
 @available(macOS 15.0, *)
 private struct OriginalAudioSource {
     let reader: AVAssetReader
-    let output: AVAssetReaderTrackOutput
+    let output: AVAssetReaderOutput
     let firstSample: CMSampleBuffer
+    let role: ScreenCapTrackRole?
 }
 
 @available(macOS 15.0, *)
