@@ -40,8 +40,15 @@ struct RecorderStartupTests {
             blockAllocator: kCFAllocatorDefault, customBlockSource: nil,
             offsetToData: 0, dataLength: bytes, flags: 0, blockBufferOut: &block
         ) == noErr, "PCM allocation")
-        let data = (0..<(frames * Int(channels))).map {
-            Float(0.2 * sin(2 * .pi * 440 * (time + Double($0 / Int(channels)) / rate)))
+        let channelCount = Int(channels)
+        let angularFrequency = 2.0 * Double.pi * 440.0
+        var data = [Float](repeating: 0, count: frames * channelCount)
+        for frame in 0..<frames {
+            let sampleTime = time + Double(frame) / rate
+            let value = Float(0.2 * sin(angularFrequency * sampleTime))
+            for channel in 0..<channelCount {
+                data[frame * channelCount + channel] = value
+            }
         }
         let status = data.withUnsafeBytes {
             CMBlockBufferReplaceDataBytes(with: $0.baseAddress!, blockBuffer: block!,
