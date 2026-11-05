@@ -287,3 +287,23 @@
 "about.link.license" = "Licence";
 "about.link.issues" = "Nahlásit problém";
 "about.copyright" = "Licence MIT · © 2026 přispěvatelé ScreenCap";
+
+/* Palette color names */
+"color.red" = "Červená";
+"color.orange" = "Oranžová";
+"color.yellow" = "Žlutá";
+"color.green" = "Zelená";
+"color.teal" = "Tyrkysová";
+"color.cyan" = "Azurová";
+"color.blue" = "Modrá";
+"color.indigo" = "Indigová";
+"color.purple" = "Fialová";
+"color.pink" = "Růžová";
+"color.brown" = "Hnědá";
+"color.white" = "Bílá";
+"color.lightGray" = "Světle šedá";
+"color.gray" = "Šedá";
+"color.darkGray" = "Tmavě šedá";
+"color.charcoal" = "Antracitová";
+"color.black" = "Černá";
+"color.offWhite" = "Lomená bílá";

@@ -287,3 +287,23 @@
 "about.link.license" = "Lizenz";
 "about.link.issues" = "Problem melden";
 "about.copyright" = "MIT-Lizenz · © 2026 ScreenCap-Mitwirkende";
+
+/* Palette color names */
+"color.red" = "Rot";
+"color.orange" = "Orange";
+"color.yellow" = "Gelb";
+"color.green" = "Grün";
+"color.teal" = "Türkis";
+"color.cyan" = "Cyanblau";
+"color.blue" = "Blau";
+"color.indigo" = "Indigoblau";
+"color.purple" = "Violett";
+"color.pink" = "Rosa";
+"color.brown" = "Braun";
+"color.white" = "Weiß";
+"color.lightGray" = "Hellgrau";
+"color.gray" = "Grau";
+"color.darkGray" = "Dunkelgrau";
+"color.charcoal" = "Anthrazit";
+"color.black" = "Schwarz";
+"color.offWhite" = "Gebrochenes Weiß";

@@ -287,3 +287,23 @@
 "about.link.license" = "लाइसेंस";
 "about.link.issues" = "समस्या की रिपोर्ट करें";
 "about.copyright" = "MIT लाइसेंस · © 2026 ScreenCap योगदानकर्ता";
+
+/* Palette color names */
+"color.red" = "लाल";
+"color.orange" = "नारंगी";
+"color.yellow" = "पीला";
+"color.green" = "हरा";
+"color.teal" = "नीलहरित";
+"color.cyan" = "आसमानी";
+"color.blue" = "नीला";
+"color.indigo" = "जामुनी नीला";
+"color.purple" = "बैंगनी";
+"color.pink" = "गुलाबी";
+"color.brown" = "भूरा";
+"color.white" = "सफ़ेद";
+"color.lightGray" = "हल्का धूसर";
+"color.gray" = "धूसर";
+"color.darkGray" = "गहरा धूसर";
+"color.charcoal" = "कोयला रंग";
+"color.black" = "काला";
+"color.offWhite" = "धूमिल सफ़ेद";

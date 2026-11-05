@@ -287,3 +287,23 @@
 "about.link.license" = "Lisensi";
 "about.link.issues" = "Laporkan masalah";
 "about.copyright" = "Lisensi MIT · © 2026 kontributor ScreenCap";
+
+/* Palette color names */
+"color.red" = "Merah";
+"color.orange" = "Jingga";
+"color.yellow" = "Kuning";
+"color.green" = "Hijau";
+"color.teal" = "Hijau kebiruan";
+"color.cyan" = "Sian";
+"color.blue" = "Biru";
+"color.indigo" = "Nila";
+"color.purple" = "Ungu";
+"color.pink" = "Merah muda";
+"color.brown" = "Cokelat";
+"color.white" = "Putih";
+"color.lightGray" = "Abu-abu muda";
+"color.gray" = "Abu-abu";
+"color.darkGray" = "Abu-abu tua";
+"color.charcoal" = "Arang";
+"color.black" = "Hitam";
+"color.offWhite" = "Putih gading";

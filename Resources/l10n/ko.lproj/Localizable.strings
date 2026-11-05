@@ -287,3 +287,23 @@
 "about.link.license" = "라이선스";
 "about.link.issues" = "문제 신고";
 "about.copyright" = "MIT 라이선스 · © 2026 ScreenCap 기여자";
+
+/* Palette color names */
+"color.red" = "빨강";
+"color.orange" = "주황";
+"color.yellow" = "노랑";
+"color.green" = "초록";
+"color.teal" = "청록";
+"color.cyan" = "시안";
+"color.blue" = "파랑";
+"color.indigo" = "남색";
+"color.purple" = "보라";
+"color.pink" = "분홍";
+"color.brown" = "갈색";
+"color.white" = "흰색";
+"color.lightGray" = "밝은 회색";
+"color.gray" = "회색";
+"color.darkGray" = "어두운 회색";
+"color.charcoal" = "차콜";
+"color.black" = "검정";
+"color.offWhite" = "오프화이트";

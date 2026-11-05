@@ -287,3 +287,23 @@
 "about.link.license" = "Licens";
 "about.link.issues" = "Rapportera ett problem";
 "about.copyright" = "MIT-licens · © 2026 ScreenCap-bidragsgivare";
+
+/* Palette color names */
+"color.red" = "Röd";
+"color.orange" = "Orange";
+"color.yellow" = "Gul";
+"color.green" = "Grön";
+"color.teal" = "Blågrön";
+"color.cyan" = "Cyanblå";
+"color.blue" = "Blå";
+"color.indigo" = "Indigoblå";
+"color.purple" = "Lila";
+"color.pink" = "Rosa";
+"color.brown" = "Brun";
+"color.white" = "Vit";
+"color.lightGray" = "Ljusgrå";
+"color.gray" = "Grå";
+"color.darkGray" = "Mörkgrå";
+"color.charcoal" = "Antracitgrå";
+"color.black" = "Svart";
+"color.offWhite" = "Bruten vit";

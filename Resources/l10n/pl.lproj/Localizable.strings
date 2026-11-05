@@ -287,3 +287,23 @@
 "about.link.license" = "Licencja";
 "about.link.issues" = "Zgłoś problem";
 "about.copyright" = "Licencja MIT · © 2026 współtwórcy ScreenCap";
+
+/* Palette color names */
+"color.red" = "Czerwony";
+"color.orange" = "Pomarańczowy";
+"color.yellow" = "Żółty";
+"color.green" = "Zielony";
+"color.teal" = "Morski";
+"color.cyan" = "Cyjanowy";
+"color.blue" = "Niebieski";
+"color.indigo" = "Indygo";
+"color.purple" = "Fioletowy";
+"color.pink" = "Różowy";
+"color.brown" = "Brązowy";
+"color.white" = "Biały";
+"color.lightGray" = "Jasnoszary";
+"color.gray" = "Szary";
+"color.darkGray" = "Ciemnoszary";
+"color.charcoal" = "Antracytowy";
+"color.black" = "Czarny";
+"color.offWhite" = "Złamana biel";

@@ -287,3 +287,23 @@
 "about.link.license" = "Lisans";
 "about.link.issues" = "Sorun bildir";
 "about.copyright" = "MIT Lisansı · © 2026 ScreenCap katkıda bulunanları";
+
+/* Palette color names */
+"color.red" = "Kırmızı";
+"color.orange" = "Turuncu";
+"color.yellow" = "Sarı";
+"color.green" = "Yeşil";
+"color.teal" = "Turkuaz";
+"color.cyan" = "Camgöbeği";
+"color.blue" = "Mavi";
+"color.indigo" = "Çivit mavisi";
+"color.purple" = "Mor";
+"color.pink" = "Pembe";
+"color.brown" = "Kahverengi";
+"color.white" = "Beyaz";
+"color.lightGray" = "Açık gri";
+"color.gray" = "Gri";
+"color.darkGray" = "Koyu gri";
+"color.charcoal" = "Antrasit";
+"color.black" = "Siyah";
+"color.offWhite" = "Kırık beyaz";

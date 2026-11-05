@@ -287,3 +287,23 @@
 "about.link.license" = "الرخصة";
 "about.link.issues" = "الإبلاغ عن مشكلة";
 "about.copyright" = "رخصة MIT · © 2026 مساهمو ScreenCap";
+
+/* Palette color names */
+"color.red" = "أحمر";
+"color.orange" = "برتقالي";
+"color.yellow" = "أصفر";
+"color.green" = "أخضر";
+"color.teal" = "تركوازي";
+"color.cyan" = "سماوي";
+"color.blue" = "أزرق";
+"color.indigo" = "نيلي";
+"color.purple" = "بنفسجي";
+"color.pink" = "وردي";
+"color.brown" = "بني";
+"color.white" = "أبيض";
+"color.lightGray" = "رمادي فاتح";
+"color.gray" = "رمادي";
+"color.darkGray" = "رمادي داكن";
+"color.charcoal" = "فحمي";
+"color.black" = "أسود";
+"color.offWhite" = "أبيض مائل للرمادي";

@@ -287,3 +287,23 @@
 "about.link.license" = "许可证";
 "about.link.issues" = "报告问题";
 "about.copyright" = "MIT 许可证 · © 2026 ScreenCap 贡献者";
+
+/* Palette color names */
+"color.red" = "红色";
+"color.orange" = "橙色";
+"color.yellow" = "黄色";
+"color.green" = "绿色";
+"color.teal" = "蓝绿色";
+"color.cyan" = "青色";
+"color.blue" = "蓝色";
+"color.indigo" = "靛蓝色";
+"color.purple" = "紫色";
+"color.pink" = "粉色";
+"color.brown" = "棕色";
+"color.white" = "白色";
+"color.lightGray" = "浅灰色";
+"color.gray" = "灰色";
+"color.darkGray" = "深灰色";
+"color.charcoal" = "炭灰色";
+"color.black" = "黑色";
+"color.offWhite" = "米白色";

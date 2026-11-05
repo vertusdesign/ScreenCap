@@ -287,3 +287,23 @@
 "about.link.license" = "ライセンス";
 "about.link.issues" = "問題を報告";
 "about.copyright" = "MIT ライセンス · © 2026 ScreenCap コントリビューター";
+
+/* Palette color names */
+"color.red" = "赤";
+"color.orange" = "オレンジ";
+"color.yellow" = "黄";
+"color.green" = "緑";
+"color.teal" = "ティール";
+"color.cyan" = "シアン";
+"color.blue" = "青";
+"color.indigo" = "インディゴ";
+"color.purple" = "紫";
+"color.pink" = "ピンク";
+"color.brown" = "茶色";
+"color.white" = "白";
+"color.lightGray" = "ライトグレー";
+"color.gray" = "グレー";
+"color.darkGray" = "ダークグレー";
+"color.charcoal" = "チャコール";
+"color.black" = "黒";
+"color.offWhite" = "オフホワイト";
