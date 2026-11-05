@@ -287,3 +287,23 @@
 "about.link.license" = "Ліцензія";
 "about.link.issues" = "Повідомити про проблему";
 "about.copyright" = "Ліцензія MIT · © 2026 учасники ScreenCap";
+
+/* Palette color names */
+"color.red" = "Червоний";
+"color.orange" = "Помаранчевий";
+"color.yellow" = "Жовтий";
+"color.green" = "Зелений";
+"color.teal" = "Бірюзовий";
+"color.cyan" = "Блакитний";
+"color.blue" = "Синій";
+"color.indigo" = "Індиго";
+"color.purple" = "Фіолетовий";
+"color.pink" = "Рожевий";
+"color.brown" = "Коричневий";
+"color.white" = "Білий";
+"color.lightGray" = "Світло-сірий";
+"color.gray" = "Сірий";
+"color.darkGray" = "Темно-сірий";
+"color.charcoal" = "Вугільний";
+"color.black" = "Чорний";
+"color.offWhite" = "Молочний";

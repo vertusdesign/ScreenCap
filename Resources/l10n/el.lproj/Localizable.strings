@@ -287,3 +287,23 @@
 "about.link.license" = "Άδεια";
 "about.link.issues" = "Αναφορά προβλήματος";
 "about.copyright" = "Άδεια MIT · © 2026 συνεισφέροντες του ScreenCap";
+
+/* Palette color names */
+"color.red" = "Κόκκινο";
+"color.orange" = "Πορτοκαλί";
+"color.yellow" = "Κίτρινο";
+"color.green" = "Πράσινο";
+"color.teal" = "Τυρκουάζ";
+"color.cyan" = "Κυανό";
+"color.blue" = "Μπλε";
+"color.indigo" = "Λουλακί";
+"color.purple" = "Μοβ";
+"color.pink" = "Ροζ";
+"color.brown" = "Καφέ";
+"color.white" = "Λευκό";
+"color.lightGray" = "Ανοιχτό γκρι";
+"color.gray" = "Γκρι";
+"color.darkGray" = "Σκούρο γκρι";
+"color.charcoal" = "Ανθρακί";
+"color.black" = "Μαύρο";
+"color.offWhite" = "Υπόλευκο";

@@ -287,3 +287,23 @@
 "about.link.license" = "Licență";
 "about.link.issues" = "Raportează o problemă";
 "about.copyright" = "Licență MIT · © 2026 contribuitorii ScreenCap";
+
+/* Palette color names */
+"color.red" = "Roșu";
+"color.orange" = "Portocaliu";
+"color.yellow" = "Galben";
+"color.green" = "Verde";
+"color.teal" = "Turcoaz";
+"color.cyan" = "Cyan";
+"color.blue" = "Albastru";
+"color.indigo" = "Indigo";
+"color.purple" = "Violet";
+"color.pink" = "Roz";
+"color.brown" = "Maro";
+"color.white" = "Alb";
+"color.lightGray" = "Gri deschis";
+"color.gray" = "Gri";
+"color.darkGray" = "Gri închis";
+"color.charcoal" = "Antracit";
+"color.black" = "Negru";
+"color.offWhite" = "Alb murdar";

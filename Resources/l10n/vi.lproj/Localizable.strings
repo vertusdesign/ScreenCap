@@ -287,3 +287,23 @@
 "about.link.license" = "Giấy phép";
 "about.link.issues" = "Báo lỗi";
 "about.copyright" = "Giấy phép MIT · © 2026 những người đóng góp ScreenCap";
+
+/* Palette color names */
+"color.red" = "Đỏ";
+"color.orange" = "Cam";
+"color.yellow" = "Vàng";
+"color.green" = "Xanh lá";
+"color.teal" = "Xanh mòng két";
+"color.cyan" = "Xanh lơ";
+"color.blue" = "Xanh dương";
+"color.indigo" = "Chàm";
+"color.purple" = "Tím";
+"color.pink" = "Hồng";
+"color.brown" = "Nâu";
+"color.white" = "Trắng";
+"color.lightGray" = "Xám nhạt";
+"color.gray" = "Xám";
+"color.darkGray" = "Xám đậm";
+"color.charcoal" = "Xám than";
+"color.black" = "Đen";
+"color.offWhite" = "Trắng ngà";

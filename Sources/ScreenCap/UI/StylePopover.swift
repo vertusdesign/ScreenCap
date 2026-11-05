@@ -10,8 +10,14 @@ private final class ColorCell: NSButton {
     let color: NSColor
     let colorTarget: StyleColorTarget
     var isSelectedColor = false { didSet { needsDisplay = true } }
+    private var trackingAreaRef: NSTrackingArea?
+    private lazy var hoverTooltip = HoverTooltip(for: self)
 
-    init(color: NSColor, target: StyleColorTarget, side: CGFloat = 20) {
+    override var toolTip: String? {
+        didSet { hoverTooltip.setText(toolTip) }
+    }
+
+    init(color: NSColor, target: StyleColorTarget, side: CGFloat = 20, nameKey: String? = nil) {
         self.color = color
         self.colorTarget = target
         super.init(frame: .zero)
@@ -19,7 +25,7 @@ private final class ColorCell: NSButton {
         focusRingType = .none
         wantsLayer = true
         title = ""
-        toolTip = color.hexString
+        toolTip = nameKey.map { L10n.t($0) + " · " + color.hexString } ?? color.hexString
         translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             widthAnchor.constraint(equalToConstant: side),
@@ -29,6 +35,31 @@ private final class ColorCell: NSButton {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not supported") }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingAreaRef { removeTrackingArea(trackingAreaRef) }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self
+        )
+        addTrackingArea(area)
+        trackingAreaRef = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        hoverTooltip.scheduleShow()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        hoverTooltip.hide()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        hoverTooltip.hide()
+        super.mouseDown(with: event)
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let swatch = bounds.insetBy(dx: 2, dy: 2)
@@ -73,10 +104,14 @@ final class StylePopover: OverlayPanel {
     private static let contentWidth: CGFloat =
         max(paletteWidth, sliderRowWidth) + 20
 
-    private static let palette: [NSColor] = [
-        "#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#00C7BE", "#30B0C7", "#007AFF", "#5856D6", "#AF52DE",
-        "#FF2D55", "#8E5A3C", "#FFFFFF", "#C7C7CC", "#8E8E93", "#48484A", "#1C1C1E", "#000000", "#F2F2F7"
-    ].compactMap { NSColor(hex: $0) }
+    private static let palette: [(color: NSColor, nameKey: String)] = [
+        ("#FF3B30", "color.red"), ("#FF9500", "color.orange"), ("#FFCC00", "color.yellow"),
+        ("#34C759", "color.green"), ("#00C7BE", "color.teal"), ("#30B0C7", "color.cyan"),
+        ("#007AFF", "color.blue"), ("#5856D6", "color.indigo"), ("#AF52DE", "color.purple"),
+        ("#FF2D55", "color.pink"), ("#8E5A3C", "color.brown"), ("#FFFFFF", "color.white"),
+        ("#C7C7CC", "color.lightGray"), ("#8E8E93", "color.gray"), ("#48484A", "color.darkGray"),
+        ("#1C1C1E", "color.charcoal"), ("#000000", "color.black"), ("#F2F2F7", "color.offWhite")
+    ].compactMap { hex, nameKey in NSColor(hex: hex).map { ($0, nameKey) } }
 
     private var style: ToolStyle
     private var tool: ToolKind
@@ -260,7 +295,8 @@ final class StylePopover: OverlayPanel {
             for columnIndex in 0..<9 {
                 let index = rowIndex * 9 + columnIndex
                 guard index < Self.palette.count else { break }
-                let cell = ColorCell(color: Self.palette[index], target: target, side: Self.paletteCellSide)
+                let entry = Self.palette[index]
+                let cell = ColorCell(color: entry.color, target: target, side: Self.paletteCellSide, nameKey: entry.nameKey)
                 cell.target = self
                 cell.action = #selector(paletteCellTapped(_:))
                 if target == .stroke {

@@ -287,3 +287,23 @@
 "about.link.license" = "Licenc";
 "about.link.issues" = "Hiba bejelentése";
 "about.copyright" = "MIT licenc · © 2026 a ScreenCap közreműködői";
+
+/* Palette color names */
+"color.red" = "Piros";
+"color.orange" = "Narancssárga";
+"color.yellow" = "Sárga";
+"color.green" = "Zöld";
+"color.teal" = "Kékeszöld";
+"color.cyan" = "Ciánkék";
+"color.blue" = "Kék";
+"color.indigo" = "Indigókék";
+"color.purple" = "Lila";
+"color.pink" = "Rózsaszín";
+"color.brown" = "Barna";
+"color.white" = "Fehér";
+"color.lightGray" = "Világosszürke";
+"color.gray" = "Szürke";
+"color.darkGray" = "Sötétszürke";
+"color.charcoal" = "Antracitszürke";
+"color.black" = "Fekete";
+"color.offWhite" = "Törtfehér";

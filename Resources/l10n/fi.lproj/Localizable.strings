@@ -287,3 +287,23 @@
 "about.link.license" = "Lisenssi";
 "about.link.issues" = "Ilmoita ongelmasta";
 "about.copyright" = "MIT-lisenssi · © 2026 ScreenCapin tekijät";
+
+/* Palette color names */
+"color.red" = "Punainen";
+"color.orange" = "Oranssi";
+"color.yellow" = "Keltainen";
+"color.green" = "Vihreä";
+"color.teal" = "Sinivihreä";
+"color.cyan" = "Syaani";
+"color.blue" = "Sininen";
+"color.indigo" = "Indigonsininen";
+"color.purple" = "Violetti";
+"color.pink" = "Vaaleanpunainen";
+"color.brown" = "Ruskea";
+"color.white" = "Valkoinen";
+"color.lightGray" = "Vaaleanharmaa";
+"color.gray" = "Harmaa";
+"color.darkGray" = "Tummanharmaa";
+"color.charcoal" = "Hiilenharmaa";
+"color.black" = "Musta";
+"color.offWhite" = "Luonnonvalkoinen";

@@ -287,3 +287,23 @@
 "about.link.license" = "Licentie";
 "about.link.issues" = "Meld een probleem";
 "about.copyright" = "MIT-licentie · © 2026 ScreenCap-bijdragers";
+
+/* Palette color names */
+"color.red" = "Rood";
+"color.orange" = "Oranje";
+"color.yellow" = "Geel";
+"color.green" = "Groen";
+"color.teal" = "Blauwgroen";
+"color.cyan" = "Cyaan";
+"color.blue" = "Blauw";
+"color.indigo" = "Indigoblauw";
+"color.purple" = "Paars";
+"color.pink" = "Roze";
+"color.brown" = "Bruin";
+"color.white" = "Wit";
+"color.lightGray" = "Lichtgrijs";
+"color.gray" = "Grijs";
+"color.darkGray" = "Donkergrijs";
+"color.charcoal" = "Antraciet";
+"color.black" = "Zwart";
+"color.offWhite" = "Gebroken wit";
